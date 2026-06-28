@@ -4,8 +4,8 @@ from collections import defaultdict
 
 from sqlmodel import Session, select
 
-from models import Asset, PriceSnapshot, Transaction
-from schemas import AnalyticsSummary, Performer, TypeReturn, MonthlyPnL
+from models import Asset, Income, PriceSnapshot, Transaction
+from schemas import AnalyticsSummary, IncomeSummary, Performer, TypeReturn, MonthlyPnL
 from services.portfolio import PortfolioService
 
 
@@ -22,6 +22,7 @@ class AnalyticsService:
 
         type_returns = self._type_returns(portfolio.items)
         monthly_pnl = self._monthly_pnl()
+        income_summary = self._income_summary()
 
         return AnalyticsSummary(
             top_performers=[
@@ -48,7 +49,19 @@ class AnalyticsService:
             ],
             type_returns=type_returns,
             monthly_pnl=monthly_pnl,
+            income=income_summary,
+            total_income=round(sum(i.total for i in income_summary), 2),
         )
+
+    def _income_summary(self) -> List[IncomeSummary]:
+        incomes = self.session.exec(select(Income)).all()
+        grouped: Dict[str, float] = defaultdict(float)
+        for income in incomes:
+            grouped[income.type] += income.amount
+        return [
+            IncomeSummary(type=t, total=round(total, 2))
+            for t, total in sorted(grouped.items())
+        ]
 
     def _type_returns(self, items: List) -> List[TypeReturn]:
         grouped = defaultdict(lambda: {"value": 0.0, "cost": 0.0})
@@ -75,41 +88,56 @@ class AnalyticsService:
         if not assets:
             return []
 
-        # Last snapshot of each month per asset
-        monthly_snapshots: Dict[str, Dict[int, PriceSnapshot]] = defaultdict(dict)
+        # Latest snapshot per month for each asset
+        asset_monthly_snapshots: Dict[int, Dict[str, PriceSnapshot]] = {}
         for asset in assets:
             snapshots = self.session.exec(
                 select(PriceSnapshot)
                 .where(PriceSnapshot.asset_id == asset.id)
                 .order_by(PriceSnapshot.date.asc())
             ).all()
+            monthly: Dict[str, PriceSnapshot] = {}
             for s in snapshots:
                 month = s.date.strftime("%Y-%m")
-                # Keep latest snapshot in the month
-                if asset.id not in monthly_snapshots[month] or s.date > monthly_snapshots[month][asset.id].date:
-                    monthly_snapshots[month][asset.id] = s
+                if month not in monthly or s.date > monthly[month].date:
+                    monthly[month] = s
+            asset_monthly_snapshots[asset.id] = monthly
 
-        # Holdings per asset
-        holdings: Dict[int, float] = {}
+        # Preload transactions per asset, ordered by date
+        asset_transactions: Dict[int, List[Transaction]] = {}
         for asset in assets:
             transactions = self.session.exec(
-                select(Transaction).where(Transaction.asset_id == asset.id)
+                select(Transaction)
+                .where(Transaction.asset_id == asset.id)
+                .order_by(Transaction.date.asc())
             ).all()
-            qty = 0.0
-            for t in transactions:
-                if t.type == "BUY":
-                    qty += t.quantity
-                elif t.type == "SELL":
-                    qty -= t.quantity
-            holdings[asset.id] = qty
+            asset_transactions[asset.id] = transactions
 
-        months = sorted(monthly_snapshots.keys())
+        all_months = sorted(
+            set().union(*[set(m.keys()) for m in asset_monthly_snapshots.values()])
+        )
+
         result = []
         prev_value = 0.0
-        for month in months:
+        for month in all_months:
             month_value = 0.0
-            for asset_id, snapshot in monthly_snapshots[month].items():
-                month_value += snapshot.price * holdings.get(asset_id, 0.0)
+            for asset in assets:
+                snapshot = asset_monthly_snapshots.get(asset.id, {}).get(month)
+                if not snapshot:
+                    continue
+
+                # Holdings as of the snapshot date
+                qty = 0.0
+                for t in asset_transactions.get(asset.id, []):
+                    if t.date > snapshot.date:
+                        break
+                    if t.type == "BUY":
+                        qty += t.quantity
+                    elif t.type == "SELL":
+                        qty -= t.quantity
+
+                month_value += snapshot.price * qty
+
             month_value = round(month_value, 2)
             pnl = round(month_value - prev_value, 2) if prev_value else 0.0
             pnl_percent = round((pnl / prev_value * 100), 2) if prev_value else 0.0

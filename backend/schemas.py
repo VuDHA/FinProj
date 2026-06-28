@@ -157,11 +157,18 @@ class MonthlyPnL(BaseModel):
     pnl_percent: float
 
 
+class IncomeSummary(BaseModel):
+    type: str
+    total: float
+
+
 class AnalyticsSummary(BaseModel):
     top_performers: List[Performer]
     bottom_performers: List[Performer]
     type_returns: List[TypeReturn]
     monthly_pnl: List[MonthlyPnL]
+    income: List[IncomeSummary]
+    total_income: float
 
 
 class GoldRate(BaseModel):
@@ -192,3 +199,73 @@ class SettingRead(BaseModel):
 class SettingCreate(BaseModel):
     key: str
     value: str
+
+
+class IncomeCreate(BaseModel):
+    asset_id: int
+    type: str  # DIVIDEND, INTEREST
+    amount: float
+    date: datetime.date
+    notes: Optional[str] = None
+
+
+class IncomeRead(IncomeCreate):
+    id: int
+
+
+class AllocationTargetCreate(BaseModel):
+    type: str
+    target_percent: float
+
+
+class AllocationTargetRead(AllocationTargetCreate):
+    id: int
+
+
+class PortfolioHistoryPoint(BaseModel):
+    date: datetime.date
+    value: float
+    cost: float
+
+
+class BenchmarkPoint(BaseModel):
+    date: datetime.date
+    portfolio_value: float
+    benchmark_value: float
+
+
+class RebalanceSuggestion(BaseModel):
+    type: str
+    current_value: float
+    current_percent: float
+    target_percent: float
+    target_value: float
+    diff_value: float
+
+
+class RebalanceTrade(BaseModel):
+    symbol: str
+    name: str
+    action: str  # BUY, SELL
+    quantity: float
+    estimated_price: float
+    estimated_value: float
+
+
+class RebalanceResult(BaseModel):
+    total_value: float
+    suggestions: List[RebalanceSuggestion]
+    trades: List[RebalanceTrade]
+
+
+class RiskMetrics(BaseModel):
+    volatility: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
+    max_drawdown_percent: Optional[float] = None
+    beta: Optional[float] = None
+
+
+class CsvImportResult(BaseModel):
+    created: int
+    skipped: int
+    errors: List[str]

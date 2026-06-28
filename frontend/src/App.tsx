@@ -5,6 +5,7 @@ import { Assets } from "./pages/Assets";
 import { Backtest } from "./pages/Backtest";
 import { Dashboard } from "./pages/Dashboard";
 import { Market } from "./pages/Market";
+import { Rebalance } from "./pages/Rebalance";
 import { Settings } from "./pages/Settings";
 import { Transactions } from "./pages/Transactions";
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/backtest" element={<Backtest />} />
+        <Route path="/rebalance" element={<Rebalance />} />
         <Route path="/market" element={<Market />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>

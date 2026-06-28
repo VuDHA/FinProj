@@ -2,11 +2,12 @@ import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from database import get_session
 from models import Asset, PriceSnapshot
-from schemas import FundDetail, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
+from schemas import BenchmarkPoint, FundDetail, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
 from services.market_data import MarketDataService
 
 router = APIRouter(prefix="/prices", tags=["prices"])
@@ -17,6 +18,35 @@ DEFAULT_WATCHLIST = [
 ]
 
 
+def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> PriceSnapshot | None:
+    """Persist a price snapshot if it is valid and not already stored for this date."""
+    if not data or not data.get("price"):
+        return None
+
+    date = data.get("date")
+    if not date:
+        return None
+
+    existing = session.exec(
+        select(PriceSnapshot).where(
+            PriceSnapshot.asset_id == asset.id,
+            PriceSnapshot.date == date,
+        )
+    ).first()
+    if existing:
+        return existing
+
+    snapshot = PriceSnapshot(
+        asset_id=asset.id,
+        date=date,
+        price=data["price"],
+        change=data.get("change"),
+        change_percent=data.get("change_percent"),
+    )
+    session.add(snapshot)
+    return snapshot
+
+
 @router.post("/refresh-all")
 def refresh_all_prices(session: Session = Depends(get_session)):
     service = MarketDataService()
@@ -25,9 +55,7 @@ def refresh_all_prices(session: Session = Depends(get_session)):
     failed = 0
     for asset in assets:
         data = service.fetch_price(asset)
-        if data:
-            snapshot = PriceSnapshot(asset_id=asset.id, **data)
-            session.add(snapshot)
+        if _get_or_create_snapshot(session, asset, data):
             updated += 1
         else:
             failed += 1
@@ -46,8 +74,10 @@ def refresh_price(asset_id: int, session: Session = Depends(get_session)):
     if not data:
         raise HTTPException(status_code=502, detail="Failed to fetch market data")
 
-    snapshot = PriceSnapshot(asset_id=asset.id, **data)
-    session.add(snapshot)
+    snapshot = _get_or_create_snapshot(session, asset, data)
+    if not snapshot:
+        raise HTTPException(status_code=502, detail="Failed to fetch market data")
+
     session.commit()
     session.refresh(snapshot)
     return snapshot
@@ -116,6 +146,39 @@ def get_market_history(
     history = service.fetch_market_history(symbol, type, start, end)
     if not history:
         raise HTTPException(status_code=502, detail="Failed to fetch market history")
+    return [{"date": d, "price": p} for d, p in sorted(history.items())]
+
+
+class BenchmarkPricePoint(BaseModel):
+    date: datetime.date
+    price: float
+
+
+@router.get("/benchmark/{symbol}", response_model=List[BenchmarkPoint])
+def get_benchmark(
+    symbol: str,
+    start: datetime.date,
+    end: datetime.date,
+    session: Session = Depends(get_session),
+):
+    from services.benchmark import BenchmarkService
+
+    data = BenchmarkService(session).get_comparison(symbol, start, end)
+    if not data:
+        raise HTTPException(status_code=502, detail="Failed to fetch benchmark data")
+    return data
+
+
+@router.get("/benchmark-raw/{symbol}", response_model=List[BenchmarkPricePoint])
+def get_benchmark_raw(
+    symbol: str,
+    start: datetime.date,
+    end: datetime.date,
+):
+    service = MarketDataService()
+    history = service.fetch_benchmark_history(symbol, start, end)
+    if not history:
+        raise HTTPException(status_code=502, detail="Failed to fetch benchmark data")
     return [{"date": d, "price": p} for d, p in sorted(history.items())]
 
 

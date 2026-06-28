@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Play } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -54,10 +55,39 @@ export function Backtest() {
 
   const result = run.data?.data;
 
+  const benchmark = useQuery({
+    queryKey: ["backtest-benchmark", form.start_date, form.end_date],
+    queryFn: async () => {
+      const { data } = await API.get("/prices/benchmark-raw/VNINDEX", {
+        params: { start: form.start_date, end: form.end_date },
+      });
+      return data as Array<{ date: string; price: number }>;
+    },
+    enabled: !!result,
+  });
+
+  const curveMap = new Map<string, { portfolio?: number; benchmark?: number }>();
+  for (const point of result?.equity_curve || []) {
+    curveMap.set(point.date, { ...(curveMap.get(point.date) || {}), portfolio: point.value });
+  }
+  const rawBenchmark = benchmark.data || [];
+  const initialCash = Number(form.initial_cash) || 0;
+  if (rawBenchmark.length > 0 && initialCash > 0) {
+    const firstPrice = rawBenchmark[0].price;
+    for (const point of rawBenchmark) {
+      const normalized = firstPrice > 0 ? (point.price / firstPrice) * initialCash : 0;
+      curveMap.set(point.date, { ...(curveMap.get(point.date) || {}), benchmark: normalized });
+    }
+  }
+  const chartData = Array.from(curveMap.entries())
+    .map(([date, values]) => ({ date, ...values }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   return (
     <div className="space-y-6">
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
       {run.isError && <ErrorMessage error={run.error} retry={() => run.mutate()} />}
+      {benchmark.isError && <ErrorMessage error={benchmark.error} retry={() => benchmark.refetch()} />}
       <SectionHeader title={labels.backtest.title} />
 
       <FintechCard delay={0.1}>
@@ -145,112 +175,146 @@ export function Backtest() {
       </FintechCard>
 
       {result && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FintechCard delay={0.15}>
-              <div className="card-title mb-1">{labels.backtest.finalValue}</div>
-              <div className="metric-value">
-                <AnimatedNumber value={result.final_value} formatter={formatCurrency} />
+        <div className="relative">
+          {run.isPending && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-xl">
+              <div className="flex items-center gap-2 text-slate-600">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>{labels.backtest.running}</span>
               </div>
-            </FintechCard>
-            <FintechCard delay={0.2}>
-              <div className="card-title mb-1">{labels.backtest.totalReturn}</div>
-              <div className={`metric-value ${result.total_return >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
-                {formatPercent(result.total_return_percent)}
-              </div>
-            </FintechCard>
-            <FintechCard delay={0.25}>
-              <div className="card-title mb-1">{labels.backtest.maxDrawdown}</div>
-              <div className="metric-value text-accent-rose">
-                -{formatPercent(result.max_drawdown_percent)}
-              </div>
-            </FintechCard>
-          </div>
-
-          {result.warnings && result.warnings.length > 0 && (
-            <FintechCard delay={0.12}>
-              <h3 className="card-title mb-2 text-amber-300">{labels.backtest.warnings}</h3>
-              <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
-                {result.warnings.map((warning: string, idx: number) => (
-                  <li key={idx}>{warning}</li>
-                ))}
-              </ul>
-            </FintechCard>
-          )}
-
-          <FintechCard delay={0.3}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="card-title">{labels.backtest.equityCurve}</h3>
-              <TrendBadge value={result.total_return_percent} />
             </div>
-            {result.equity_curve.length > 1 ? (
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={result.equity_curve}>
-                    <defs>
-                      <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={result.total_return >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={result.total_return >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tickFormatter={(v: number) => formatCurrency(v)} tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => formatCurrency(v)} />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke={result.total_return >= 0 ? "#34D399" : "#FB7185"}
-                      strokeWidth={2.5}
-                      fill="url(#equityGradient)"
-                      dot={false}
-                      activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2 }}
-                      animationDuration={1500}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="text-slate-500">{labels.backtest.noData}</div>
-            )}
-          </FintechCard>
+          )}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FintechCard delay={0.15}>
+                <div className="card-title mb-1">{labels.backtest.finalValue}</div>
+                <div className="metric-value">
+                  <AnimatedNumber value={result.final_value} formatter={formatCurrency} />
+                </div>
+              </FintechCard>
+              <FintechCard delay={0.2}>
+                <div className="card-title mb-1">{labels.backtest.totalReturn}</div>
+                <div className={`metric-value ${result.total_return >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
+                  {formatPercent(result.total_return_percent)}
+                </div>
+              </FintechCard>
+              <FintechCard delay={0.25}>
+                <div className="card-title mb-1">{labels.backtest.maxDrawdown}</div>
+                <div className="metric-value text-accent-rose">
+                  -{formatPercent(result.max_drawdown_percent)}
+                </div>
+              </FintechCard>
+            </div>
 
-          <FintechCard delay={0.35}>
-            <h3 className="card-title mb-4">{labels.backtest.trades}</h3>
-            {result.trades.length > 0 ? (
-              <div className="overflow-x-auto max-h-80 overflow-y-auto scrollbar-thin">
-                <table className="table-fintech">
-                  <thead className="sticky top-0 bg-white/80 backdrop-blur-md">
-                    <tr>
-                      <th className="text-left">{labels.backtest.date}</th>
-                      <th className="text-left">{labels.backtest.symbol}</th>
-                      <th className="text-left">{labels.backtest.action}</th>
-                      <th className="text-right">{labels.backtest.quantity}</th>
-                      <th className="text-right">{labels.backtest.price}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.trades.map((trade: any, idx: number) => (
-                      <tr key={idx}>
-                        <td className="font-mono text-slate-500">{trade.date}</td>
-                        <td className="font-display font-semibold text-slate-900">{trade.symbol}</td>
-                        <td>
-                          <span className={trade.action === "BUY" ? "badge-gain" : "badge-loss"}>
-                            {trade.action === "BUY" ? labels.transactions.buy : labels.transactions.sell}
-                          </span>
-                        </td>
-                        <td className="text-right font-mono">{trade.quantity}</td>
-                        <td className="text-right font-mono">{formatCurrency(trade.price)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-slate-500">{labels.backtest.noTrades}</div>
+            {result.warnings && result.warnings.length > 0 && (
+              <FintechCard delay={0.12}>
+                <h3 className="card-title mb-2 text-amber-300">{labels.backtest.warnings}</h3>
+                <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
+                  {result.warnings.map((warning: string, idx: number) => (
+                    <li key={idx}>{warning}</li>
+                  ))}
+                </ul>
+              </FintechCard>
             )}
-          </FintechCard>
-        </>
+
+            <FintechCard delay={0.3}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="card-title">{labels.backtest.equityCurve}</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: result.total_return >= 0 ? "#34D399" : "#FB7185" }} />
+                    {labels.backtest.equityCurve}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    {labels.dashboard.benchmark}
+                  </div>
+                  <TrendBadge value={result.total_return_percent} />
+                </div>
+              </div>
+              {chartData.length > 1 ? (
+                <div className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={result.total_return >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0.3} />
+                          <stop offset="100%" stopColor={result.total_return >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={(v: number) => formatCurrency(v)} tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={chartTooltipStyle}
+                        formatter={(v: number, name: string) => [
+                          formatCurrency(v),
+                          name === "portfolio" ? labels.backtest.equityCurve : labels.dashboard.benchmark,
+                        ]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="portfolio"
+                        stroke={result.total_return >= 0 ? "#34D399" : "#FB7185"}
+                        strokeWidth={2.5}
+                        fill="url(#equityGradient)"
+                        dot={false}
+                        activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2 }}
+                        animationDuration={1500}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="benchmark"
+                        stroke="#FBBF24"
+                        strokeWidth={2}
+                        dot={false}
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-slate-500">{labels.backtest.noData}</div>
+              )}
+            </FintechCard>
+
+            <FintechCard delay={0.35}>
+              <h3 className="card-title mb-4">{labels.backtest.trades}</h3>
+              {result.trades.length > 0 ? (
+                <div className="overflow-x-auto max-h-80 overflow-y-auto scrollbar-thin">
+                  <table className="table-fintech">
+                    <thead className="sticky top-0 bg-white/80 backdrop-blur-md">
+                      <tr>
+                        <th className="text-left">{labels.backtest.date}</th>
+                        <th className="text-left">{labels.backtest.symbol}</th>
+                        <th className="text-left">{labels.backtest.action}</th>
+                        <th className="text-right">{labels.backtest.quantity}</th>
+                        <th className="text-right">{labels.backtest.price}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.trades.map((trade: any, idx: number) => (
+                        <tr key={idx}>
+                          <td className="font-mono text-slate-500">{trade.date}</td>
+                          <td className="font-display font-semibold text-slate-900">{trade.symbol}</td>
+                          <td>
+                            <span className={trade.action === "BUY" ? "badge-gain" : "badge-loss"}>
+                              {trade.action === "BUY" ? labels.transactions.buy : labels.transactions.sell}
+                            </span>
+                          </td>
+                          <td className="text-right font-mono">{trade.quantity}</td>
+                          <td className="text-right font-mono">{formatCurrency(trade.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-slate-500">{labels.backtest.noTrades}</div>
+              )}
+            </FintechCard>
+          </>
+        </div>
       )}
     </div>
   );

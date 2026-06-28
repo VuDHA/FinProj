@@ -9,6 +9,8 @@ from schemas import AssetCreate, AssetRead
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
+VALID_ASSET_TYPES = {"STOCK", "FUND", "ETF", "GOLD", "CRYPTO"}
+
 
 @router.get("/", response_model=List[AssetRead])
 def list_assets(session: Session = Depends(get_session)):
@@ -17,6 +19,12 @@ def list_assets(session: Session = Depends(get_session)):
 
 @router.post("/", response_model=AssetRead)
 def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
+    if asset.type not in VALID_ASSET_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported asset type: {asset.type}. Must be one of {', '.join(sorted(VALID_ASSET_TYPES))}",
+        )
+
     existing = session.exec(
         select(Asset).where(Asset.symbol == asset.symbol, Asset.is_active == True)
     ).first()

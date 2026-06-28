@@ -88,8 +88,13 @@ def _fetch_vcb_fx() -> List[FxRate]:
 
 
 def _parse_number(s: str) -> float:
+    if s is None:
+        return 0.0
     try:
-        return float(s.replace(",", "").replace(".", "")) / 1000 if "," not in s and "." in s else float(s.replace(",", ""))
+        # Treat comma as a thousands separator and keep the dot as decimal.
+        # If both are present, remove only commas. This matches the VCB XML format.
+        cleaned = s.replace(",", "")
+        return float(cleaned)
     except ValueError:
         return 0.0
 
