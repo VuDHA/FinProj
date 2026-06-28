@@ -1,0 +1,23 @@
+.gitattributes
+  s_82b054541998c3::t_f705249b77711d 1-2
+.gitignore
+  s_82b054541998c3::t_4368e93ec290f9 1-136
+README.md
+  s_82b054541998c3::t_05a708e6106b2d 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "63d436a5d9f91b347b7d741c0ea5d9cb3d894381",
+  "prompts": {},
+  "sessions": {
+    "s_82b054541998c3": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "d2dacd3b-c62d-41ff-9f2f-600848c52786",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
