@@ -1,0 +1,35 @@
+backend/services/market_data.py
+  s_82b054541998c3::t_2bb90fd0959ad2 534,538-554,556-559,570,573,577-582,587-589,594
+  s_82b054541998c3::t_3c8fee55eec950 215-266,269-286,642-643
+  s_82b054541998c3::t_02df0e04d1afe7 532-533,555,560-569,571-572,574-576,593,595-598
+  s_82b054541998c3::t_89d106393f8693 42-47,84-86,88-132,134-139,141-142,144-146,148-162,164-167,169-176,178,180,182-192,197,200-201,203-204,209-214,287-308,394
+frontend/src/pages/Market.tsx
+  s_82b054541998c3::t_cccb604a098ce5 92,94-95
+  s_82b054541998c3::t_4b8354358529e9 15,39-44,444-448
+  s_82b054541998c3::t_19039e9c4bab1e 562-571
+backend/schemas.py
+  s_82b054541998c3::t_b47c151fddc897 63-74
+backend/api/prices.py
+  s_82b054541998c3::t_82399f06056589 99-121
+  s_82b054541998c3::t_85bf2df9bfc3a9 9
+  s_82b054541998c3::t_d3b5f94cda1f2e 87-98
+frontend/src/components/SymbolDetailModal.tsx
+  s_82b054541998c3::t_4a706d3c9f3f79 1-10,12-141,144-150,153-259
+  s_82b054541998c3::t_b045087ff5eacc 11,142-143,151-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "a6104a54ed8185efcc7420604833fb3e9db74d46",
+  "prompts": {},
+  "sessions": {
+    "s_82b054541998c3": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "d2dacd3b-c62d-41ff-9f2f-600848c52786",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
