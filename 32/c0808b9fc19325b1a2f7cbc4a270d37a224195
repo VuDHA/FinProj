@@ -1,0 +1,68 @@
+backend/test_scrapers.py
+  s_82b054541998c3::t_df36c824c55bd2 5-19
+  s_82b054541998c3::t_3cd9430421fdc1 2-4
+backend/api/gold_fx.py
+  s_3a6fc3ed7ead74::t_5c0d040de2fe71 1-11
+backend/api/prices.py
+  s_d8d2c7cb3b92f8::t_519ff15f6c99d6 1-93
+backend/check_prices_around_16000.py
+  s_d8d2c7cb3b92f8::t_6b91ddff51e8c1 1-21
+backend/models.py
+  s_3a6fc3ed7ead74::t_ffd82237ea1f2a 1-40
+backend/schemas.py
+  s_82b054541998c3::t_64b5639b84f7fb 1-182
+backend/services/backtest.py
+  s_d8d2c7cb3b92f8::t_8f37b23f52fa1b 1-255
+frontend/package-lock.json
+  s_3a6fc3ed7ead74::t_9648d15616a7e7 1-3483
+frontend/src/i18n/vi.ts
+  s_d8d2c7cb3b92f8::t_1b8ce3900e1859 1-210
+frontend/src/lib/utils.ts
+  s_3a6fc3ed7ead74::t_fed62c18933123 1-10
+frontend/src/pages/Analytics.tsx
+  s_d8d2c7cb3b92f8::t_6c675d7a5a8d8c 1-263
+frontend/src/pages/Assets.tsx
+  s_d8d2c7cb3b92f8::t_e4bf92967e4249 1-145
+frontend/src/pages/Backtest.tsx
+  s_d8d2c7cb3b92f8::t_8e7c39965f80a6 1-257
+frontend/src/pages/Dashboard.tsx
+  s_d8d2c7cb3b92f8::t_15ac62e81790ee 1-255
+frontend/src/pages/Market.tsx
+  s_d8d2c7cb3b92f8::t_859b9270791c75 1-552
+frontend/src/pages/Settings.tsx
+  s_d8d2c7cb3b92f8::t_c8ba062c96c31c 1-157
+frontend/src/pages/Transactions.tsx
+  s_d8d2c7cb3b92f8::t_244f8fea16fb71 1-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "32c0808b9fc19325b1a2f7cbc4a270d37a224195",
+  "prompts": {},
+  "sessions": {
+    "s_3a6fc3ed7ead74": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "cba925e7-1213-4e85-9416-ca261db25842",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_82b054541998c3": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "d2dacd3b-c62d-41ff-9f2f-600848c52786",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_d8d2c7cb3b92f8": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "7371ac8a-5da8-431d-84b2-4ef1bbf8f02f",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
