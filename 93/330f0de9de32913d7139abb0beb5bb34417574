@@ -1,0 +1,53 @@
+backend/api/prices.py
+  s_076d8519493262::t_12875afbbc17d0 5,10,21-49,58,77-80,152-184
+backend/services/csv_io.py
+  s_076d8519493262::t_49dbc4ed951b7f 1-151
+backend/services/market_data.py
+  s_076d8519493262::t_ba5525d307fa9e 508-558
+backend/services/rebalance.py
+  s_076d8519493262::t_53b34b283ae06e 1-100
+backend/services/risk_metrics.py
+  s_076d8519493262::t_6a55ace75c7ea8 1-137
+frontend/src/components/SymbolDetailModal.tsx
+  s_076d8519493262::t_e0afee5b17b1a3 52-59,118-125
+frontend/src/i18n/vi.ts
+  s_076d8519493262::t_54122cafa2e6fc 12,30-31,80-86,108-129,202,214-224
+frontend/src/pages/Backtest.tsx
+  s_076d8519493262::t_89001b3e2de608 3,8,58-85,90,178-183,185,187-206,208-217,220-233,235-317
+frontend/src/pages/Dashboard.tsx
+  s_076d8519493262::t_afcf10439d6401 8,28-34,36-37,48-68,73-74,97-112,117-118,238-248,251-300
+frontend/src/pages/Settings.tsx
+  s_076d8519493262::t_ad1c3c7baf9922 3,18-19,33-37,40-73,77-78,86-115,120,122-124,137-140,148-160,245-342
+start.bat
+  s_26251f4c95fd2a::t_39dbe8ce4e96fe 2-4
+start.ps1
+  s_076d8519493262::t_ddc631e30f857a 1-303
+backend/api/portfolio.py
+  s_26251f4c95fd2a::t_3872686e9428ca 1-3,8,10,18-26
+backend/schemas.py
+  s_26251f4c95fd2a::t_3502079400088c 160-164,170-171,202-271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "93330f0de9de32913d7139abb0beb5bb34417574",
+  "prompts": {},
+  "sessions": {
+    "s_076d8519493262": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "baea081f-a3f7-4aa1-ba2e-61e277fcbc51",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_26251f4c95fd2a": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "d445855a-2daf-4926-9a5a-31f96e17cbc8",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
