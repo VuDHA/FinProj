@@ -60,6 +60,18 @@ class MarketSymbol(BaseModel):
     type: str
 
 
+class FundDetail(BaseModel):
+    symbol: str
+    name: str
+    fund_type: Optional[str] = None
+    owner: Optional[str] = None
+    management_fee: Optional[float] = None
+    inception_date: Optional[datetime.date] = None
+    nav: float
+    nav_update_at: Optional[datetime.date] = None
+    vsd_fee_id: Optional[str] = None
+
+
 class PortfolioItem(BaseModel):
     asset_id: int
     symbol: str

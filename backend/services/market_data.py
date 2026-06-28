@@ -1,7 +1,4 @@
-import contextlib
 import datetime
-import io
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Optional
 
@@ -32,23 +29,6 @@ class MarketDataService:
         except (ValueError, TypeError):
             return 0.0
 
-    @contextlib.contextmanager
-    def _suppress_output(self):
-        import os
-
-        old_stdout_fd = os.dup(1)
-        old_stderr_fd = os.dup(2)
-        with open(os.devnull, "w") as devnull:
-            os.dup2(devnull.fileno(), 1)
-            os.dup2(devnull.fileno(), 2)
-        try:
-            yield
-        finally:
-            os.dup2(old_stdout_fd, 1)
-            os.dup2(old_stderr_fd, 2)
-            os.close(old_stdout_fd)
-            os.close(old_stderr_fd)
-
     def _parse_date(self, value) -> datetime.date:
         if isinstance(value, datetime.date):
             return value
@@ -56,6 +36,12 @@ class MarketDataService:
             return value.date()
         try:
             return datetime.datetime.strptime(str(value), "%Y-%m-%d").date()
+        except Exception:
+            return self._today()
+
+    def _parse_timestamp_date(self, ms: int) -> datetime.date:
+        try:
+            return datetime.datetime.fromtimestamp(ms / 1000).date()
         except Exception:
             return self._today()
 
@@ -95,93 +81,231 @@ class MarketDataService:
     # Cổ phiếu
     # ------------------------------------------------------------------
 
-    def _fetch_vnstock_stock(self, symbol: str) -> Optional[dict]:
-        """Scrape giá cổ phiếu từ vnstock (VCI/TCBS). Giá trả về theo nghìn đồng."""
-        try:
-            with self._suppress_output():
-                from vnstock.api.quote import Quote
-                import pandas as pd
+    # ------------------------------------------------------------------
+    # Fmarket - NAV quỹ mở (direct API, không cần vnstock)
+    # ------------------------------------------------------------------
 
-            q = Quote(symbol=symbol.upper(), source="VCI", show_log=False)
-            end = self._today()
-            start = end - datetime.timedelta(days=30)
-            df = q.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"))
-            if df is None or df.empty:
-                return None
-            df = df.sort_values("time").reset_index(drop=True)
-            latest = df.iloc[-1]
-            price = float(latest["close"]) * 1000
-            ts = latest["time"]
-            date = ts.date() if hasattr(ts, "date") else pd.to_datetime(ts).date()
-            if len(df) >= 2:
-                prev = df.iloc[-2]
-                prev_price = float(prev["close"]) * 1000
-                change = price - prev_price
-                change_percent = (change / prev_price * 100) if prev_price else 0.0
-            else:
-                change = 0.0
-                change_percent = 0.0
-            return {
-                "price": price,
-                "change": change,
-                "change_percent": change_percent,
-                "date": date,
+    _FMARKET_LISTING_CACHE: Optional[List[dict]] = None
+    _FMARKET_LISTING_CACHE_TIME: Optional[datetime.datetime] = None
+
+    def _fmarket_headers(self) -> dict:
+        return {
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7",
+            "Connection": "keep-alive",
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-site",
+            "DNT": "1",
+            "Pragma": "no-cache",
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-ch-ua-mobile": "?0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Referer": "https://fmarket.vn/",
+            "Origin": "https://fmarket.vn/",
+        }
+
+    def _fetch_fmarket_listing(self, force: bool = False) -> List[dict]:
+        if (
+            not force
+            and self._FMARKET_LISTING_CACHE is not None
+            and self._FMARKET_LISTING_CACHE_TIME is not None
+            and (datetime.datetime.now() - self._FMARKET_LISTING_CACHE_TIME).total_seconds() < 3600
+        ):
+            return self._FMARKET_LISTING_CACHE
+        try:
+            url = "https://api.fmarket.vn/res/products/filter"
+            payload = {
+                "types": ["NEW_FUND", "TRADING_FUND"],
+                "issuerIds": [],
+                "sortOrder": "DESC",
+                "sortField": "navTo6Months",
+                "page": 1,
+                "pageSize": 100,
+                "isIpo": False,
+                "fundAssetTypes": [],
+                "bondRemainPeriods": [],
+                "searchField": "",
+                "isBuyByReward": False,
+                "thirdAppIds": [],
             }
+            r = requests.post(url, json=payload, headers=self._fmarket_headers(), timeout=15)
+            if r.status_code == 200:
+                rows = r.json().get("data", {}).get("rows", [])
+                MarketDataService._FMARKET_LISTING_CACHE = rows
+                MarketDataService._FMARKET_LISTING_CACHE_TIME = datetime.datetime.now()
+                return rows
         except Exception as e:
-            print(f"[market_data] vnstock stock {symbol} error: {e}")
-            return None
+            print(f"[market_data] fmarket listing error: {e}")
+        return self._FMARKET_LISTING_CACHE or []
 
-    def _fetch_fmarket_fund(self, symbol: str) -> Optional[dict]:
-        """Scrape NAV quỹ mở từ Fmarket qua vnstock."""
+    def _fetch_fmarket_nav_history(
+        self, fund_id: int, start: datetime.date, end: datetime.date
+    ) -> List[dict]:
         try:
-            with self._suppress_output():
-                from vnstock import Fund
-                import pandas as pd
+            url = "https://api.fmarket.vn/res/product/get-nav-history"
+            payload = {
+                "isAllData": 0,
+                "productId": fund_id,
+                "fromDate": start.strftime("%Y%m%d"),
+                "toDate": end.strftime("%Y%m%d"),
+            }
+            r = requests.post(url, json=payload, headers=self._fmarket_headers(), timeout=15)
+            if r.status_code == 200:
+                data = r.json().get("data", [])
+                if isinstance(data, list):
+                    return sorted(data, key=lambda x: x["navDate"])
+        except Exception as e:
+            print(f"[market_data] fmarket nav history {fund_id} error: {e}")
+        return []
 
-            fund = Fund()
-            listing = fund.listing()
+    def _fetch_fmarket_fund_direct(self, symbol: str) -> Optional[dict]:
+        """Scrape NAV quỹ mở từ Fmarket API (public, không cần auth)."""
+        try:
+            listing = self._fetch_fmarket_listing()
             symbol_upper = symbol.upper()
-            mask = (listing["short_name"].str.upper() == symbol_upper) | (
-                listing["fund_code"].str.upper() == symbol_upper
+            row = next(
+                (
+                    r
+                    for r in listing
+                    if r.get("shortName", "").upper() == symbol_upper
+                    or r.get("code", "").upper() == symbol_upper
+                ),
+                None,
             )
-            match = listing[mask]
-            if match.empty:
+            if not row:
                 return None
-            row = match.iloc[0]
-            fund_id = row["fund_id_fmarket"]
+            fund_id = row["id"]
             try:
-                nav_history = fund.nav_report(str(fund_id)).sort_values("date")
-                if not nav_history.empty and len(nav_history) >= 1:
-                    latest = nav_history.iloc[-1]
-                    price = float(latest["nav_per_unit"])
-                    date = latest["date"]
-                    if len(nav_history) >= 2:
-                        prev = nav_history.iloc[-2]
-                        prev_price = float(prev["nav_per_unit"])
-                        change = price - prev_price
-                        change_percent = (change / prev_price * 100) if prev_price else 0.0
-                    else:
-                        change = 0.0
-                        change_percent = 0.0
+                end = self._today()
+                start = end - datetime.timedelta(days=14)
+                nav_history = self._fetch_fmarket_nav_history(fund_id, start, end)
+                if nav_history:
+                    latest = nav_history[-1]
+                    prev = nav_history[-2] if len(nav_history) > 1 else latest
+                    price = float(latest["nav"])
+                    prev_price = float(prev["nav"])
+                    change = price - prev_price
+                    change_percent = (change / prev_price * 100) if prev_price else 0.0
+                    date = datetime.datetime.strptime(latest["navDate"], "%Y-%m-%d").date()
                     return {
                         "price": price,
                         "change": change,
                         "change_percent": change_percent,
-                        "date": self._parse_date(date),
+                        "date": date,
                     }
             except Exception as e:
-                print(f"[market_data] fmarket nav_report {symbol} error: {e}")
-            # fallback dùng nav từ listing
+                print(f"[market_data] fmarket nav {symbol} error: {e}")
+            # Fallback dùng nav từ listing
             nav = float(row["nav"])
-            date = row["nav_update_at"]
+            update_at = row.get("productNavChange", {}).get("updateAt")
+            date = self._parse_timestamp_date(update_at) if update_at else self._today()
             return {
                 "price": nav,
                 "change": 0.0,
                 "change_percent": 0.0,
-                "date": self._parse_date(date),
+                "date": date,
             }
         except Exception as e:
-            print(f"[market_data] fmarket {symbol} error: {e}")
+            print(f"[market_data] fmarket direct {symbol} error: {e}")
+            return None
+
+    def fetch_fund_detail(self, symbol: str) -> Optional[dict]:
+        """Trả về thông tin cơ bản của quỹ mở từ Fmarket."""
+        try:
+            listing = self._fetch_fmarket_listing()
+            symbol_upper = symbol.upper()
+            row = next(
+                (
+                    r
+                    for r in listing
+                    if r.get("shortName", "").upper() == symbol_upper
+                    or r.get("code", "").upper() == symbol_upper
+                ),
+                None,
+            )
+            if not row:
+                return None
+            return {
+                "symbol": row.get("shortName") or row.get("code"),
+                "name": row.get("name"),
+                "fund_type": row.get("dataFundAssetType", {}).get("name"),
+                "owner": row.get("owner", {}).get("name"),
+                "management_fee": row.get("managementFee"),
+                "inception_date": self._parse_timestamp_date(row.get("firstIssueAt")) if row.get("firstIssueAt") else None,
+                "nav": float(row.get("nav", 0)),
+                "nav_update_at": self._parse_timestamp_date(row.get("productNavChange", {}).get("updateAt")) if row.get("productNavChange", {}).get("updateAt") else None,
+                "vsd_fee_id": row.get("vsdFeeId"),
+            }
+        except Exception as e:
+            print(f"[market_data] fund detail {symbol} error: {e}")
+            return None
+
+    def _fetch_fmarket_market_history(
+        self, symbol: str, start: datetime.date, end: datetime.date
+    ) -> Dict[datetime.date, float]:
+        try:
+            listing = self._fetch_fmarket_listing()
+            symbol_upper = symbol.upper()
+            row = next(
+                (
+                    r
+                    for r in listing
+                    if r.get("shortName", "").upper() == symbol_upper
+                    or r.get("code", "").upper() == symbol_upper
+                ),
+                None,
+            )
+            if not row:
+                return {}
+            history = self._fetch_fmarket_nav_history(row["id"], start, end)
+            return {
+                datetime.datetime.strptime(h["navDate"], "%Y-%m-%d").date(): float(h["nav"])
+                for h in history
+            }
+        except Exception as e:
+            print(f"[market_data] fmarket market history {symbol} error: {e}")
+            return {}
+
+    def fetch_market_history(
+        self,
+        symbol: str,
+        type: str,
+        start: datetime.date,
+        end: datetime.date,
+    ) -> Dict[datetime.date, float]:
+        """Trả về lịch sử giá/NAV cho mã thị trường."""
+        if type == "FUND":
+            history = self._fetch_fmarket_market_history(symbol, start, end)
+            if history:
+                return history
+            return {}
+        return self.fetch_history(symbol, start, end)
+
+    def _fetch_cafef_current_stock(self, symbol: str) -> Optional[dict]:
+        """Scrape giá đóng cửa gần nhất từ CafeF (nghìn đồng)."""
+        try:
+            end = self._today()
+            start = end - datetime.timedelta(days=14)
+            history = self._fetch_cafef_history(symbol, start, end)
+            if not history:
+                return None
+            dates = sorted(history.keys())
+            latest_date = dates[-1]
+            latest = history[latest_date]
+            prev = history[dates[-2]] if len(dates) > 1 else latest
+            change = latest - prev
+            change_percent = (change / prev * 100) if prev else 0.0
+            return {
+                "price": latest,
+                "change": change,
+                "change_percent": change_percent,
+                "date": latest_date,
+            }
+        except Exception as e:
+            print(f"[market_data] cafef current {symbol} error: {e}")
             return None
 
     def fetch_stock_price(self, symbol: str) -> Optional[dict]:
@@ -267,7 +391,7 @@ class MarketDataService:
 
     def fetch_quote(self, symbol: str) -> dict:
         # Ưu tiên Fmarket cho quỹ mở, KBS cho cổ phiếu/ETF
-        price = self._fetch_fmarket_fund(symbol) or self.fetch_stock_price(symbol)
+        price = self._fetch_fmarket_fund_direct(symbol) or self.fetch_stock_price(symbol)
         if price:
             return {
                 "symbol": symbol.upper(),
@@ -405,47 +529,73 @@ class MarketDataService:
     # Danh sách mã niêm yết
     # ------------------------------------------------------------------
 
-    def fetch_all_symbols(self) -> List[dict]:
-        """Lấy danh sách tất cả mã cổ phiếu và chứng chỉ quỹ đang niêm yết từ CafeF."""
+    def fetch_all_stocks(self) -> List[dict]:
+        """Lấy danh sách cổ phiếu/ETF niêm yết trên sàn từ CafeF."""
+        results = []
         try:
             url = "https://cafefnew.mediacdn.vn/Search/company.json"
             r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
-            if r.status_code != 200:
-                return []
-            items = r.json()
-            results = []
-            for item in items:
-                redirect = item.get("RedirectUrl", "")
-                exchange = None
-                if "/hose/" in redirect:
-                    exchange = "HOSE"
-                elif "/hastc/" in redirect or "/hnx/" in redirect:
-                    exchange = "HNX"
-                elif "/upcom/" in redirect:
-                    exchange = "UPCOM"
-                if not exchange:
+            if r.status_code == 200:
+                items = r.json()
+                for item in items:
+                    redirect = item.get("RedirectUrl", "")
+                    exchange = None
+                    if "/hose/" in redirect:
+                        exchange = "HOSE"
+                    elif "/hastc/" in redirect or "/hnx/" in redirect:
+                        exchange = "HNX"
+                    elif "/upcom/" in redirect:
+                        exchange = "UPCOM"
+                    if not exchange:
+                        continue
+                    symbol = item.get("Symbol", "")
+                    title = item.get("Title", "")
+                    if not symbol:
+                        continue
+                    # Bỏ qua các mã được phân loại là quỹ/ETF (sẽ lấy từ Fmarket endpoint)
+                    title_lower = title.lower()
+                    is_fund = any(
+                        kw in title_lower for kw in ["etf", "quỹ", "fund", "ccq", "chứng chỉ quỹ"]
+                    )
+                    if is_fund:
+                        continue
+                    results.append(
+                        {
+                            "symbol": symbol,
+                            "name": title,
+                            "exchange": exchange,
+                            "type": "STOCK",
+                        }
+                    )
+        except Exception as e:
+            print(f"[market_data] fetch_all_stocks error: {e}")
+        return results
+
+    def fetch_all_funds(self) -> List[dict]:
+        """Lấy danh sách quỹ mở từ Fmarket."""
+        results = []
+        try:
+            fmarket_listing = self._fetch_fmarket_listing()
+            for row in fmarket_listing:
+                symbol = row.get("shortName") or row.get("code")
+                name = row.get("name")
+                if not symbol or not name:
                     continue
-                symbol = item.get("Symbol", "")
-                title = item.get("Title", "")
-                if not symbol:
-                    continue
-                # Phân loại chứng chỉ quỹ / ETF qua tên
-                title_lower = title.lower()
-                is_fund = any(
-                    kw in title_lower for kw in ["etf", "quỹ", "fund", "ccq", "chứng chỉ quỹ"]
-                )
                 results.append(
                     {
                         "symbol": symbol,
-                        "name": title,
-                        "exchange": exchange,
-                        "type": "FUND" if is_fund else "STOCK",
+                        "name": name,
+                        "exchange": "FMARKET",
+                        "type": "FUND",
                     }
                 )
-            return results
         except Exception as e:
-            print(f"[market_data] fetch_all_symbols error: {e}")
-            return []
+            print(f"[market_data] fetch_all_funds error: {e}")
+        return results
+
+    def fetch_all_symbols(self) -> List[dict]:
+        """Lấy danh sách tất cả mã cổ phiếu và quỹ mở."""
+        return self.fetch_all_stocks() + self.fetch_all_funds()
 
     # ------------------------------------------------------------------
     # Crypto
@@ -489,5 +639,5 @@ class MarketDataService:
         if asset.type == "GOLD":
             return self.fetch_gold_price()
         if asset.type == "FUND":
-            return self._fetch_fmarket_fund(asset.symbol) or self._fetch_vnstock_stock(asset.symbol) or self.fetch_stock_price(asset.symbol)
-        return self._fetch_vnstock_stock(asset.symbol) or self.fetch_stock_price(asset.symbol)
+            return self._fetch_fmarket_fund_direct(asset.symbol) or self.fetch_stock_price(asset.symbol) or self._fetch_cafef_current_stock(asset.symbol)
+        return self.fetch_stock_price(asset.symbol) or self._fetch_cafef_current_stock(asset.symbol)

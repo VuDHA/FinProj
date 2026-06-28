@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import Asset, PriceSnapshot
-from schemas import MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
+from schemas import FundDetail, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
 from services.market_data import MarketDataService
 
 router = APIRouter(prefix="/prices", tags=["prices"])
@@ -82,6 +82,41 @@ def get_quotes(symbols: str = ",".join(DEFAULT_WATCHLIST)):
 def get_all_symbols():
     service = MarketDataService()
     return service.fetch_all_symbols()
+
+
+@router.get("/stocks", response_model=List[MarketSymbol])
+def get_all_stocks():
+    service = MarketDataService()
+    return service.fetch_all_stocks()
+
+
+@router.get("/funds", response_model=List[MarketSymbol])
+def get_all_funds():
+    service = MarketDataService()
+    return service.fetch_all_funds()
+
+
+@router.get("/fund-detail/{symbol}", response_model=FundDetail)
+def get_fund_detail(symbol: str):
+    service = MarketDataService()
+    data = service.fetch_fund_detail(symbol)
+    if not data:
+        raise HTTPException(status_code=404, detail="Fund not found")
+    return data
+
+
+@router.get("/market-history/{symbol}", response_model=List[PriceHistoryPoint])
+def get_market_history(
+    symbol: str,
+    type: str,
+    start: datetime.date,
+    end: datetime.date,
+):
+    service = MarketDataService()
+    history = service.fetch_market_history(symbol, type, start, end)
+    if not history:
+        raise HTTPException(status_code=502, detail="Failed to fetch market history")
+    return [{"date": d, "price": p} for d, p in sorted(history.items())]
 
 
 @router.get("/{asset_id}", response_model=List[PriceSnapshotRead])

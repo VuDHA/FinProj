@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import SymbolDetailModal from "../components/SymbolDetailModal";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { MiniSparkline } from "../components/ui/MiniSparkline";
@@ -35,6 +36,12 @@ export function Market() {
   const [activeTab, setActiveTab] = useState<"STOCK" | "FUND">("STOCK");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedSymbol, setSelectedSymbol] = useState<{
+    symbol: string;
+    name: string;
+    type: string;
+    exchange: string;
+  } | null>(null);
   const PAGE_SIZE = 20;
 
   const assets = useQuery({
@@ -82,9 +89,10 @@ export function Market() {
   });
 
   const allSymbols = useQuery({
-    queryKey: ["market-symbols"],
+    queryKey: ["market-symbols", activeTab],
     queryFn: async () => {
-      const { data } = await API.get("/prices/symbols");
+      const endpoint = activeTab === "STOCK" ? "/prices/stocks" : "/prices/funds";
+      const { data } = await API.get(endpoint);
       return data as Array<{ symbol: string; name: string; exchange: string; type: string }>;
     },
   });
@@ -433,7 +441,11 @@ export function Market() {
                   {pageSymbols.map((item) => {
                     const q = quoteMap[item.symbol];
                     return (
-                      <tr key={item.symbol}>
+                      <tr
+                        key={item.symbol}
+                        onClick={() => setSelectedSymbol(item)}
+                        className="cursor-pointer hover:bg-slate-50 transition-colors"
+                      >
                         <td className="font-display font-semibold text-slate-900">{item.symbol}</td>
                         <td className="text-sm text-slate-500 max-w-xs truncate">{item.name}</td>
                         <td className="text-xs text-slate-500">{item.exchange}</td>
@@ -546,6 +558,16 @@ export function Market() {
             </div>
           </div>
         </FintechCard>
+      )}
+
+      {selectedSymbol && (
+        <SymbolDetailModal
+          symbol={selectedSymbol.symbol}
+          name={selectedSymbol.name}
+          type={selectedSymbol.type}
+          exchange={selectedSymbol.exchange}
+          onClose={() => setSelectedSymbol(null)}
+        />
       )}
     </div>
   );
