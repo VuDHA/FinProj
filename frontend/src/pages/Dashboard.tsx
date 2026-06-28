@@ -5,6 +5,7 @@ import {
   AreaChart,
   CartesianGrid,
   Cell,
+  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -24,22 +25,16 @@ import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
 
 const COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#FB7185", "#8B5CF6", "#3B82F6"];
 
-function generateTrend(total: number) {
-  const data: Array<{ date: string; value: number }> = [];
-  const days = 30;
-  const end = new Date();
-  let value = total * 0.92;
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(end);
-    date.setDate(date.getDate() - i);
-    value = value * (1 + (Math.random() - 0.45) * 0.015);
-    data.push({
-      date: date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }),
-      value: Math.max(value, total * 0.5),
-    });
+function holdingSparkline(item: any) {
+  const points = 18;
+  const arr: number[] = [];
+  let v = item.current_value * 0.88;
+  for (let i = 0; i < points; i++) {
+    v = v * (1 + (Math.random() - 0.48) * 0.04);
+    arr.push(v);
   }
-  data[data.length - 1].value = total;
-  return data;
+  arr[arr.length - 1] = item.current_value;
+  return arr;
 }
 
 export function Dashboard() {
@@ -50,10 +45,33 @@ export function Dashboard() {
     queryFn: async () => (await API.get("/portfolio/")).data,
   });
 
+  const history = useQuery({
+    queryKey: ["portfolio-history"],
+    queryFn: async () => {
+      const end = new Date().toISOString().split("T")[0];
+      const start = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const { data } = await API.get("/portfolio/history", { params: { start, end } });
+      return data as Array<{ date: string; value: number; cost: number }>;
+    },
+  });
+
+  const benchmark = useQuery({
+    queryKey: ["portfolio-benchmark"],
+    queryFn: async () => {
+      const end = new Date().toISOString().split("T")[0];
+      const start = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const { data } = await API.get("/prices/benchmark/VNINDEX", { params: { start, end } });
+      return data as Array<{ date: string; portfolio_value: number; benchmark_value: number }>;
+    },
+    enabled: history.data && history.data.length > 1,
+  });
+
   const refresh = useMutation({
     mutationFn: () => API.post("/prices/refresh-all"),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["portfolio"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-history"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-benchmark"] });
       qc.invalidateQueries({ queryKey: ["prices"] });
     },
   });
@@ -76,23 +94,28 @@ export function Dashboard() {
     value,
   }));
 
-  const trendData = generateTrend(data.total_value || 1_000_000_000);
-
-  const holdingSparkline = (item: any) => {
-    const points = 18;
-    const arr: number[] = [];
-    let v = item.current_value * 0.88;
-    for (let i = 0; i < points; i++) {
-      v = v * (1 + (Math.random() - 0.48) * 0.04);
-      arr.push(v);
-    }
-    arr[arr.length - 1] = item.current_value;
-    return arr;
-  };
+  const trendMap = new Map<string, { label: string; portfolio?: number; benchmark?: number }>();
+  for (const point of history.data || []) {
+    const date = new Date(point.date);
+    const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+    const iso = point.date;
+    trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, portfolio: point.value });
+  }
+  for (const point of benchmark.data || []) {
+    const date = new Date(point.date);
+    const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+    const iso = point.date;
+    trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, benchmark: point.benchmark_value });
+  }
+  const trendData = Array.from(trendMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([_, { label, portfolio, benchmark }]) => ({ date: label, portfolio, benchmark }));
 
   return (
     <div className="space-y-6">
       {portfolio.isError && <ErrorMessage error={portfolio.error} retry={() => portfolio.refetch()} />}
+      {history.isError && <ErrorMessage error={history.error} retry={() => history.refetch()} />}
+      {benchmark.isError && <ErrorMessage error={benchmark.error} retry={() => benchmark.refetch()} />}
       {refresh.isError && <ErrorMessage error={refresh.error} retry={() => refresh.mutate()} />}
 
       <SectionHeader title={labels.dashboard.title}>
@@ -212,42 +235,69 @@ export function Dashboard() {
       <FintechCard delay={0.4}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="card-title">{labels.dashboard.portfolioTrend}</h3>
-          <TrendBadge value={data.total_pnl_percent} />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              {labels.dashboard.portfolioTrend}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              {labels.dashboard.benchmark}
+            </div>
+            <TrendBadge value={data.total_pnl_percent} />
+          </div>
         </div>
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData}>
-              <defs>
-                <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-              <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis
-                tickFormatter={(v) => formatCurrency(v)}
-                tick={{ fill: "#64748b", fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={80}
-              />
-              <Tooltip
-                contentStyle={chartTooltipStyle}
-                formatter={(v: number) => [formatCurrency(v), "Giá trị"]}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#3B82F6"
-                strokeWidth={2.5}
-                fill="url(#trendGradient)"
-                dot={false}
-                activeDot={{ r: 5, fill: "#22D3EE", stroke: "#ffffff", strokeWidth: 2 }}
-                animationDuration={1500}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {trendData.length > 1 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData}>
+                <defs>
+                  <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
+                <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tickFormatter={(v) => formatCurrency(v)}
+                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={80}
+                />
+                <Tooltip
+                  contentStyle={chartTooltipStyle}
+                  formatter={(v: number, name: string) => [
+                    formatCurrency(v),
+                    name === "portfolio" ? labels.dashboard.portfolioTrend : labels.dashboard.benchmark,
+                  ]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="portfolio"
+                  stroke="#3B82F6"
+                  strokeWidth={2.5}
+                  fill="url(#trendGradient)"
+                  dot={false}
+                  activeDot={{ r: 5, fill: "#22D3EE", stroke: "#ffffff", strokeWidth: 2 }}
+                  animationDuration={1500}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="benchmark"
+                  stroke="#FBBF24"
+                  strokeWidth={2}
+                  dot={false}
+                  animationDuration={1500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-500">
+              {labels.dashboard.addAssetsHint}
+            </div>
+          )}
         </div>
       </FintechCard>
     </div>

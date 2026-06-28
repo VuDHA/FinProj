@@ -6,6 +6,7 @@ import {
   FlaskConical,
   LineChart,
   Receipt,
+  Scale,
   Settings,
   TrendingUp,
   Wallet,
@@ -18,6 +19,7 @@ const nav = [
   { path: "/transactions", label: labels.nav.transactions, icon: Receipt },
   { path: "/analytics", label: labels.nav.analytics, icon: TrendingUp },
   { path: "/backtest", label: labels.nav.backtest, icon: FlaskConical },
+  { path: "/rebalance", label: labels.nav.rebalance, icon: Scale },
   { path: "/market", label: labels.nav.market, icon: LineChart },
   { path: "/settings", label: labels.nav.settings, icon: Settings },
 ];

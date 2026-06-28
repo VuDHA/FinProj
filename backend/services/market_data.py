@@ -506,6 +506,57 @@ class MarketDataService:
         return {}
 
     # ------------------------------------------------------------------
+    # Benchmark indexes (VN-Index, etc.)
+    # ------------------------------------------------------------------
+
+    _BENCHMARK_CACHE: Dict[str, Dict[datetime.date, float]] = {}
+    _BENCHMARK_CACHE_TIME: Optional[datetime.datetime] = None
+
+    def fetch_benchmark_history(
+        self,
+        symbol: str,
+        start: datetime.date,
+        end: datetime.date,
+    ) -> Dict[datetime.date, float]:
+        """Trả về lịch sử chỉ số tham chiếu (VD: VNINDEX) từ VNDirect dchart API."""
+        cache_key = f"{symbol.upper()}:{start}:{end}"
+        if (
+            cache_key in self._BENCHMARK_CACHE
+            and self._BENCHMARK_CACHE_TIME
+            and (datetime.datetime.now() - self._BENCHMARK_CACHE_TIME).total_seconds() < 86400
+        ):
+            return self._BENCHMARK_CACHE[cache_key]
+
+        try:
+            start_ts = int(datetime.datetime.combine(start, datetime.time.min).timestamp())
+            end_ts = int(datetime.datetime.combine(end, datetime.time.max).timestamp())
+            url = "https://dchart-api.vndirect.com.vn/dchart/history"
+            params = {
+                "resolution": "D",
+                "symbol": symbol.upper(),
+                "from": start_ts,
+                "to": end_ts,
+            }
+            r = requests.get(url, params=params, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+            if r.status_code == 200:
+                payload = r.json()
+                timestamps = payload.get("t", [])
+                closes = payload.get("c", [])
+                if timestamps and closes and len(timestamps) == len(closes):
+                    result = {}
+                    for ts, close in zip(timestamps, closes):
+                        d = datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc).date()
+                        result[d] = self._parse_float(close)
+                    if result:
+                        self._BENCHMARK_CACHE[cache_key] = result
+                        self._BENCHMARK_CACHE_TIME = datetime.datetime.now()
+                        return result
+        except Exception as e:
+            print(f"[market_data] dchart benchmark {symbol} error: {e}")
+
+        return {}
+
+    # ------------------------------------------------------------------
     # Vàng
     # ------------------------------------------------------------------
 

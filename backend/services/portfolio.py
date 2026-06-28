@@ -52,8 +52,11 @@ class PortfolioService:
                     quantity += t.quantity
                     cost += t.quantity * t.price + t.fee
                 elif t.type == "SELL":
+                    if quantity > 0:
+                        avg_cost = cost / quantity
+                        cost -= t.quantity * avg_cost
+                        cost += t.fee
                     quantity -= t.quantity
-                    cost -= t.quantity * t.price
 
             if quantity <= 0:
                 continue

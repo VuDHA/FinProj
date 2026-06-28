@@ -4,6 +4,30 @@ from database import engine
 from models import Asset, PriceSnapshot
 from services.market_data import MarketDataService
 
+
+def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> PriceSnapshot | None:
+    if not data or not data.get("price") or not data.get("date"):
+        return None
+
+    existing = session.exec(
+        select(PriceSnapshot).where(
+            PriceSnapshot.asset_id == asset.id,
+            PriceSnapshot.date == data["date"],
+        )
+    ).first()
+    if existing:
+        return existing
+
+    snapshot = PriceSnapshot(
+        asset_id=asset.id,
+        date=data["date"],
+        price=data["price"],
+        change=data.get("change"),
+        change_percent=data.get("change_percent"),
+    )
+    session.add(snapshot)
+    return snapshot
+
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
     APSCHEDULER_AVAILABLE = True
@@ -18,9 +42,7 @@ def update_all_prices():
         assets = session.exec(select(Asset).where(Asset.is_active == True)).all()
         for asset in assets:
             data = service.fetch_price(asset)
-            if data:
-                snapshot = PriceSnapshot(asset_id=asset.id, **data)
-                session.add(snapshot)
+            if _get_or_create_snapshot(session, asset, data):
                 print(f"[scheduler] updated {asset.symbol}: {data['price']}")
         session.commit()
 

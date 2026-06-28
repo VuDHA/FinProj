@@ -31,10 +31,14 @@ def create_transaction(
 
     if transaction.type == "SELL":
         existing = session.exec(
-            select(Transaction).where(Transaction.asset_id == asset.id)
+            select(Transaction)
+            .where(Transaction.asset_id == asset.id)
+            .order_by(Transaction.date.asc())
         ).all()
         holding = sum(
-            t.quantity if t.type == "BUY" else -t.quantity for t in existing
+            t.quantity if t.type == "BUY" else -t.quantity
+            for t in existing
+            if t.date <= transaction.date
         )
         if transaction.quantity > holding:
             raise HTTPException(

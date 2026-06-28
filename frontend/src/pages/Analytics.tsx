@@ -28,13 +28,21 @@ export function Analytics() {
     queryFn: async () => (await API.get("/analytics/")).data,
   });
 
+  const risk = useQuery({
+    queryKey: ["analytics-risk"],
+    queryFn: async () => (await API.get("/analytics/risk")).data,
+  });
+
   const data = analytics.data;
 
   const totalPnl = data?.type_returns?.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0) || 0;
+  const totalCost = data?.type_returns?.reduce((sum: number, t: any) => sum + (t.cost || 0), 0) || 0;
+  const totalPnlPercent = totalCost ? (totalPnl / totalCost) * 100 : 0;
 
   return (
     <div className="space-y-6">
       {analytics.isError && <ErrorMessage error={analytics.error} retry={() => analytics.refetch()} />}
+      {risk.isError && <ErrorMessage error={risk.error} retry={() => risk.refetch()} />}
       <SectionHeader title={labels.analytics.title} />
 
       {!data && <div className="text-slate-500">{labels.common.loading}</div>}
@@ -48,7 +56,7 @@ export function Analytics() {
                 <AnimatedNumber value={totalPnl} formatter={formatCurrency} />
               </div>
               <div className="mt-2">
-                <TrendBadge value={(totalPnl / (Math.abs(totalPnl) + 1)) * 100} />
+                <TrendBadge value={totalPnlPercent} />
               </div>
             </FintechCard>
             <FintechCard delay={0.15}>
@@ -75,6 +83,16 @@ export function Analytics() {
                 ) : (
                   <span className="text-xs text-slate-500">-</span>
                 )}
+              </div>
+            </FintechCard>
+
+            <FintechCard delay={0.22}>
+              <div className="card-title mb-1">{labels.analytics.totalIncome}</div>
+              <div className="metric-value text-accent-emerald">
+                <AnimatedNumber value={data.total_income || 0} formatter={formatCurrency} />
+              </div>
+              <div className="mt-2 text-xs text-slate-500">
+                {(data.income || []).map((inc: any) => `${inc.type}: ${formatCurrency(inc.total)}`).join(" | ")}
               </div>
             </FintechCard>
           </div>
@@ -218,6 +236,33 @@ export function Analytics() {
               ) : (
                 <div className="text-slate-500">{labels.analytics.empty}</div>
               )}
+            </FintechCard>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <FintechCard delay={0.42}>
+              <div className="card-title mb-1">{labels.analytics.volatility}</div>
+              <div className="metric-value text-accent-blue">
+                {risk.data?.volatility != null ? `${(risk.data.volatility * 100).toFixed(2)}%` : "—"}
+              </div>
+            </FintechCard>
+            <FintechCard delay={0.44}>
+              <div className="card-title mb-1">{labels.analytics.sharpeRatio}</div>
+              <div className="metric-value text-accent-violet">
+                {risk.data?.sharpe_ratio != null ? risk.data.sharpe_ratio.toFixed(2) : "—"}
+              </div>
+            </FintechCard>
+            <FintechCard delay={0.46}>
+              <div className="card-title mb-1">{labels.analytics.maxDrawdown}</div>
+              <div className="metric-value text-accent-rose">
+                {risk.data?.max_drawdown_percent != null ? `${risk.data.max_drawdown_percent.toFixed(2)}%` : "—"}
+              </div>
+            </FintechCard>
+            <FintechCard delay={0.48}>
+              <div className="card-title mb-1">{labels.analytics.beta}</div>
+              <div className="metric-value text-accent-cyan">
+                {risk.data?.beta != null ? risk.data.beta.toFixed(2) : "—"}
+              </div>
             </FintechCard>
           </div>
 
