@@ -1,0 +1,283 @@
+frontend/src/components/SummaryCards.tsx
+  s_be54190965da3b::t_fd9fac5dae2c68 42,53,63
+  s_be54190965da3b::t_37cfdd883aac61 9
+  s_be54190965da3b::t_2a3b2650c805ac 89-92
+frontend/src/components/EmptyState.tsx
+  s_0d328a89385f06::t_0f7fa31ba5297d 1-21
+backend/services/source_selector.py
+  s_0d328a89385f06::t_ee757337d9db70 7
+  s_240594de584ec9::t_f760be4019fc40 104,107-114
+  s_240594de584ec9::t_923df1e356980f 82-100
+  s_0d328a89385f06::t_f644798321f3a4 38-46,50
+  s_0d328a89385f06::t_dc7c2579589c6b 1-6,8-28,31-35,37,47-49,51-81,101-103,105-106,115-117
+  s_0d328a89385f06::t_039ec0e6a3d8e7 29-30,36
+backend/services/sources/gold.py
+  s_0d328a89385f06::t_2497b72baf0361 1-51
+backend/jobs/price_updater.py
+  s_0d328a89385f06::t_436643ebfa00b5 41,44
+backend/services/sources/__init__.py
+  s_0d328a89385f06::t_f2ed025278d5e6 1,3-5,9-16,20-30,34
+  s_0e84d038ba0991::t_c27f479fa647d8 6-8,17-19,31-33
+  s_d2b0d454b38969::t_237ed361e16a87 2
+frontend/src/components/Layout.tsx
+  s_0d328a89385f06::t_24c11a3d6cb194 112-117,121,132,139-145
+  s_0d328a89385f06::t_b0883bed723d95 93
+  s_be54190965da3b::t_b7db56b787b193 18-19
+  s_be54190965da3b::t_32cac67ea4a25c 118-120,122-131,146-147,149-157
+  s_0d328a89385f06::t_1bcf4b05d916a3 8,16,20
+  s_0d328a89385f06::t_aca1dfc09654b4 23-25,30,33-40
+  s_0d328a89385f06::t_8757b4e7c1db6c 44-50,52-60
+  s_be54190965da3b::t_a1e96f7fe8d44e 51
+  s_be54190965da3b::t_12edd471e80054 5
+  s_0d328a89385f06::t_2086a43e7c67ad 41
+backend/services/sources/tcbs.py
+  s_0e84d038ba0991::t_fa5c8d35c32fe4 1-96,99,108,111-125,129-149
+  s_240594de584ec9::t_2d0b1865e4799f 97-98,100-107,109-110,126-128
+frontend/src/i18n/vi.ts
+  s_b7fb8b481702b9::t_35a5e486ec754d 194-214
+  s_be54190965da3b::t_12be5403ed9d2b 278-306,308-311
+  s_0d328a89385f06::t_9323b49241fa21 215-235,270-277,312
+  s_d2b0d454b38969::t_8d3f4d7b9342cc 307
+  s_8211dde0a190ce::t_9d4178994dce8c 358,362
+  s_be54190965da3b::t_20e91e6ef5e3da 236-269
+  s_0d328a89385f06::t_82c4c6301a6b7f 87
+backend/services/sources/vcbf.py
+  s_240594de584ec9::t_7e68f69303e3c2 114-119,127,129-141,143-151
+  s_0e84d038ba0991::t_cac61e00f1c183 217
+  s_0e84d038ba0991::t_ff8c28eaa3233a 128,142,163,171,192-193
+  s_240594de584ec9::t_5edf77516b9926 64-66,71-83,108
+  s_0e84d038ba0991::t_3fa6a8c7fe3c64 1-63,67-70,84-93,95-107,109-112,120-122,124-126,152-153,155-161,164,167-168,172-190,194-215,218-220,222-228,230-231
+  s_240594de584ec9::t_2e83ed4f1f0cb9 94
+  s_240594de584ec9::t_e8f01fc7e5fbe8 113,123,154,162,165-166,169-170,191,216,221,229
+frontend/src/components/SourceSelect.tsx
+  s_0d328a89385f06::t_e27e639a0a3cac 1-42
+backend/services/sources/crypto.py
+  s_0d328a89385f06::t_e23c4f530821a3 1-43
+frontend/src/pages/Market.tsx
+  s_0d328a89385f06::t_8a5eec10ff3a7b 15
+  s_0d328a89385f06::t_ce380259e89821 456-466
+  s_be54190965da3b::t_66de45ad33dae0 168-171,183-206,240,254,266,289-292,301-304,311-314,318-321,330,332,419-422,476-499,563-566,582-593,614-629
+  s_240594de584ec9::t_46f6cf5c50e45d 114,117
+frontend/src/components/SymbolDetailModal.tsx
+  s_b7fb8b481702b9::t_e916ebf4489388 3-7,11,14
+  s_b7fb8b481702b9::t_6d79809eb525d5 232-278,280,285,287,289,293,295,298,302,304,307,311-344,402-407,410-424,426-430,443-444,446,449,451,455,459
+  s_b7fb8b481702b9::t_7f8b3d23940c9a 41-123
+  s_b7fb8b481702b9::t_0b2cb5e8447763 135-138
+  s_b7fb8b481702b9::t_e5e75f696a067e 149-155,158,168,179,188,199-207
+  s_82b054541998c3::t_4d5c5cc0007860 148
+backend/check_vn_sources_output.txt
+  s_992455d9e739eb::t_01b8bded2a6d82 1,3,15,17,34-35
+  s_992455d9e739eb::t_94e3f03e084dec 2,4-14,16,18-30,36-120
+  s_992455d9e739eb::t_30b1a527adeaa6 31-33,121-169
+frontend/src/components/OnboardingTour.tsx
+  s_0d328a89385f06::t_31b0fc8b24c2fa 1-86,88-105,108-136
+  s_0d328a89385f06::t_4e9a9f3d7bb83d 87,106-107
+frontend/src/pages/Backtest.tsx
+  s_be54190965da3b::t_d262449b5de3ba 99,113,125,137,149,163,197-200,206-209,215-218,238-241,301-304
+  s_be54190965da3b::t_294cc5294ac31b 16
+backend/api/settings.py
+  s_0d328a89385f06::t_7de758afc3d481 8-10
+  s_0d328a89385f06::t_e331d444bbab2e 20-55
+frontend/src/pages/Transactions.tsx
+  s_be54190965da3b::t_d7286af7f648fb 245-268
+  s_0d328a89385f06::t_cc242b63a5f053 4,7
+  s_be54190965da3b::t_bbf768aecd6fce 8
+  s_be54190965da3b::t_49d2dbc3bafd71 306-316,325-326,328-333,387-398,400-403,405-408,426,428-481
+  s_be54190965da3b::t_18497526017056 124,128,132,136,145-221,482
+  s_be54190965da3b::t_914ae3124a8c26 334-386,410-425
+backend/services/source_config.py
+  s_0d328a89385f06::t_1e58dccc0c1849 1-89
+backend/database.py
+  s_0d328a89385f06::t_943d92f3be3d55 3,26-44,47-49
+frontend/src/pages/Assets.tsx
+  s_0d328a89385f06::t_ac085f79319bc2 60-61,84,86-95,108-116,118-119
+  s_be54190965da3b::t_67e42430d17c92 62-83,85,96-107,117
+  s_0d328a89385f06::t_5a512a521b263f 42
+  s_0d328a89385f06::t_10fa6e43874e04 8-9
+  s_0d328a89385f06::t_e8b8579c7e95b6 30
+  s_0d328a89385f06::t_28fd979ca89882 136,153,155,170-182,196
+  s_be54190965da3b::t_b675d1c3d84b50 137-152,154
+backend/services/sources/base.py
+  s_0d328a89385f06::t_9d0ed371b8c9a2 1-62
+backend/services/sources/stocks.py
+  s_0d328a89385f06::t_0475d4704bfb94 1-7,9-186
+  s_d2b0d454b38969::t_08dfcdc144f632 8
+frontend/src/pages/Analytics.tsx
+  s_be54190965da3b::t_d9ebb93685e137 19
+  s_0d328a89385f06::t_02416b508d039d 2-3
+  s_0d328a89385f06::t_130bb5c6657afa 18
+  s_0d328a89385f06::t_26af3b4de01ec6 54-67
+  s_be54190965da3b::t_a21517ec01eba0 71-74,83-86,99-102,116-119,131-134,178-181,227-230,253-256,285-288,294-297,303-306,312-315,323-326
+backend/services/benchmark.py
+  s_0d328a89385f06::t_34a92031bf9e86 30
+.tmp/scraping_sources_diff.patch
+  s_240594de584ec9::t_14e2de67ca47ab 1-744
+backend/services/sources/utils.py
+  s_0d328a89385f06::t_82e8d9acab3bb7 1-45
+frontend/src/pages/Dashboard.tsx
+  s_be54190965da3b::t_577b2f14fd6959 258-261
+  s_be54190965da3b::t_6032255f1a3ea6 207-210
+  s_0d328a89385f06::t_7043efd8223703 2-3
+  s_0d328a89385f06::t_ae38391655c02b 125-135
+  s_0d328a89385f06::t_2acd5058e05d43 193-202
+  s_0d328a89385f06::t_5ea52eeb8f2dab 321-331
+  s_be54190965da3b::t_94f0f79b65ce78 143-146
+  s_0d328a89385f06::t_15dff2d820e142 19-20
+backend/api/prices.py
+  s_240594de584ec9::t_b192a3c039fbee 2
+  s_0d328a89385f06::t_d7116401ce1c24 77-80
+  s_0d328a89385f06::t_1118ebd115d7ed 52,56,58-59,65,74-75,88,102-103,110-111,113-115,142-143,148-149,154-155,160-161,174,176,208,210
+  s_d2b0d454b38969::t_1ab103fd624ec6 122
+  s_240594de584ec9::t_6f6c73443e8611 112,117-121,123-138
+frontend/src/components/InfoTooltip.tsx
+  s_be54190965da3b::t_7b54b2d2a4310f 1-2,15-19,22-37,39-85,88-94,96-106,110,119-138
+  s_be54190965da3b::t_5f1bff61459550 20-21
+  s_be54190965da3b::t_f21da85a3dee5a 95
+  s_0d328a89385f06::t_9ff4f0861f25d3 3-5,8-9,11,13,38,87,107-109,111-114,117-118,139-142
+  s_be54190965da3b::t_347555ead0953a 6-7,10,12,14,86,115-116
+backend/api/assets.py
+  s_0d328a89385f06::t_c3310db15e222c 40-43
+  s_0d328a89385f06::t_568900e0df7878 9
+  s_0d328a89385f06::t_dc780bbbd837cf 29-34
+frontend/src/components/HelpModal.tsx
+  s_be54190965da3b::t_93319c87ae1c97 1-83
+frontend/src/pages/Rebalance.tsx
+  s_be54190965da3b::t_05330374e52bf7 70,73,87-102,158-161
+  s_be54190965da3b::t_98d885cb7776ed 6
+  s_be54190965da3b::t_beafa18060a59c 167-186
+backend/schemas.py
+  s_0d328a89385f06::t_a8063c0a7d0f12 7-18,25-26
+  s_240594de584ec9::t_0c8fdf9880089f 68
+backend/services/portfolio.py
+  s_240594de584ec9::t_d72de84df286d3 92
+  s_240594de584ec9::t_634d6810f8daa4 69-72
+  s_0d328a89385f06::t_1de0b28b0f1c33 13
+README.md
+  s_077e2b4134a058::t_d3752127204c13 1-121
+backend/services/market_data.py
+  s_240594de584ec9::t_b8d7bf5f6d4742 46,61
+  s_0d328a89385f06::t_d4da256c630a58 3,8-10,13-14,17-23,26-27,29-31,34,37-39,41-42,44-45,47,50-53,60,64,68-70,83,97,170-173,177,181-182,184-191,193-194,196-206,219,259
+  s_240594de584ec9::t_a7f6d051c4e05c 104-169
+  s_0e84d038ba0991::t_60173be4e94bd6 207-216
+  s_240594de584ec9::t_6f459b7a80f2f0 84,98
+backend/services/sources/dnse.py
+  s_0e84d038ba0991::t_b9e5120b9bdeaa 1-95
+backend/requirements.txt
+  s_0e84d038ba0991::t_b8c25518b8cccf 9-10
+backend/services/backtest.py
+  s_0d328a89385f06::t_04b5dd7b66a4ff 42
+  s_0d328a89385f06::t_0fda8a51665023 15
+  s_0d328a89385f06::t_1a773852f32168 17,19,21
+backend/services/sources/funds.py
+  s_240594de584ec9::t_c909a229c18f49 51-71,73-80,82
+  s_0d328a89385f06::t_f3f04f7e22fd0a 1-50,72,81,83-161,182-221
+  s_0d328a89385f06::t_945cb7fbd5c4c1 162-181
+backend/models.py
+  s_0d328a89385f06::t_db8b8598b76412 16-17
+frontend/src/pages/Settings.tsx
+  s_0d328a89385f06::t_458b7ade3b98da 149-150
+  s_be54190965da3b::t_8041115f94521a 156-159,200-203,224-239,266-281,375-378
+  s_0d328a89385f06::t_3c489c4fac33bd 54-63
+  s_0d328a89385f06::t_7232a7eb09a6e9 89,92-104
+  s_0d328a89385f06::t_d059fcece1624b 8-9
+  s_0d328a89385f06::t_c188fb948e17e7 304-336,338-341
+  s_0d328a89385f06::t_353a54627e2468 105
+frontend/package-lock.json
+  s_3a6fc3ed7ead74::t_fed3b6ea9b1500 28,335-338,342-344,347-350,354-355,358-361,365-366,419-437,476-485,495-498,507-510,512-515,524-527,529-532,542-544,546-549,559-561,563-566,576-578,580-583,595-598,600-603,605,616-618,620-623,636-638,640-643,655-658,660-663,675-678,680-683,696-698,700-703,712-715,717-720,722,727-734,736-739,741,748-751,753-756,766-773,775,803-813,1431-1440,1947-2219,2872-2875,2879-2880,2883,2886,2889-2911,3218-3220,3224-3228,3234,3243-3254,3260,3263-3269,3286-3291,3295-3307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "92024d35742092e327e93d30fd5c7790bc252f3a",
+  "prompts": {},
+  "sessions": {
+    "s_077e2b4134a058": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "70283e63-3e3d-449f-9ff6-23a550eede20",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_0d328a89385f06": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "e5940ace-e64f-425e-aa27-7acb3c6d377f",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_0e84d038ba0991": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "136b9fa4-c48e-4a85-a48a-84ec158be04a",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_240594de584ec9": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "8e2a9b3d-dfb0-49c5-9b36-82af4b505af4",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_3a6fc3ed7ead74": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "cba925e7-1213-4e85-9416-ca261db25842",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_8211dde0a190ce": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "c88c3927-a46e-4b1d-9e1d-c8fda3ccd712",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_82b054541998c3": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "d2dacd3b-c62d-41ff-9f2f-600848c52786",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_992455d9e739eb": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "39a85f68-ba23-4e45-9e19-d85978a7dd24",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_b7fb8b481702b9": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "7e92f6fd-aae3-480c-ac83-540f629977d5",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_be54190965da3b": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "b413da93-ed27-4ee5-b7a2-36e5776d606a",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_d2b0d454b38969": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "b9a38cb5-45a9-4a70-be5d-62f400595f7f",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
