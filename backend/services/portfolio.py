@@ -10,7 +10,7 @@ from services.market_data import MarketDataService
 class PortfolioService:
     def __init__(self, session: Session):
         self.session = session
-        self.market = MarketDataService()
+        self.market = MarketDataService(session)
 
     def _save_snapshot(self, asset: Asset, data: dict):
         """Persist a market price snapshot if it is valid and not already stored."""
@@ -66,12 +66,10 @@ class PortfolioService:
 
         # Fetch current market prices for held assets automatically.
         market_data: dict[str, dict] = {}
-        stock_symbols = [
-            a.symbol for a in held_assets if a.type in ("STOCK", "FUND", "ETF")
-        ]
-        if stock_symbols:
-            for quote in self.market.fetch_quotes(stock_symbols):
-                market_data[quote["symbol"].upper()] = quote
+        for quote in self.market.fetch_quotes_for_assets(
+            [a for a in held_assets if a.type in ("STOCK", "FUND", "ETF")]
+        ):
+            market_data[quote["symbol"].upper()] = quote
 
         for asset in held_assets:
             if asset.type in ("STOCK", "FUND", "ETF"):
@@ -91,7 +89,7 @@ class PortfolioService:
             avg_cost = cost / quantity if quantity > 0 else 0.0
 
             quote = market_data.get(asset.symbol.upper())
-            if quote and quote.get("price", 0) > 0:
+            if quote and (quote.get("price") or 0) > 0:
                 self._save_snapshot(asset, quote)
 
             latest = self.session.exec(

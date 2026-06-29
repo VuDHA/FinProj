@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from database import get_session
 from models import Asset
 from schemas import AssetCreate, AssetRead
+from services.source_config import is_valid_source_for_type
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -25,12 +26,21 @@ def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
             detail=f"Unsupported asset type: {asset.type}. Must be one of {', '.join(sorted(VALID_ASSET_TYPES))}",
         )
 
+    if asset.source and not is_valid_source_for_type(asset.source, asset.type):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Source {asset.source} is not supported for asset type {asset.type}",
+        )
+
     existing = session.exec(
         select(Asset).where(Asset.symbol == asset.symbol, Asset.is_active == True)
     ).first()
     if existing:
         raise HTTPException(status_code=409, detail="Asset symbol already exists")
-    db_asset = Asset(**asset.model_dump())
+    payload = asset.model_dump()
+    if payload.get("source") == "":
+        payload["source"] = None
+    db_asset = Asset(**payload)
     session.add(db_asset)
     session.commit()
     session.refresh(db_asset)

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -95,6 +96,7 @@ export function Backtest() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.backtest.strategy}
+              <InfoTooltip content={labels.tooltips.backtestStrategy} />
             </label>
             <select
               className="input-fintech"
@@ -108,6 +110,7 @@ export function Backtest() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.backtest.startDate}
+              <InfoTooltip content={labels.tooltips.backtestStartDate} />
             </label>
             <input
               type="date"
@@ -119,6 +122,7 @@ export function Backtest() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.backtest.endDate}
+              <InfoTooltip content={labels.tooltips.backtestEndDate} />
             </label>
             <input
               type="date"
@@ -130,6 +134,7 @@ export function Backtest() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.backtest.initialCash}
+              <InfoTooltip content={labels.tooltips.backtestInitialCash} />
             </label>
             <input
               type="number"
@@ -141,6 +146,7 @@ export function Backtest() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.backtest.frequency}
+              <InfoTooltip content={labels.tooltips.backtestFrequency} />
             </label>
             <select
               className="input-fintech"
@@ -154,6 +160,7 @@ export function Backtest() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.backtest.symbols}
+              <InfoTooltip content={labels.tooltips.backtestSymbols} />
             </label>
             <input
               type="text"
@@ -187,19 +194,28 @@ export function Backtest() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FintechCard delay={0.15}>
-                <div className="card-title mb-1">{labels.backtest.finalValue}</div>
+                <div className="card-title mb-1 inline-flex items-center">
+                  {labels.backtest.finalValue}
+                  <InfoTooltip content={labels.tooltips.totalValue} />
+                </div>
                 <div className="metric-value">
                   <AnimatedNumber value={result.final_value} formatter={formatCurrency} />
                 </div>
               </FintechCard>
               <FintechCard delay={0.2}>
-                <div className="card-title mb-1">{labels.backtest.totalReturn}</div>
+                <div className="card-title mb-1 inline-flex items-center">
+                  {labels.backtest.totalReturn}
+                  <InfoTooltip content={labels.tooltips.pnl} />
+                </div>
                 <div className={`metric-value ${result.total_return >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
                   {formatPercent(result.total_return_percent)}
                 </div>
               </FintechCard>
               <FintechCard delay={0.25}>
-                <div className="card-title mb-1">{labels.backtest.maxDrawdown}</div>
+                <div className="card-title mb-1 inline-flex items-center">
+                  {labels.backtest.maxDrawdown}
+                  <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+                </div>
                 <div className="metric-value text-accent-rose">
                   -{formatPercent(result.max_drawdown_percent)}
                 </div>
@@ -219,7 +235,10 @@ export function Backtest() {
 
             <FintechCard delay={0.3}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="card-title">{labels.backtest.equityCurve}</h3>
+                <h3 className="card-title inline-flex items-center">
+                  {labels.backtest.equityCurve}
+                  <InfoTooltip content={labels.tooltips.portfolioTrend} />
+                </h3>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-xs text-slate-500">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: result.total_return >= 0 ? "#34D399" : "#FB7185" }} />
@@ -279,7 +298,10 @@ export function Backtest() {
             </FintechCard>
 
             <FintechCard delay={0.35}>
-              <h3 className="card-title mb-4">{labels.backtest.trades}</h3>
+              <h3 className="card-title mb-4 inline-flex items-center">
+                {labels.backtest.trades}
+                <InfoTooltip content={labels.tooltips.rebalanceSuggestion} />
+              </h3>
               {result.trades.length > 0 ? (
                 <div className="overflow-x-auto max-h-80 overflow-y-auto scrollbar-thin">
                   <table className="table-fintech">

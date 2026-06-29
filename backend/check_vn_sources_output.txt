@@ -1,0 +1,169 @@
+Traceback (most recent call last):
+  File "E:\FinProj\backend\check_vn_sources.py", line 30, in <module>
+    tcbs = Vnstock().stock(symbol="VCB", source="TCBS")
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\client.py", line 141, in stock
+    return StockComponents(self.symbol, source, show_log=self.show_log)
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\data.py", line 150, in __init__
+    super().__init__(symbol, source)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\data.py", line 116, in __init__
+    self._validate_source()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\data.py", line 124, in _validate_source
+    raise ValueError(f"Supported sources: {sources_str}. Got: {self.source}")
+ValueError: Supported sources: KBS, VCI, MSN, FMP. Got: TCBS
+Traceback (most recent call last):
+  File "E:\FinProj\backend\check_vn_sources.py", line 40, in <module>
+    dnse = Vnstock().stock(symbol="VCB", source="DNSE")
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\client.py", line 141, in stock
+    return StockComponents(self.symbol, source, show_log=self.show_log)
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\data.py", line 150, in __init__
+    super().__init__(symbol, source)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\data.py", line 116, in __init__
+    self._validate_source()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\FinProj\backend\.venv\Lib\site-packages\vnstock\common\data.py", line 124, in _validate_source
+    raise ValueError(f"Supported sources: {sources_str}. Got: {self.source}")
+ValueError: Supported sources: KBS, VCI, MSN, FMP. Got: DNSE
+2026-06-29 21:41:34 - vnstock.explorer.fmarket.fund - INFO - Total number of funds currently listed on Fmarket: 65
+2026-06-29 21:41:34 - vnstock.explorer.fmarket.fund - INFO - Total number of funds currently listed on Fmarket: 65
+============================================================
+1. vnstock availability & API introspection
+============================================================
+vnstock version: unknown
+Vnstock class methods: []
+
+  Γò¡ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò«
+  Γöé  ΓÜá∩╕Å  VNSTOCK DEPRECATION NOTICE (31/08/2025)             Γöé
+  Γöé                                                          Γöé
+  Γöé  Lß╗¢p Vnstock v├á c├íc ph╞░╞íng thß╗⌐c c┼⌐ (stock, fx, crypto,   Γöé
+  Γöé  world_index, fund...) ─æ├ú ch├¡nh thß╗⌐c bß╗ï ngß╗½ng hß╗ù trß╗ú.    Γöé
+  Γöé                                                          Γöé
+  Γöé  ─Éß╗â hß╗ç thß╗æng ß╗òn ─æß╗ïnh v├á nhß║¡n ─æ╞░ß╗úc cß║¡p nhß║¡t mß╗¢i nhß║Ñt,     Γöé
+  Γöé  vui l├▓ng chuyß╗ân sang d├╣ng bß╗Ö th╞░ viß╗çn `vnstock.api`.    Γöé
+  Γöé                                                          Γöé
+  Γöé  ≡ƒæë Xem h╞░ß╗¢ng dß║½n Migration: /vnstock-migration          Γöé
+  Γò░ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò»
+
+Mß║½u code chuyß╗ân ─æß╗òi (Migration Example):
+--------------------------------------
+C┼⌐ (Old):  stock = Vnstock().stock('ACB')
+Mß╗¢i (New): from vnstock.api.quote import Quote
+          q = Quote(symbol='ACB', source='VCI')
+
+TCBS via vnstock failed: Supported sources: KBS, VCI, MSN, FMP. Got: TCBS
+
+  Γò¡ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò«
+  Γöé  ΓÜá∩╕Å  VNSTOCK DEPRECATION NOTICE (31/08/2025)             Γöé
+  Γöé                                                          Γöé
+  Γöé  Lß╗¢p Vnstock v├á c├íc ph╞░╞íng thß╗⌐c c┼⌐ (stock, fx, crypto,   Γöé
+  Γöé  world_index, fund...) ─æ├ú ch├¡nh thß╗⌐c bß╗ï ngß╗½ng hß╗ù trß╗ú.    Γöé
+  Γöé                                                          Γöé
+  Γöé  ─Éß╗â hß╗ç thß╗æng ß╗òn ─æß╗ïnh v├á nhß║¡n ─æ╞░ß╗úc cß║¡p nhß║¡t mß╗¢i nhß║Ñt,     Γöé
+  Γöé  vui l├▓ng chuyß╗ân sang d├╣ng bß╗Ö th╞░ viß╗çn `vnstock.api`.    Γöé
+  Γöé                                                          Γöé
+  Γöé  ≡ƒæë Xem h╞░ß╗¢ng dß║½n Migration: /vnstock-migration          Γöé
+  Γò░ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò»
+
+Mß║½u code chuyß╗ân ─æß╗òi (Migration Example):
+--------------------------------------
+C┼⌐ (Old):  stock = Vnstock().stock('ACB')
+Mß╗¢i (New): from vnstock.api.quote import Quote
+          q = Quote(symbol='ACB', source='VCI')
+
+DNSE via vnstock failed: Supported sources: KBS, VCI, MSN, FMP. Got: DNSE
+
+  Γò¡ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò«
+  Γöé  ΓÜá∩╕Å  VNSTOCK DEPRECATION NOTICE (31/08/2025)             Γöé
+  Γöé                                                          Γöé
+  Γöé  Lß╗¢p Vnstock v├á c├íc ph╞░╞íng thß╗⌐c c┼⌐ (stock, fx, crypto,   Γöé
+  Γöé  world_index, fund...) ─æ├ú ch├¡nh thß╗⌐c bß╗ï ngß╗½ng hß╗ù trß╗ú.    Γöé
+  Γöé                                                          Γöé
+  Γöé  ─Éß╗â hß╗ç thß╗æng ß╗òn ─æß╗ïnh v├á nhß║¡n ─æ╞░ß╗úc cß║¡p nhß║¡t mß╗¢i nhß║Ñt,     Γöé
+  Γöé  vui l├▓ng chuyß╗ân sang d├╣ng bß╗Ö th╞░ viß╗çn `vnstock.api`.    Γöé
+  Γöé                                                          Γöé
+  Γöé  ≡ƒæë Xem h╞░ß╗¢ng dß║½n Migration: /vnstock-migration          Γöé
+  Γò░ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò»
+
+Mß║½u code chuyß╗ân ─æß╗òi (Migration Example):
+--------------------------------------
+C┼⌐ (Old):  stock = Vnstock().stock('ACB')
+Mß╗¢i (New): from vnstock.api.quote import Quote
+          q = Quote(symbol='ACB', source='VCI')
+
+ΓöÅΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöô
+Γöâ                                                                                 Γöâ
+Γöâ  ΓÜá∩╕Å TH├öNG B├üO QUAN TRß╗îNG                                                        Γöâ
+Γöâ                                                                                 Γöâ
+Γöâ  Ph├ít h├ánh vnstock 4.0.1 cung cß║Ñp sß╗¡a lß╗ùi quan trß╗ìng v├á bß╗ò sung giao diß╗çn API   Γöâ
+Γöâ  thß╗æng nhß║Ñt (Unified UI), t─âng t├¡nh ß╗òn ─æß╗ïnh cß╗ºa code.                           Γöâ
+Γöâ  Cß║¡p nhß║¡t: pip install vnstock -U                                               Γöâ
+Γöâ  AI Agent Guide: https://github.com/vnstock-hq/vnstock-agent-guide/             Γöâ
+Γöâ                                                                                 Γöâ
+Γöâ  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ Γöâ
+Γöâ                                                                                 Γöâ
+Γöâ  ≡ƒÜÇ VNSTOCK INSIDERS PROGRAM - N├éNG Tß║ªM TRß║óI NGHIß╗åM Cß╗ªA Bß║áN! ≡ƒÜÇ                 Γöâ
+Γöâ                                                                                 Γöâ
+Γöâ  Nß║┐u bß║ín cß║úm thß║Ñy kh├│ chß╗ïu vß╗¢i c├íc th├┤ng b├ío v├á quß║úng c├ío:                      Γöâ
+Γöâ                                                                                 Γöâ
+Γöâ  Γ£¿ ß║¿n to├án bß╗Ö th├┤ng b├ío v├á quß║úng c├ío phiß╗ün h├á                                  Γöâ
+Γöâ  ≡ƒöô Mß╗ƒ rß╗Öng khß║ú n─âng sß╗¡ dß╗Ñng API tß╗æi ─æa                                         Γöâ
+Γöâ  ΓÜí T─âng tß╗æc tß║úi dß╗» liß╗çu tß╗½ 5-8 lß║ºn                                              Γöâ
+Γöâ  ≡ƒôê T─âng giß╗¢i hß║ín truy cß║¡p API l├¬n ─æß║┐n 5 lß║ºn                                    Γöâ
+Γöâ  ≡ƒñû D├╣ng AI Agent viß║┐t code hiß╗çu quß║ú vß╗¢i t├ái liß╗çu Agent Guide                    Γöâ
+Γöâ                                                                                 Γöâ
+Γöâ  ≡ƒöù Tham gia ngay: https://vnstocks.com/insiders-program#tiers                  Γöâ
+Γöâ                                                                                 Γöâ
+ΓöùΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö¢
+Fund object methods: ['SUPPORTED_SOURCES', 'data_source', 'details', 'listing', 'random_agent', 'source', 'source_module', 'symbol']
+Fund listing sample: {'short_name': {0: 'DCDS', 1: 'BVFED'}, 'name': {0: 'QUß╗╕ ─Éß║ªU T╞» CHß╗¿NG KHO├üN N─éNG ─Éß╗ÿNG DC', 1: 'QUß╗╕ ─Éß║ªU T╞» Cß╗ö PHIß║╛U N─éNG ─Éß╗ÿNG Bß║óO VIß╗åT'}, 'fund_type': {0: 'Quß╗╣ cß╗ò phiß║┐u', 1: 'Quß╗╣ cß╗ò phiß║┐u'}, 'fund_owner_name': {0: 'C├öNG TY Cß╗ö PHß║ªN QUß║óN L├¥ QUß╗╕ DRAGON CAPITAL VIß╗åT NAM', 1: 'C├öNG TY TNHH QUß║óN L├¥ QUß╗╕ Bß║óO VIß╗åT'}, 'management_fee': {0: 1.95, 1: 1.0}, 'inception_date': {0: '2004-05-19', 1: '2014-01-07'}, 'nav': {0: 100615.8, 1: 31058.0}, 'nav_change_previous': {0: 0.47, 1: 0.21}, 'nav_change_last_year': {0: -6.08, 1: 0.07}, 'nav_change_inception': {0: 906.16, 1: 210.95}, 'nav_change_1m': {0: -0.78, 1: 0.01}, 'nav_change_3m': {0: 1.26, 1: 6.17}, 'nav_change_6m': {0: -4.22, 1: 1.32}, 'nav_change_12m': {0: 14.09, 1: 25.71}, 'nav_change_24m': {0: 24.59, 1: 41.95}, 'nav_change_36m': {0: 67.63, 1: 61.51}, 'nav_change_36m_annualized': {0: 18.79, 1: 17.33}, 'nav_update_at': {0: '2026-06-29', 1: '2026-06-29'}, 'fund_id_fmarket': {0: 28, 1: 12}, 'fund_code': {0: 'VFMVF1', 1: 'BVFED'}, 'vsd_fee_id': {0: 'VFMVF1N001', 1: 'BVFEDN001'}}
+
+============================================================
+2. Raw HTTP probes
+============================================================
+
+--- TCBS snapshot (VCB) ---
+URL: https://apipubaws.tcbs.com.vn/tcanalysis/v1/ticker/VCB/snapshot
+Status: 404
+Content-Type: application/json
+
+--- TCBS listing ---
+URL: https://apipubaws.tcbs.com.vn/tcanalysis/v1/ticker/all
+Status: 404
+Content-Type: application/json
+
+--- TCBS history (VCB) ---
+URL: https://apipubaws.tcbs.com.vn/tcanalysis/v1/ticker/VCB/historical-quote?start=20260530&end=20260629&offset=0&limit=20
+Status: 404
+Content-Type: application/json
+
+--- DNSE quote (VCB) ---
+Failed: HTTPSConnectionPool(host='eapi.dnse.com.vn', port=443): Max retries exceeded with url: /dnse/order-service/v1/matching-Price?symbol=VCB (Caused by NameResolutionError("HTTPSConnection(host='eapi.dnse.com.vn', port=443): Failed to resolve 'eapi.dnse.com.vn' ([Errno 11001] getaddrinfo failed)"))
+
+--- DNSE history (VCB) ---
+Failed: HTTPSConnectionPool(host='eapi.dnse.com.vn', port=443): Max retries exceeded with url: /dnse/order-service/v1/historicalPrice?symbol=VCB&fromDate=2024-01-01&toDate=2024-01-10 (Caused by NameResolutionError("HTTPSConnection(host='eapi.dnse.com.vn', port=443): Failed to resolve 'eapi.dnse.com.vn' ([Errno 11001] getaddrinfo failed)"))
+
+--- DNSE listing ---
+Failed: HTTPSConnectionPool(host='eapi.dnse.com.vn', port=443): Max retries exceeded with url: /dnse/order-service/v1/symbols (Caused by NameResolutionError("HTTPSConnection(host='eapi.dnse.com.vn', port=443): Failed to resolve 'eapi.dnse.com.vn' ([Errno 11001] getaddrinfo failed)"))
+
+--- VCBF NAV page ---
+URL: https://www.vcbf.com/danh-muc-dau-tu/bieu-do-gia-va-nav
+Status: 404
+Content-Type: text/html; charset=UTF-8
+
+--- VCBF API (funds) ---
+URL: https://www.vcbf.com/api/fund/list
+Status: 404
+Content-Type: text/html; charset=UTF-8
+
+--- VCBF API (NAV) ---
+URL: https://www.vcbf.com/api/fund/nav?symbol=MGF
+Status: 404
+Content-Type: text/html; charset=UTF-8
+
+============================================================
+3. Summary
+============================================================
+Inspect the output above. Decide whether vnstock covers enough
+data (TCBS/DNSE/VCBF) or if raw HTTP scrapers are needed.

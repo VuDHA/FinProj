@@ -12,13 +12,13 @@ from services.market_data import MarketDataService
 class BacktestService:
     def __init__(self, session: Session):
         self.session = session
-        self.market = MarketDataService()
+        self.market = MarketDataService(session)
 
-    def _history_from_public(self, symbol: str, start: datetime.date, end: datetime.date) -> Dict[datetime.date, float]:
+    def _history_from_public(self, asset: Asset, start: datetime.date, end: datetime.date) -> Dict[datetime.date, float]:
         try:
-            return self.market.fetch_history(symbol, start, end)
+            return self.market.fetch_history(asset.symbol, asset.type, start, end)
         except Exception as e:
-            print(f"[backtest] public history error {symbol}: {e}")
+            print(f"[backtest] public history error {asset.symbol}: {e}")
             return {}
 
     def _history_from_snapshots(self, asset_id: int, start: datetime.date, end: datetime.date) -> Dict[datetime.date, float]:
@@ -39,7 +39,7 @@ class BacktestService:
             return snapshots
         if asset.type == "CRYPTO":
             return {}
-        return self._history_from_public(asset.symbol, start, end)
+        return self._history_from_public(asset, start, end)
 
     def _fill_history(
         self,

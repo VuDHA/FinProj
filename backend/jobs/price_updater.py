@@ -38,10 +38,10 @@ except ImportError:
 
 def update_all_prices():
     with Session(engine) as session:
-        service = MarketDataService()
+        service = MarketDataService(session)
         assets = session.exec(select(Asset).where(Asset.is_active == True)).all()
         for asset in assets:
-            data = service.fetch_price(asset)
+            data, _ = service.fetch_price_with_warnings(asset)
             if _get_or_create_snapshot(session, asset, data):
                 print(f"[scheduler] updated {asset.symbol}: {data['price']}")
         session.commit()

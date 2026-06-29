@@ -1,5 +1,5 @@
 import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -49,18 +49,20 @@ def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> Price
 
 @router.post("/refresh-all")
 def refresh_all_prices(session: Session = Depends(get_session)):
-    service = MarketDataService()
+    service = MarketDataService(session)
     assets = session.exec(select(Asset).where(Asset.is_active == True)).all()
     updated = 0
     failed = 0
+    warnings: List[str] = []
     for asset in assets:
-        data = service.fetch_price(asset)
+        data, asset_warnings = service.fetch_price_with_warnings(asset)
+        warnings.extend(asset_warnings)
         if _get_or_create_snapshot(session, asset, data):
             updated += 1
         else:
             failed += 1
     session.commit()
-    return {"updated": updated, "failed": failed, "date": datetime.date.today().isoformat()}
+    return {"updated": updated, "failed": failed, "warnings": warnings, "date": datetime.date.today().isoformat()}
 
 
 @router.post("/refresh/{asset_id}")
@@ -69,10 +71,13 @@ def refresh_price(asset_id: int, session: Session = Depends(get_session)):
     if not asset or not asset.is_active:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    service = MarketDataService()
-    data = service.fetch_price(asset)
+    service = MarketDataService(session)
+    data, warnings = service.fetch_price_with_warnings(asset)
     if not data:
-        raise HTTPException(status_code=502, detail="Failed to fetch market data")
+        detail = "Failed to fetch market data"
+        if warnings:
+            detail += f" ({'; '.join(warnings)})"
+        raise HTTPException(status_code=502, detail=detail)
 
     snapshot = _get_or_create_snapshot(session, asset, data)
     if not snapshot:
@@ -80,7 +85,7 @@ def refresh_price(asset_id: int, session: Session = Depends(get_session)):
 
     session.commit()
     session.refresh(snapshot)
-    return snapshot
+    return {"snapshot": snapshot, "warnings": warnings}
 
 
 @router.get("/history/{asset_id}", response_model=List[PriceHistoryPoint])
@@ -94,41 +99,66 @@ def get_price_history(
     if not asset or not asset.is_active:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    service = MarketDataService()
-    history = service.fetch_history(asset.symbol, start, end)
+    service = MarketDataService(session)
+    history = service.fetch_history(asset.symbol, asset.type, start, end)
     if not history:
         raise HTTPException(status_code=502, detail="Failed to fetch market data")
     return [{"date": d, "price": p} for d, p in sorted(history.items())]
 
 
 @router.get("/quote", response_model=List[Quote])
-def get_quotes(symbols: str = ",".join(DEFAULT_WATCHLIST)):
-    service = MarketDataService()
+def get_quotes(
+    symbols: str = ",".join(DEFAULT_WATCHLIST),
+    asset_type: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    service = MarketDataService(session)
     symbols_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
-    return service.fetch_quotes(symbols_list)
+
+    if asset_type:
+        return service.fetch_quotes(symbols_list, asset_type=asset_type)
+
+    # Look up asset types from the database so each symbol is routed through
+    # the correct sources (e.g. FUND -> fmarket/vcbf, not stock sources).
+    assets = session.exec(select(Asset).where(Asset.symbol.in_(symbols_list))).all()
+    by_symbol = {a.symbol.upper(): a for a in assets}
+
+    by_type: dict[str, list[str]] = {}
+    for symbol in symbols_list:
+        asset = by_symbol.get(symbol)
+        type_ = asset.type if asset else "STOCK"
+        by_type.setdefault(type_, []).append(symbol)
+
+    quote_map: dict[str, dict] = {}
+    for type_, syms in by_type.items():
+        for q in service.fetch_quotes(syms, asset_type=type_):
+            quote_map[q["symbol"].upper()] = q
+
+    # Preserve input order.
+    return [quote_map[s] for s in symbols_list]
 
 
 @router.get("/symbols", response_model=List[MarketSymbol])
-def get_all_symbols():
-    service = MarketDataService()
+def get_all_symbols(session: Session = Depends(get_session)):
+    service = MarketDataService(session)
     return service.fetch_all_symbols()
 
 
 @router.get("/stocks", response_model=List[MarketSymbol])
-def get_all_stocks():
-    service = MarketDataService()
+def get_all_stocks(session: Session = Depends(get_session)):
+    service = MarketDataService(session)
     return service.fetch_all_stocks()
 
 
 @router.get("/funds", response_model=List[MarketSymbol])
-def get_all_funds():
-    service = MarketDataService()
+def get_all_funds(session: Session = Depends(get_session)):
+    service = MarketDataService(session)
     return service.fetch_all_funds()
 
 
 @router.get("/fund-detail/{symbol}", response_model=FundDetail)
-def get_fund_detail(symbol: str):
-    service = MarketDataService()
+def get_fund_detail(symbol: str, session: Session = Depends(get_session)):
+    service = MarketDataService(session)
     data = service.fetch_fund_detail(symbol)
     if not data:
         raise HTTPException(status_code=404, detail="Fund not found")
@@ -141,8 +171,9 @@ def get_market_history(
     type: str,
     start: datetime.date,
     end: datetime.date,
+    session: Session = Depends(get_session),
 ):
-    service = MarketDataService()
+    service = MarketDataService(session)
     history = service.fetch_market_history(symbol, type, start, end)
     if not history:
         raise HTTPException(status_code=502, detail="Failed to fetch market history")
@@ -174,8 +205,9 @@ def get_benchmark_raw(
     symbol: str,
     start: datetime.date,
     end: datetime.date,
+    session: Session = Depends(get_session),
 ):
-    service = MarketDataService()
+    service = MarketDataService(session)
     history = service.fetch_benchmark_history(symbol, start, end)
     if not history:
         raise HTTPException(status_code=502, detail="Failed to fetch benchmark data")

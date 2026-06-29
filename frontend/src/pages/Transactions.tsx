@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { EmptyState } from "../components/EmptyState";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { labels } from "../i18n/vi";
@@ -118,17 +121,19 @@ export function Transactions() {
       <div className="flex gap-2">
         <button
           onClick={() => setTab("transactions")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "transactions" ? "bg-accent-blue text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "transactions" ? "bg-accent-blue text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
         >
           {labels.transactions.title}
+          <InfoTooltip content={labels.tooltips.transactionType} />
         </button>
         <button
           onClick={() => setTab("income")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "income" ? "bg-accent-blue text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "income" ? "bg-accent-blue text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
             }`}
         >
           {labels.transactions.income}
+          <InfoTooltip content={labels.tooltips.incomeType} />
         </button>
       </div>
 
@@ -137,53 +142,83 @@ export function Transactions() {
           <FintechCard delay={0.1}>
             <h3 className="card-title mb-4">{labels.transactions.addTransaction}</h3>
             <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <select
-                className="input-fintech"
-                value={form.asset_id}
-                onChange={(e) => setForm({ ...form, asset_id: e.target.value })}
-              >
-                <option value="">{labels.transactions.selectAsset}</option>
-                {assets.data?.map((asset: any) => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.symbol} — {asset.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input-fintech"
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value })}
-              >
-                <option value="BUY">{labels.transactions.buy}</option>
-                <option value="SELL">{labels.transactions.sell}</option>
-              </select>
-              <input
-                type="number"
-                placeholder={labels.transactions.quantity}
-                className="input-fintech"
-                value={form.quantity}
-                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-              />
-              <input
-                type="number"
-                placeholder={labels.transactions.price}
-                className="input-fintech"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-              />
-              <input
-                type="number"
-                placeholder={labels.transactions.fee}
-                className="input-fintech"
-                value={form.fee}
-                onChange={(e) => setForm({ ...form, fee: e.target.value })}
-              />
-              <input
-                type="date"
-                className="input-fintech"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
+              <div className="relative">
+                <select
+                  className="input-fintech pr-10"
+                  value={form.asset_id}
+                  onChange={(e) => setForm({ ...form, asset_id: e.target.value })}
+                >
+                  <option value="">{labels.transactions.selectAsset}</option>
+                  {assets.data?.map((asset: any) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.symbol} — {asset.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="absolute right-8 top-1/2 -translate-y-1/2">
+                  <InfoTooltip content={labels.tooltips.assetType} position="right" />
+                </span>
+              </div>
+              <div className="relative">
+                <select
+                  className="input-fintech pr-10"
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                >
+                  <option value="BUY">{labels.transactions.buy}</option>
+                  <option value="SELL">{labels.transactions.sell}</option>
+                </select>
+                <span className="absolute right-8 top-1/2 -translate-y-1/2">
+                  <InfoTooltip content={labels.tooltips.transactionType} position="right" />
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder={labels.transactions.quantity}
+                  className="input-fintech pr-10"
+                  value={form.quantity}
+                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <InfoTooltip content={labels.tooltips.transactionQuantity} position="right" />
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder={labels.transactions.price}
+                  className="input-fintech pr-10"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <InfoTooltip content={labels.tooltips.transactionPrice} position="right" />
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  placeholder={labels.transactions.fee}
+                  className="input-fintech pr-10"
+                  value={form.fee}
+                  onChange={(e) => setForm({ ...form, fee: e.target.value })}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <InfoTooltip content={labels.tooltips.transactionFee} position="right" />
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="date"
+                  className="input-fintech pr-10"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <InfoTooltip content={labels.tooltips.backtestStartDate} position="right" />
+                </span>
+              </div>
               <input
                 type="text"
                 placeholder={labels.transactions.notes}
@@ -207,12 +242,30 @@ export function Transactions() {
               <table className="table-fintech">
                 <thead>
                   <tr>
-                    <th className="text-left">{labels.transactions.dateCol}</th>
-                    <th className="text-left">{labels.transactions.assetCol}</th>
-                    <th className="text-left">{labels.transactions.typeCol}</th>
-                    <th className="text-right">{labels.transactions.quantityCol}</th>
-                    <th className="text-right">{labels.transactions.priceCol}</th>
-                    <th className="text-right">{labels.transactions.feeCol}</th>
+                    <th className="text-left">
+                      {labels.transactions.dateCol}
+                      <InfoTooltip content={labels.tooltips.backtestStartDate} />
+                    </th>
+                    <th className="text-left">
+                      {labels.transactions.assetCol}
+                      <InfoTooltip content={labels.tooltips.assetName} />
+                    </th>
+                    <th className="text-left">
+                      {labels.transactions.typeCol}
+                      <InfoTooltip content={labels.tooltips.transactionType} />
+                    </th>
+                    <th className="text-right">
+                      {labels.transactions.quantityCol}
+                      <InfoTooltip content={labels.tooltips.transactionQuantity} />
+                    </th>
+                    <th className="text-right">
+                      {labels.transactions.priceCol}
+                      <InfoTooltip content={labels.tooltips.transactionPrice} />
+                    </th>
+                    <th className="text-right">
+                      {labels.transactions.feeCol}
+                      <InfoTooltip content={labels.tooltips.transactionFee} />
+                    </th>
                     <th className="text-right">{labels.transactions.actionsCol}</th>
                   </tr>
                 </thead>
@@ -250,8 +303,17 @@ export function Transactions() {
                   })}
                   {transactions.data?.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                        {labels.transactions.noTransactions}
+                      <td colSpan={7} className="px-4 py-4">
+                        <EmptyState
+                          title={labels.transactions.noTransactions}
+                          description={labels.dashboard.addAssetsHint}
+                          action={
+                            <Link to="/assets" className="btn-primary">
+                              <Plus className="w-4 h-4" />
+                              {labels.assets.addAsset}
+                            </Link>
+                          }
+                        />
                       </td>
                     </tr>
                   )}
@@ -260,119 +322,163 @@ export function Transactions() {
             </div>
           </FintechCard>
         </>
-      )}
+      )
+      }
 
-      {tab === "income" && (
-        <>
-          <FintechCard delay={0.1}>
-            <h3 className="card-title mb-4">{labels.transactions.addIncome}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <select
-                className="input-fintech"
-                value={incomeForm.asset_id}
-                onChange={(e) => setIncomeForm({ ...incomeForm, asset_id: e.target.value })}
+      {
+        tab === "income" && (
+          <>
+            <FintechCard delay={0.1}>
+              <h3 className="card-title mb-4">{labels.transactions.addIncome}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div className="relative">
+                  <select
+                    className="input-fintech pr-10"
+                    value={incomeForm.asset_id}
+                    onChange={(e) => setIncomeForm({ ...incomeForm, asset_id: e.target.value })}
+                  >
+                    <option value="">{labels.transactions.selectAsset}</option>
+                    {assets.data?.map((asset: any) => (
+                      <option key={asset.id} value={asset.id}>
+                        {asset.symbol} — {asset.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="absolute right-8 top-1/2 -translate-y-1/2">
+                    <InfoTooltip content={labels.tooltips.assetType} position="right" />
+                  </span>
+                </div>
+                <div className="relative">
+                  <select
+                    className="input-fintech pr-10"
+                    value={incomeForm.type}
+                    onChange={(e) => setIncomeForm({ ...incomeForm, type: e.target.value })}
+                  >
+                    <option value="DIVIDEND">{labels.transactions.dividend}</option>
+                    <option value="INTEREST">{labels.transactions.interest}</option>
+                  </select>
+                  <span className="absolute right-8 top-1/2 -translate-y-1/2">
+                    <InfoTooltip content={labels.tooltips.incomeType} position="right" />
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder={labels.transactions.amount}
+                    className="input-fintech pr-10"
+                    value={incomeForm.amount}
+                    onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <InfoTooltip content={labels.tooltips.transactionPrice} position="right" />
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="date"
+                    className="input-fintech pr-10"
+                    value={incomeForm.date}
+                    onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <InfoTooltip content={labels.tooltips.backtestStartDate} position="right" />
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  placeholder={labels.transactions.notes}
+                  className="input-fintech"
+                  value={incomeForm.notes}
+                  onChange={(e) => setIncomeForm({ ...incomeForm, notes: e.target.value })}
+                />
+              </div>
+              <button
+                onClick={() => createIncome.mutate()}
+                disabled={!incomeForm.asset_id || !incomeForm.amount || createIncome.isPending}
+                className="btn-primary mt-3"
               >
-                <option value="">{labels.transactions.selectAsset}</option>
-                {assets.data?.map((asset: any) => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.symbol} — {asset.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input-fintech"
-                value={incomeForm.type}
-                onChange={(e) => setIncomeForm({ ...incomeForm, type: e.target.value })}
-              >
-                <option value="DIVIDEND">{labels.transactions.dividend}</option>
-                <option value="INTEREST">{labels.transactions.interest}</option>
-              </select>
-              <input
-                type="number"
-                placeholder={labels.transactions.amount}
-                className="input-fintech"
-                value={incomeForm.amount}
-                onChange={(e) => setIncomeForm({ ...incomeForm, amount: e.target.value })}
-              />
-              <input
-                type="date"
-                className="input-fintech"
-                value={incomeForm.date}
-                onChange={(e) => setIncomeForm({ ...incomeForm, date: e.target.value })}
-              />
-              <input
-                type="text"
-                placeholder={labels.transactions.notes}
-                className="input-fintech"
-                value={incomeForm.notes}
-                onChange={(e) => setIncomeForm({ ...incomeForm, notes: e.target.value })}
-              />
-            </div>
-            <button
-              onClick={() => createIncome.mutate()}
-              disabled={!incomeForm.asset_id || !incomeForm.amount || createIncome.isPending}
-              className="btn-primary mt-3"
-            >
-              <Plus className="w-4 h-4" />
-              {labels.transactions.addIncome}
-            </button>
-          </FintechCard>
+                <Plus className="w-4 h-4" />
+                {labels.transactions.addIncome}
+              </button>
+            </FintechCard>
 
-          <FintechCard delay={0.15}>
-            <div className="overflow-x-auto scrollbar-thin">
-              <table className="table-fintech">
-                <thead>
-                  <tr>
-                    <th className="text-left">{labels.transactions.dateCol}</th>
-                    <th className="text-left">{labels.transactions.assetCol}</th>
-                    <th className="text-left">{labels.transactions.incomeType}</th>
-                    <th className="text-right">{labels.transactions.amount}</th>
-                    <th className="text-right">{labels.transactions.actionsCol}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {income.data?.map((inc: any) => {
-                    const asset = assets.data?.find((a: any) => a.id === inc.asset_id);
-                    return (
-                      <tr key={inc.id}>
-                        <td className="font-mono text-slate-500">{inc.date}</td>
-                        <td>
-                          <div className="font-display font-semibold text-slate-900">
-                            {asset ? asset.symbol : inc.asset_id}
-                          </div>
-                          <span className="text-xs text-slate-500">{asset ? asset.name : "-"}</span>
-                        </td>
-                        <td>
-                          <span className="badge-gain">
-                            {inc.type === "DIVIDEND" ? labels.transactions.dividend : labels.transactions.interest}
-                          </span>
-                        </td>
-                        <td className="text-right font-mono">{formatCurrency(inc.amount)}</td>
-                        <td className="text-right">
-                          <button
-                            onClick={() => removeIncome.mutate(inc.id)}
-                            disabled={removeIncome.isPending}
-                            className="inline-flex items-center justify-center p-2 rounded-lg text-accent-rose hover:bg-accent-rose/10 transition-colors disabled:opacity-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+            <FintechCard delay={0.15}>
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="table-fintech">
+                  <thead>
+                    <tr>
+                      <th className="text-left">
+                        {labels.transactions.dateCol}
+                        <InfoTooltip content={labels.tooltips.backtestStartDate} />
+                      </th>
+                      <th className="text-left">
+                        {labels.transactions.assetCol}
+                        <InfoTooltip content={labels.tooltips.assetName} />
+                      </th>
+                      <th className="text-left">
+                        {labels.transactions.incomeType}
+                        <InfoTooltip content={labels.tooltips.incomeType} />
+                      </th>
+                      <th className="text-right">
+                        {labels.transactions.amount}
+                        <InfoTooltip content={labels.tooltips.transactionPrice} />
+                      </th>
+                      <th className="text-right">{labels.transactions.actionsCol}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {income.data?.map((inc: any) => {
+                      const asset = assets.data?.find((a: any) => a.id === inc.asset_id);
+                      return (
+                        <tr key={inc.id}>
+                          <td className="font-mono text-slate-500">{inc.date}</td>
+                          <td>
+                            <div className="font-display font-semibold text-slate-900">
+                              {asset ? asset.symbol : inc.asset_id}
+                            </div>
+                            <span className="text-xs text-slate-500">{asset ? asset.name : "-"}</span>
+                          </td>
+                          <td>
+                            <span className="badge-gain">
+                              {inc.type === "DIVIDEND" ? labels.transactions.dividend : labels.transactions.interest}
+                            </span>
+                          </td>
+                          <td className="text-right font-mono">{formatCurrency(inc.amount)}</td>
+                          <td className="text-right">
+                            <button
+                              onClick={() => removeIncome.mutate(inc.id)}
+                              disabled={removeIncome.isPending}
+                              className="inline-flex items-center justify-center p-2 rounded-lg text-accent-rose hover:bg-accent-rose/10 transition-colors disabled:opacity-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {income.data?.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-4">
+                          <EmptyState
+                            title={labels.transactions.noIncome}
+                            description={labels.transactions.addIncomeHint}
+                            action={
+                              <Link to="/assets" className="btn-primary">
+                                <Plus className="w-4 h-4" />
+                                {labels.assets.addAsset}
+                              </Link>
+                            }
+                          />
                         </td>
                       </tr>
-                    );
-                  })}
-                  {income.data?.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                        {labels.transactions.noIncome}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </FintechCard>
-        </>
-      )}
-    </div>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </FintechCard>
+          </>
+        )
+      }
+    </div >
   );
 }

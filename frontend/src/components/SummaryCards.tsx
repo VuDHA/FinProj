@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { AnimatedNumber } from "./ui/AnimatedNumber";
 import { FintechCard } from "./ui/FintechCard";
+import { InfoTooltip } from "./InfoTooltip";
 import { MiniSparkline } from "./ui/MiniSparkline";
 import { TrendBadge } from "./ui/TrendBadge";
 import { formatCurrency } from "../lib/utils";
@@ -38,6 +39,7 @@ export function SummaryCards({
   const cards = [
     {
       label: labels.summary.totalValue,
+      tooltip: labels.tooltips.totalValue,
       value: total_value,
       formatter: formatCurrency,
       icon: Wallet,
@@ -48,6 +50,7 @@ export function SummaryCards({
     },
     {
       label: labels.summary.totalCost,
+      tooltip: labels.tooltips.totalCost,
       value: total_cost,
       formatter: formatCurrency,
       icon: PiggyBank,
@@ -57,6 +60,7 @@ export function SummaryCards({
     },
     {
       label: labels.summary.pnl,
+      tooltip: labels.tooltips.pnl,
       value: total_pnl,
       formatter: formatCurrency,
       icon: total_pnl >= 0 ? TrendingUp : TrendingDown,
@@ -82,7 +86,10 @@ export function SummaryCards({
           <FintechCard key={card.label} delay={i * 0.08}>
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <span className="card-title">{card.label}</span>
+                <span className="card-title inline-flex items-center">
+                  {card.label}
+                  <InfoTooltip content={card.tooltip} position="right" />
+                </span>
                 <div className="metric-value">
                   <AnimatedNumber
                     value={card.value}

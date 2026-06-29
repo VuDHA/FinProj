@@ -5,7 +5,9 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import AllocationTarget, Setting
-from schemas import AllocationTargetCreate, AllocationTargetRead, SettingCreate, SettingRead
+from schemas import AllocationTargetCreate, AllocationTargetRead, AssetSourceInfo, SettingCreate, SettingRead
+from services.source_config import get_default_sources, is_valid_source_for_type, set_default_sources
+from services.sources import registry
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -13,6 +15,42 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 @router.get("/", response_model=List[SettingRead])
 def list_settings(session: Session = Depends(get_session)):
     return session.exec(select(Setting)).all()
+
+
+@router.get("/sources/{asset_type}", response_model=List[AssetSourceInfo])
+def list_sources(asset_type: str):
+    return [
+        AssetSourceInfo(
+            code=source.code,
+            name=source.name,
+            description=source.description,
+            supports_history=source.supports_history,
+            supports_listing=source.supports_listing,
+        )
+        for source in registry.for_type(asset_type.upper())
+    ]
+
+
+@router.get("/default-sources")
+def get_default_source_settings(session: Session = Depends(get_session)):
+    return get_default_sources(session)
+
+
+@router.post("/default-sources")
+def save_default_source_settings(
+    payload: dict,
+    session: Session = Depends(get_session),
+):
+    sources = {}
+    for asset_type, source in payload.items():
+        asset_type = str(asset_type).upper()
+        if not isinstance(source, str) or not is_valid_source_for_type(source, asset_type):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid source {source} for asset type {asset_type}",
+            )
+        sources[asset_type] = source
+    return set_default_sources(session, sources)
 
 
 @router.post("/", response_model=SettingRead)

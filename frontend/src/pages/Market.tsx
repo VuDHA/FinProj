@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { InfoTooltip } from "../components/InfoTooltip";
 import SymbolDetailModal from "../components/SymbolDetailModal";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
@@ -110,10 +111,10 @@ export function Market() {
   const pageSymbolsStr = pageSymbols.map((s) => s.symbol).join(",");
 
   const pageQuotes = useQuery({
-    queryKey: ["market-quotes", pageSymbolsStr],
+    queryKey: ["market-quotes", pageSymbolsStr, activeTab],
     queryFn: async () => {
       const { data } = await API.get("/prices/quote", {
-        params: { symbols: pageSymbolsStr },
+        params: { symbols: pageSymbolsStr, asset_type: activeTab },
       });
       return data as Array<{
         symbol: string;
@@ -164,7 +165,10 @@ export function Market() {
 
       <FintechCard delay={0.05}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="card-title">{labels.market.watchlist}</h3>
+          <h3 className="card-title inline-flex items-center">
+            {labels.market.watchlist}
+            <InfoTooltip content={labels.tooltips.marketWatchlist} />
+          </h3>
           <span className="text-sm font-mono text-slate-600">
             {labels.market.totalValue}: {portfolio.isLoading ? "..." : formatCurrency(stockFundTotal)}
           </span>
@@ -176,12 +180,30 @@ export function Market() {
             <table className="table-fintech">
               <thead>
                 <tr>
-                  <th className="text-left">{labels.dashboard.symbol}</th>
-                  <th className="text-left">{labels.market.type}</th>
-                  <th className="text-right">{labels.dashboard.quantity}</th>
-                  <th className="text-right">{labels.dashboard.price}</th>
-                  <th className="text-right">{labels.dashboard.value}</th>
-                  <th className="text-right">{labels.dashboard.pnl}</th>
+                  <th className="text-left">
+                    {labels.dashboard.symbol}
+                    <InfoTooltip content={labels.tooltips.assetSymbol} />
+                  </th>
+                  <th className="text-left">
+                    {labels.market.type}
+                    <InfoTooltip content={labels.tooltips.assetType} />
+                  </th>
+                  <th className="text-right">
+                    {labels.dashboard.quantity}
+                    <InfoTooltip content={labels.tooltips.transactionQuantity} />
+                  </th>
+                  <th className="text-right">
+                    {labels.dashboard.price}
+                    <InfoTooltip content={labels.tooltips.transactionPrice} />
+                  </th>
+                  <th className="text-right">
+                    {labels.dashboard.value}
+                    <InfoTooltip content={labels.tooltips.totalValue} />
+                  </th>
+                  <th className="text-right">
+                    {labels.dashboard.pnl}
+                    <InfoTooltip content={labels.tooltips.pnl} />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -215,6 +237,7 @@ export function Market() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.market.selectAsset}
+              <InfoTooltip content={labels.tooltips.marketSelectAsset} />
             </label>
             <select className="input-fintech" value={assetId} onChange={(e) => setAssetId(e.target.value)}>
               <option value="">{labels.market.selectAsset}</option>
@@ -228,6 +251,7 @@ export function Market() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.market.startDate}
+              <InfoTooltip content={labels.tooltips.marketDateRange} />
             </label>
             <input
               type="date"
@@ -239,6 +263,7 @@ export function Market() {
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
               {labels.market.endDate}
+              <InfoTooltip content={labels.tooltips.marketDateRange} />
             </label>
             <input
               type="date"
@@ -261,7 +286,10 @@ export function Market() {
       {selectedAsset && latest && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <FintechCard delay={0.15}>
-            <div className="card-title mb-1">{labels.market.currentPrice}</div>
+            <div className="card-title mb-1 inline-flex items-center">
+              {labels.market.currentPrice}
+              <InfoTooltip content={labels.tooltips.transactionPrice} />
+            </div>
             <div className="metric-value">
               <AnimatedNumber value={latest.price} formatter={formatCurrency} />
             </div>
@@ -270,18 +298,27 @@ export function Market() {
             </div>
           </FintechCard>
           <FintechCard delay={0.2}>
-            <div className="card-title mb-1">{labels.market.change}</div>
+            <div className="card-title mb-1 inline-flex items-center">
+              {labels.market.change}
+              <InfoTooltip content={labels.tooltips.marketWatchlist} />
+            </div>
             <div className={`metric-value ${changePercent >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
               {formatCurrency(change)}
             </div>
             <div className="mt-2 text-xs text-slate-500">{labels.market.vsPrevious}</div>
           </FintechCard>
           <FintechCard delay={0.25}>
-            <div className="card-title mb-1">{labels.market.high}</div>
+            <div className="card-title mb-1 inline-flex items-center">
+              {labels.market.high}
+              <InfoTooltip content={labels.tooltips.marketWatchlist} />
+            </div>
             <div className="metric-value text-accent-cyan">{formatCurrency(high)}</div>
           </FintechCard>
           <FintechCard delay={0.3}>
-            <div className="card-title mb-1">{labels.market.low}</div>
+            <div className="card-title mb-1 inline-flex items-center">
+              {labels.market.low}
+              <InfoTooltip content={labels.tooltips.marketWatchlist} />
+            </div>
             <div className="metric-value text-accent-amber">{formatCurrency(low)}</div>
           </FintechCard>
         </div>
@@ -290,8 +327,9 @@ export function Market() {
       {history.data && history.data.length > 0 && (
         <FintechCard delay={0.35}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="card-title">
+            <h3 className="card-title inline-flex items-center">
               {selectedAsset?.symbol} — {labels.market.priceHistory}
+              <InfoTooltip content={labels.tooltips.marketDateRange} />
             </h3>
             <MiniSparkline data={miniSparkline} color={changePercent >= 0 ? "emerald" : "rose"} width={140} height={36} />
           </div>
@@ -378,7 +416,10 @@ export function Market() {
       {allSymbols.data && (
         <FintechCard delay={0.15}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="card-title">{labels.market.marketSymbolsTitle}</h3>
+            <h3 className="card-title inline-flex items-center">
+              {labels.market.marketSymbolsTitle}
+              <InfoTooltip content={labels.tooltips.marketWatchlist} />
+            </h3>
             <div className="text-sm text-slate-500">
               {filteredSymbols.length} {labels.assets.symbol}
             </div>
@@ -412,14 +453,17 @@ export function Market() {
                 setPage(1);
               }}
             />
-            <button
-              onClick={() => pageQuotes.refetch()}
-              disabled={pageQuotes.isFetching || pageSymbols.length === 0}
-              className="btn-secondary"
-            >
-              <RefreshCw className={`w-4 h-4 ${pageQuotes.isFetching ? "animate-spin" : ""}`} />
-              {labels.market.loadPrice}
-            </button>
+            <div className="flex items-center gap-2">
+              <InfoTooltip content={labels.tooltips.refreshPrices} />
+              <button
+                onClick={() => pageQuotes.refetch()}
+                disabled={pageQuotes.isFetching || pageSymbols.length === 0}
+                className="btn-secondary"
+              >
+                <RefreshCw className={`w-4 h-4 ${pageQuotes.isFetching ? "animate-spin" : ""}`} />
+                {labels.market.loadPrice}
+              </button>
+            </div>
           </div>
 
           {allSymbols.isLoading ? (
@@ -429,12 +473,30 @@ export function Market() {
               <table className="table-fintech">
                 <thead>
                   <tr>
-                    <th className="text-left">{labels.market.symbol}</th>
-                    <th className="text-left">{labels.assets.name}</th>
-                    <th className="text-left">{labels.market.exchange}</th>
-                    <th className="text-right">{labels.market.price}</th>
-                    <th className="text-right">{labels.market.change}</th>
-                    <th className="text-right">{labels.market.marketChangePercent}</th>
+                    <th className="text-left">
+                      {labels.market.symbol}
+                      <InfoTooltip content={labels.tooltips.assetSymbol} />
+                    </th>
+                    <th className="text-left">
+                      {labels.assets.name}
+                      <InfoTooltip content={labels.tooltips.assetName} />
+                    </th>
+                    <th className="text-left">
+                      {labels.market.exchange}
+                      <InfoTooltip content={labels.tooltips.assetExchange} />
+                    </th>
+                    <th className="text-right">
+                      {labels.market.price}
+                      <InfoTooltip content={labels.tooltips.transactionPrice} />
+                    </th>
+                    <th className="text-right">
+                      {labels.market.change}
+                      <InfoTooltip content={labels.tooltips.marketWatchlist} />
+                    </th>
+                    <th className="text-right">
+                      {labels.market.marketChangePercent}
+                      <InfoTooltip content={labels.tooltips.marketWatchlist} />
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -498,7 +560,10 @@ export function Market() {
       {goldFx.data && (
         <FintechCard delay={0.4}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="card-title">{labels.market.goldFx}</h3>
+            <h3 className="card-title inline-flex items-center">
+              {labels.market.goldFx}
+              <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+            </h3>
             <button
               onClick={() => goldFx.refetch()}
               className="btn-secondary"
@@ -514,9 +579,18 @@ export function Market() {
                 <table className="table-fintech">
                   <thead>
                     <tr>
-                      <th>{labels.settings.source}</th>
-                      <th className="text-right">{labels.settings.buy}</th>
-                      <th className="text-right">{labels.settings.sell}</th>
+                      <th>
+                        {labels.settings.source}
+                        <InfoTooltip content={labels.tooltips.sourceDefault} />
+                      </th>
+                      <th className="text-right">
+                        {labels.settings.buy}
+                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                      </th>
+                      <th className="text-right">
+                        {labels.settings.sell}
+                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -537,10 +611,22 @@ export function Market() {
                 <table className="table-fintech">
                   <thead>
                     <tr>
-                      <th>{labels.settings.currency}</th>
-                      <th className="text-right">{labels.settings.buy}</th>
-                      <th className="text-right">{labels.settings.transfer}</th>
-                      <th className="text-right">{labels.settings.sell}</th>
+                      <th>
+                        {labels.settings.currency}
+                        <InfoTooltip content={labels.tooltips.assetCurrency} />
+                      </th>
+                      <th className="text-right">
+                        {labels.settings.buy}
+                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                      </th>
+                      <th className="text-right">
+                        {labels.settings.transfer}
+                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                      </th>
+                      <th className="text-right">
+                        {labels.settings.sell}
+                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>

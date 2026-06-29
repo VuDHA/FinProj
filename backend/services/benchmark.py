@@ -27,7 +27,7 @@ class BenchmarkService:
         if not end:
             end = portfolio_history[-1].date
 
-        market = MarketDataService()
+        market = MarketDataService(self.session)
         benchmark_history = market.fetch_benchmark_history(symbol, start, end)
         if not benchmark_history:
             return []

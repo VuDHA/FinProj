@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -13,6 +15,8 @@ import {
 } from "recharts";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { EmptyState } from "../components/EmptyState";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { MiniSparkline } from "../components/ui/MiniSparkline";
@@ -47,11 +51,27 @@ export function Analytics() {
 
       {!data && <div className="text-slate-500">{labels.common.loading}</div>}
 
-      {data && (
+      {data && data.type_returns.length === 0 && (
+        <EmptyState
+          title={labels.analytics.empty}
+          description={labels.dashboard.addAssetsHint}
+          action={
+            <Link to="/assets" className="btn-primary">
+              <Plus className="w-4 h-4" />
+              {labels.assets.addAsset}
+            </Link>
+          }
+        />
+      )}
+
+      {data && data.type_returns.length > 0 && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <FintechCard delay={0.1}>
-              <div className="card-title mb-1">{labels.analytics.totalPnl}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.totalPnl}
+                <InfoTooltip content={labels.tooltips.pnl} />
+              </div>
               <div className={`metric-value ${totalPnl >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
                 <AnimatedNumber value={totalPnl} formatter={formatCurrency} />
               </div>
@@ -60,7 +80,10 @@ export function Analytics() {
               </div>
             </FintechCard>
             <FintechCard delay={0.15}>
-              <div className="card-title mb-1">{labels.analytics.topGainer}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.topGainer}
+                <InfoTooltip content={labels.tooltips.analyticsTopGainer} />
+              </div>
               <div className="metric-value text-accent-cyan">
                 {data.top_performers[0]?.symbol ?? "-"}
               </div>
@@ -73,7 +96,10 @@ export function Analytics() {
               </div>
             </FintechCard>
             <FintechCard delay={0.2}>
-              <div className="card-title mb-1">{labels.analytics.topLoser}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.topLoser}
+                <InfoTooltip content={labels.tooltips.analyticsTopLoser} />
+              </div>
               <div className="metric-value text-accent-rose">
                 {data.bottom_performers[0]?.symbol ?? "-"}
               </div>
@@ -87,7 +113,10 @@ export function Analytics() {
             </FintechCard>
 
             <FintechCard delay={0.22}>
-              <div className="card-title mb-1">{labels.analytics.totalIncome}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.totalIncome}
+                <InfoTooltip content={labels.tooltips.analyticsTotalIncome} />
+              </div>
               <div className="metric-value text-accent-emerald">
                 <AnimatedNumber value={data.total_income || 0} formatter={formatCurrency} />
               </div>
@@ -99,7 +128,10 @@ export function Analytics() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FintechCard delay={0.25}>
-              <h3 className="card-title mb-4">{labels.analytics.topPerformers}</h3>
+              <h3 className="card-title mb-4 inline-flex items-center">
+                {labels.analytics.topPerformers}
+                <InfoTooltip content={labels.tooltips.analyticsTopGainer} />
+              </h3>
               {data.top_performers.length > 0 ? (
                 <div className="overflow-x-auto scrollbar-thin">
                   <table className="table-fintech">
@@ -143,7 +175,10 @@ export function Analytics() {
             </FintechCard>
 
             <FintechCard delay={0.3}>
-              <h3 className="card-title mb-4">{labels.analytics.bottomPerformers}</h3>
+              <h3 className="card-title mb-4 inline-flex items-center">
+                {labels.analytics.bottomPerformers}
+                <InfoTooltip content={labels.tooltips.analyticsTopLoser} />
+              </h3>
               {data.bottom_performers.length > 0 ? (
                 <div className="overflow-x-auto scrollbar-thin">
                   <table className="table-fintech">
@@ -189,7 +224,10 @@ export function Analytics() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FintechCard delay={0.35}>
-              <h3 className="card-title mb-4">{labels.analytics.returnByType}</h3>
+              <h3 className="card-title mb-4 inline-flex items-center">
+                {labels.analytics.returnByType}
+                <InfoTooltip content={labels.tooltips.allocationByType} />
+              </h3>
               {data.type_returns.length > 0 ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -212,7 +250,10 @@ export function Analytics() {
             </FintechCard>
 
             <FintechCard delay={0.4}>
-              <h3 className="card-title mb-4">{labels.analytics.monthlyPnl}</h3>
+              <h3 className="card-title mb-4 inline-flex items-center">
+                {labels.analytics.monthlyPnl}
+                <InfoTooltip content={labels.tooltips.pnl} />
+              </h3>
               {data.monthly_pnl.length > 0 ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -241,25 +282,37 @@ export function Analytics() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <FintechCard delay={0.42}>
-              <div className="card-title mb-1">{labels.analytics.volatility}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.volatility}
+                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+              </div>
               <div className="metric-value text-accent-blue">
                 {risk.data?.volatility != null ? `${(risk.data.volatility * 100).toFixed(2)}%` : "—"}
               </div>
             </FintechCard>
             <FintechCard delay={0.44}>
-              <div className="card-title mb-1">{labels.analytics.sharpeRatio}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.sharpeRatio}
+                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+              </div>
               <div className="metric-value text-accent-violet">
                 {risk.data?.sharpe_ratio != null ? risk.data.sharpe_ratio.toFixed(2) : "—"}
               </div>
             </FintechCard>
             <FintechCard delay={0.46}>
-              <div className="card-title mb-1">{labels.analytics.maxDrawdown}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.maxDrawdown}
+                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+              </div>
               <div className="metric-value text-accent-rose">
                 {risk.data?.max_drawdown_percent != null ? `${risk.data.max_drawdown_percent.toFixed(2)}%` : "—"}
               </div>
             </FintechCard>
             <FintechCard delay={0.48}>
-              <div className="card-title mb-1">{labels.analytics.beta}</div>
+              <div className="card-title mb-1 inline-flex items-center">
+                {labels.analytics.beta}
+                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+              </div>
               <div className="metric-value text-accent-cyan">
                 {risk.data?.beta != null ? risk.data.beta.toFixed(2) : "—"}
               </div>
@@ -267,7 +320,10 @@ export function Analytics() {
           </div>
 
           <FintechCard delay={0.45}>
-            <h3 className="card-title mb-4">{labels.analytics.monthlyPnl} — {labels.analytics.detail}</h3>
+            <h3 className="card-title mb-4 inline-flex items-center">
+              {labels.analytics.monthlyPnl} — {labels.analytics.detail}
+              <InfoTooltip content={labels.tooltips.pnl} />
+            </h3>
             {data.monthly_pnl.length > 0 ? (
               <div className="overflow-x-auto scrollbar-thin">
                 <table className="table-fintech">

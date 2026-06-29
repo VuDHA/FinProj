@@ -4,12 +4,26 @@ from typing import Optional, List
 from pydantic import BaseModel, model_validator
 
 
+class AssetSourceInfo(BaseModel):
+    code: str
+    name: str
+    description: str
+    supports_history: bool
+    supports_listing: bool
+
+
+class DefaultSourceRequest(BaseModel):
+    sources: dict
+
+
 class AssetCreate(BaseModel):
     symbol: str
     name: str
     type: str
     exchange: Optional[str] = None
     currency: str = "VND"
+    source: Optional[str] = None
+    source_params: Optional[str] = None
 
 
 class AssetRead(AssetCreate):
@@ -51,6 +65,7 @@ class Quote(BaseModel):
     change: float
     change_percent: float
     date: datetime.date
+    error: Optional[str] = None
 
 
 class MarketSymbol(BaseModel):

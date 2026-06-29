@@ -5,11 +5,12 @@ import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
+import { SourceSelect } from "../components/SourceSelect";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { labels } from "../i18n/vi";
 import { formatCurrency } from "../lib/utils";
 
 const API_KEYS = [
-  { key: "vndirect_api_key", label: labels.settings.vndirectKey },
   { key: "ssi_consumer_key", label: labels.settings.ssiKey },
   { key: "ssi_consumer_secret", label: labels.settings.ssiSecret },
   { key: "fireant_api_key", label: labels.settings.fireantKey },
@@ -50,6 +51,16 @@ export function Settings() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["allocation-targets"] }),
   });
 
+  const defaultSources = useQuery({
+    queryKey: ["default-sources"],
+    queryFn: async () => (await API.get("/settings/default-sources")).data,
+  });
+
+  const saveDefaultSources = useMutation({
+    mutationFn: (payload: Record<string, string>) => API.post("/settings/default-sources", payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["default-sources"] }),
+  });
+
   const importAssets = useMutation({
     mutationFn: async (file: File) => {
       const form = new FormData();
@@ -75,7 +86,22 @@ export function Settings() {
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [targetValues, setTargetValues] = useState<Record<string, string>>({});
+  const [defaultSourceValues, setDefaultSourceValues] = useState<Record<string, string | null>>({});
   const [savedKey, setSavedKey] = useState<string | null>(null);
+
+  const getDefaultSource = (type: string) => {
+    if (defaultSourceValues[type] !== undefined) return defaultSourceValues[type];
+    return defaultSources.data?.[type] || "";
+  };
+
+  const handleSaveDefaultSources = () => {
+    const payload: Record<string, string> = {};
+    ASSET_TYPES.forEach((type) => {
+      const value = getDefaultSource(type);
+      if (value) payload[type] = value;
+    });
+    saveDefaultSources.mutate(payload);
+  };
 
   const getValue = (key: string) => {
     if (values[key] !== undefined) return values[key];
@@ -120,12 +146,17 @@ export function Settings() {
       {targets.isError && <ErrorMessage error={targets.error} retry={() => targets.refetch()} />}
       {save.isError && <ErrorMessage error={save.error} retry={() => save.reset()} />}
       {saveTargets.isError && <ErrorMessage error={saveTargets.error} retry={() => saveTargets.reset()} />}
+      {defaultSources.isError && <ErrorMessage error={defaultSources.error} retry={() => defaultSources.refetch()} />}
+      {saveDefaultSources.isError && <ErrorMessage error={saveDefaultSources.error} retry={() => saveDefaultSources.reset()} />}
       {importAssets.isError && <ErrorMessage error={importAssets.error} retry={() => importAssets.reset()} />}
       {importTransactions.isError && <ErrorMessage error={importTransactions.error} retry={() => importTransactions.reset()} />}
       <SectionHeader title={labels.settings.title} />
 
       <FintechCard delay={0.1}>
-        <h3 className="card-title mb-4">{labels.settings.apiKeys}</h3>
+        <h3 className="card-title mb-4 inline-flex items-center">
+          {labels.settings.apiKeys}
+          <InfoTooltip content={labels.tooltips.settingsApiKeys} />
+        </h3>
         <div className="space-y-3">
           {API_KEYS.map((item) => (
             <div key={item.key} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
@@ -166,7 +197,10 @@ export function Settings() {
 
       <FintechCard delay={0.15}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="card-title">{labels.settings.goldFx}</h3>
+          <h3 className="card-title inline-flex items-center">
+            {labels.settings.goldFx}
+            <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+          </h3>
           <button
             onClick={() => qc.invalidateQueries({ queryKey: ["gold-fx"] })}
             className="btn-secondary"
@@ -187,10 +221,22 @@ export function Settings() {
                   <table className="table-fintech">
                     <thead>
                       <tr>
-                        <th className="text-left">{labels.settings.source}</th>
-                        <th className="text-right">{labels.settings.buy}</th>
-                        <th className="text-right">{labels.settings.sell}</th>
-                        <th className="text-right">{labels.settings.updated}</th>
+                        <th className="text-left">
+                          {labels.settings.source}
+                          <InfoTooltip content={labels.tooltips.sourceDefault} />
+                        </th>
+                        <th className="text-right">
+                          {labels.settings.buy}
+                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                        </th>
+                        <th className="text-right">
+                          {labels.settings.sell}
+                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                        </th>
+                        <th className="text-right">
+                          {labels.settings.updated}
+                          <InfoTooltip content={labels.tooltips.backtestStartDate} />
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -217,10 +263,22 @@ export function Settings() {
                   <table className="table-fintech">
                     <thead>
                       <tr>
-                        <th className="text-left">{labels.settings.currency}</th>
-                        <th className="text-right">{labels.settings.buy}</th>
-                        <th className="text-right">{labels.settings.transfer}</th>
-                        <th className="text-right">{labels.settings.sell}</th>
+                        <th className="text-left">
+                          {labels.settings.currency}
+                          <InfoTooltip content={labels.tooltips.assetCurrency} />
+                        </th>
+                        <th className="text-right">
+                          {labels.settings.buy}
+                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                        </th>
+                        <th className="text-right">
+                          {labels.settings.transfer}
+                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                        </th>
+                        <th className="text-right">
+                          {labels.settings.sell}
+                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -243,8 +301,44 @@ export function Settings() {
         )}
       </FintechCard>
 
+      <FintechCard delay={0.18}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="card-title">{labels.sources.defaultSources}</h3>
+            <InfoTooltip content={labels.sources.defaultSourcesDescription} />
+          </div>
+          <button
+            onClick={handleSaveDefaultSources}
+            disabled={saveDefaultSources.isPending}
+            className="btn-primary"
+          >
+            <Save className="w-4 h-4" />
+            {saveDefaultSources.isPending ? labels.settings.saving : labels.settings.save}
+          </button>
+        </div>
+        <div className="space-y-3">
+          {ASSET_TYPES.map((type) => (
+            <div key={type} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+              <label className="text-sm font-medium text-slate-500 md:col-span-1">
+                {labels.assetTypes[type as keyof typeof labels.assetTypes] ?? type}
+              </label>
+              <div className="md:col-span-3">
+                <SourceSelect
+                  assetType={type}
+                  value={getDefaultSource(type)}
+                  onChange={(value) => setDefaultSourceValues({ ...defaultSourceValues, [type]: value })}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </FintechCard>
+
       <FintechCard delay={0.2}>
-        <h3 className="card-title mb-4">{labels.settings.allocationTargets}</h3>
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="card-title">{labels.settings.allocationTargets}</h3>
+          <InfoTooltip content={labels.tooltips.allocationTargets} />
+        </div>
         <div className="space-y-3">
           {ASSET_TYPES.map((type) => (
             <div key={type} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
@@ -278,7 +372,10 @@ export function Settings() {
       </FintechCard>
 
       <FintechCard delay={0.25}>
-        <h3 className="card-title mb-4">{labels.settings.importExport}</h3>
+        <h3 className="card-title mb-4 inline-flex items-center">
+          {labels.settings.importExport}
+          <InfoTooltip content={labels.tooltips.settingsImportExport} />
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <h4 className="font-medium text-slate-700">{labels.common.save}</h4>

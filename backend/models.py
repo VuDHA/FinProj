@@ -13,6 +13,8 @@ class Asset(SQLModel, table=True):
     exchange: Optional[str] = None
     currency: str = "VND"
     is_active: bool = True
+    source: Optional[str] = Field(default=None, index=True)
+    source_params: Optional[str] = None  # JSON string for source-specific params
 
 
 class PriceSnapshot(SQLModel, table=True):

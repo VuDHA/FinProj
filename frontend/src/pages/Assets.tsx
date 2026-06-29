@@ -5,6 +5,8 @@ import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
+import { SourceSelect } from "../components/SourceSelect";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { labels } from "../i18n/vi";
 
 const TYPES = ["STOCK", "FUND", "ETF", "GOLD", "CRYPTO"];
@@ -25,6 +27,7 @@ export function Assets() {
     type: "STOCK",
     exchange: "",
     currency: "VND",
+    source: null as string | null,
   });
 
   const assets = useQuery({
@@ -36,7 +39,7 @@ export function Assets() {
     mutationFn: () => API.post("/assets/", form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["assets"] });
-      setForm({ symbol: "", name: "", type: "STOCK", exchange: "", currency: "VND" });
+      setForm({ symbol: "", name: "", type: "STOCK", exchange: "", currency: "VND", source: null });
     },
   });
 
@@ -54,36 +57,66 @@ export function Assets() {
 
       <FintechCard delay={0.1}>
         <h3 className="card-title mb-4">{labels.assets.addAsset}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <input
-            placeholder={labels.assets.symbol}
-            className="input-fintech"
-            value={form.symbol}
-            onChange={(e) => setForm({ ...form, symbol: e.target.value.toUpperCase() })}
-          />
-          <input
-            placeholder={labels.assets.name}
-            className="input-fintech"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <select
-            className="input-fintech"
-            value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value })}
-          >
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {labels.assetTypes[t as keyof typeof labels.assetTypes]}
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder={labels.assets.exchange}
-            className="input-fintech"
-            value={form.exchange}
-            onChange={(e) => setForm({ ...form, exchange: e.target.value })}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="relative">
+            <input
+              placeholder={labels.assets.symbol}
+              className="input-fintech pr-10"
+              value={form.symbol}
+              onChange={(e) => setForm({ ...form, symbol: e.target.value.toUpperCase() })}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              <InfoTooltip content={labels.tooltips.assetSymbol} position="right" />
+            </span>
+          </div>
+          <div className="relative">
+            <input
+              placeholder={labels.assets.name}
+              className="input-fintech pr-10"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              <InfoTooltip content={labels.tooltips.assetName} position="right" />
+            </span>
+          </div>
+          <div className="relative">
+            <select
+              className="input-fintech pr-10"
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value })}
+            >
+              {TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {labels.assetTypes[t as keyof typeof labels.assetTypes]}
+                </option>
+              ))}
+            </select>
+            <span className="absolute right-8 top-1/2 -translate-y-1/2">
+              <InfoTooltip content={labels.tooltips.assetType} position="right" />
+            </span>
+          </div>
+          <div className="relative">
+            <input
+              placeholder={labels.assets.exchange}
+              className="input-fintech pr-10"
+              value={form.exchange}
+              onChange={(e) => setForm({ ...form, exchange: e.target.value })}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              <InfoTooltip content={labels.tooltips.assetExchange} position="right" />
+            </span>
+          </div>
+          <div className="relative">
+            <SourceSelect
+              assetType={form.type}
+              value={form.source}
+              onChange={(value) => setForm({ ...form, source: value })}
+            />
+            <span className="absolute right-8 top-1/2 -translate-y-1/2">
+              <InfoTooltip content={labels.sources.assetSourceHint} position="right" />
+            </span>
+          </div>
         </div>
         <button
           onClick={() => create.mutate()}
@@ -100,10 +133,26 @@ export function Assets() {
           <table className="table-fintech">
             <thead>
               <tr>
-                <th className="text-left">{labels.assets.symbol}</th>
-                <th className="text-left">{labels.assets.name}</th>
-                <th className="text-left">{labels.assets.type}</th>
-                <th className="text-left">{labels.assets.exchange}</th>
+                <th className="text-left">
+                  {labels.assets.symbol}
+                  <InfoTooltip content={labels.tooltips.assetSymbol} />
+                </th>
+                <th className="text-left">
+                  {labels.assets.name}
+                  <InfoTooltip content={labels.tooltips.assetName} />
+                </th>
+                <th className="text-left">
+                  {labels.assets.type}
+                  <InfoTooltip content={labels.tooltips.assetType} />
+                </th>
+                <th className="text-left">
+                  {labels.assets.exchange}
+                  <InfoTooltip content={labels.tooltips.assetExchange} />
+                </th>
+                <th className="text-left">
+                  {labels.sources.activeSource}
+                  <InfoTooltip content={labels.sources.assetSourceHint} />
+                </th>
                 <th className="text-right">{labels.assets.actions}</th>
               </tr>
             </thead>
@@ -118,6 +167,19 @@ export function Assets() {
                     </span>
                   </td>
                   <td className="text-slate-500">{asset.exchange || "-"}</td>
+                  <td className="text-slate-500">
+                    {asset.source ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent-violet" />
+                        {asset.source}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                        {labels.sources.default}
+                      </span>
+                    )}
+                  </td>
                   <td className="text-right">
                     <button
                       onClick={() => remove.mutate(asset.id)}
@@ -131,7 +193,7 @@ export function Assets() {
               ))}
               {assets.data?.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     {labels.assets.noAssets}
                   </td>
                 </tr>

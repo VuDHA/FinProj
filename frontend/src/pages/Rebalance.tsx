@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Save, Scale } from "lucide-react";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -66,9 +67,10 @@ export function Rebalance() {
 
       <FintechCard delay={0.1}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="card-title">
+          <h3 className="card-title inline-flex items-center">
             <Scale className="w-4 h-4 inline mr-2" />
             {labels.rebalance.currentAllocation}
+            <InfoTooltip content={labels.tooltips.rebalanceCurrent} />
           </h3>
           <div className="text-sm text-slate-500">
             {labels.market.totalValue}:{" "}
@@ -82,10 +84,22 @@ export function Rebalance() {
           <table className="table-fintech">
             <thead>
               <tr>
-                <th className="text-left">{labels.assets.type}</th>
-                <th className="text-right">{labels.rebalance.currentAllocation}</th>
-                <th className="text-right">{labels.rebalance.targetAllocation}</th>
-                <th className="text-right">{labels.rebalance.diff}</th>
+                <th className="text-left">
+                  {labels.assets.type}
+                  <InfoTooltip content={labels.tooltips.assetType} />
+                </th>
+                <th className="text-right">
+                  {labels.rebalance.currentAllocation}
+                  <InfoTooltip content={labels.tooltips.rebalanceCurrent} />
+                </th>
+                <th className="text-right">
+                  {labels.rebalance.targetAllocation}
+                  <InfoTooltip content={labels.tooltips.rebalanceTarget} />
+                </th>
+                <th className="text-right">
+                  {labels.rebalance.diff}
+                  <InfoTooltip content={labels.tooltips.rebalanceDiff} />
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -141,17 +155,35 @@ export function Rebalance() {
       </FintechCard>
 
       <FintechCard delay={0.2}>
-        <h3 className="card-title mb-4">{labels.rebalance.suggestedTrades}</h3>
+        <h3 className="card-title mb-4 inline-flex items-center">
+          {labels.rebalance.suggestedTrades}
+          <InfoTooltip content={labels.tooltips.rebalanceSuggestion} />
+        </h3>
         {data?.trades?.length > 0 ? (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="table-fintech">
               <thead>
                 <tr>
-                  <th className="text-left">{labels.market.symbol}</th>
-                  <th className="text-left">{labels.rebalance.action}</th>
-                  <th className="text-right">{labels.transactions.quantity}</th>
-                  <th className="text-right">{labels.market.price}</th>
-                  <th className="text-right">{labels.rebalance.estimatedValue}</th>
+                  <th className="text-left">
+                    {labels.market.symbol}
+                    <InfoTooltip content={labels.tooltips.assetSymbol} />
+                  </th>
+                  <th className="text-left">
+                    {labels.rebalance.action}
+                    <InfoTooltip content={labels.tooltips.transactionType} />
+                  </th>
+                  <th className="text-right">
+                    {labels.transactions.quantity}
+                    <InfoTooltip content={labels.tooltips.transactionQuantity} />
+                  </th>
+                  <th className="text-right">
+                    {labels.market.price}
+                    <InfoTooltip content={labels.tooltips.transactionPrice} />
+                  </th>
+                  <th className="text-right">
+                    {labels.rebalance.estimatedValue}
+                    <InfoTooltip content={labels.tooltips.totalValue} />
+                  </th>
                 </tr>
               </thead>
               <tbody>

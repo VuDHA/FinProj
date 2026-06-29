@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   Area,
   AreaChart,
@@ -15,6 +16,8 @@ import {
 } from "recharts";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { EmptyState } from "../components/EmptyState";
+import { InfoTooltip } from "../components/InfoTooltip";
 import { SummaryCards } from "../components/SummaryCards";
 import { FintechCard } from "../components/ui/FintechCard";
 import { MiniSparkline } from "../components/ui/MiniSparkline";
@@ -119,14 +122,17 @@ export function Dashboard() {
       {refresh.isError && <ErrorMessage error={refresh.error} retry={() => refresh.mutate()} />}
 
       <SectionHeader title={labels.dashboard.title}>
-        <button
-          onClick={() => refresh.mutate()}
-          disabled={refresh.isPending}
-          className="btn-primary"
-        >
-          <RefreshCw className={`w-4 h-4 ${refresh.isPending ? "animate-spin" : ""}`} />
-          {refresh.isPending ? labels.dashboard.refreshing : labels.dashboard.refreshPrices}
-        </button>
+        <div className="flex items-center gap-2">
+          <InfoTooltip content={labels.tooltips.refreshPrices} />
+          <button
+            onClick={() => refresh.mutate()}
+            disabled={refresh.isPending}
+            className="btn-primary"
+          >
+            <RefreshCw className={`w-4 h-4 ${refresh.isPending ? "animate-spin" : ""}`} />
+            {refresh.isPending ? labels.dashboard.refreshing : labels.dashboard.refreshPrices}
+          </button>
+        </div>
       </SectionHeader>
 
       <SummaryCards {...data} />
@@ -134,7 +140,10 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <FintechCard className="lg:col-span-2" delay={0.2}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="card-title">{labels.dashboard.holdings}</h3>
+            <h3 className="card-title inline-flex items-center">
+              {labels.dashboard.holdings}
+              <InfoTooltip content={labels.dashboard.addAssetsHint} />
+            </h3>
             <span className="text-xs text-slate-500">{data.items.length} {labels.assets.symbol}</span>
           </div>
           {data.items.length > 0 ? (
@@ -181,12 +190,24 @@ export function Dashboard() {
               </table>
             </div>
           ) : (
-            <div className="text-slate-500 py-8">{labels.dashboard.addAssetsHint}</div>
+            <EmptyState
+              title={labels.dashboard.empty}
+              description={labels.dashboard.addAssetsHint}
+              action={
+                <Link to="/assets" className="btn-primary">
+                  <Plus className="w-4 h-4" />
+                  {labels.assets.addAsset}
+                </Link>
+              }
+            />
           )}
         </FintechCard>
 
         <FintechCard delay={0.3}>
-          <h3 className="card-title mb-4">{labels.dashboard.allocationByType}</h3>
+          <h3 className="card-title mb-4 inline-flex items-center">
+            {labels.dashboard.allocationByType}
+            <InfoTooltip content={labels.tooltips.allocationByType} />
+          </h3>
           <div className="h-64">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -234,7 +255,10 @@ export function Dashboard() {
 
       <FintechCard delay={0.4}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="card-title">{labels.dashboard.portfolioTrend}</h3>
+          <h3 className="card-title inline-flex items-center">
+            {labels.dashboard.portfolioTrend}
+            <InfoTooltip content={labels.tooltips.portfolioTrend} />
+          </h3>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <span className="w-2 h-2 rounded-full bg-blue-500" />
@@ -294,8 +318,17 @@ export function Dashboard() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-full flex items-center justify-center text-slate-500">
-              {labels.dashboard.addAssetsHint}
+            <div className="h-full flex items-center justify-center">
+              <EmptyState
+                title={labels.dashboard.empty}
+                description={labels.dashboard.addAssetsHint}
+                action={
+                  <Link to="/assets" className="btn-primary">
+                    <Plus className="w-4 h-4" />
+                    {labels.assets.addAsset}
+                  </Link>
+                }
+              />
             </div>
           )}
         </div>
