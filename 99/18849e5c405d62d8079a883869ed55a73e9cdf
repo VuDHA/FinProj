@@ -1,0 +1,413 @@
+backend/services/backtest.py
+  s_840e57de9ab92f::t_ce6cd46b0d1939 11
+  s_2cc0e78e027298::t_ecfe1244373365 284
+  s_840e57de9ab92f::t_484c12cb619230 275-283,285-289
+  s_2cc0e78e027298::t_09aca3cc92241f 90-106
+  s_840e57de9ab92f::t_64a0ea204f5c93 7
+frontend/src/api/news.ts
+  s_840e57de9ab92f::t_8047a8140376d2 76-82
+  s_b22a3c6a777a25::t_86a563b2d4155c 111,152-170,172-175,177-178,180-216
+  s_ab2697edb080bd::t_ee0f5474f37b0a 123-124
+  s_840e57de9ab92f::t_92671dca766dee 110,113-117
+  s_d25702f5603246::t_c7779a98a4d6b8 54-75,83-84,103-109
+  s_324f8e01490936::t_b0bd61bcc56b8b 217
+  s_b22a3c6a777a25::t_7cdf8553bf4d0c 171
+  s_b22a3c6a777a25::t_ee5759348990aa 176
+  s_b22a3c6a777a25::t_055d17e0ad989c 179
+backend/services/ollama_client.py
+  s_3dce0f2aed3707::t_f2f4707f225544 1-59,62-66,75,83,93-104,107-115,124,132,142-160
+  s_840e57de9ab92f::t_a1298d994bea21 60-61,67-74,76-82,84-92,105-106,116-123,125-131,133-141
+backend/services/news/refresh_tracker.py
+  s_b22a3c6a777a25::t_54880a9008231e 1-100
+frontend/src/components/Layout.tsx
+  s_96148787dcbd0c::t_f3ff729b29151a 34
+  s_324f8e01490936::t_85373077491479 79
+  s_96148787dcbd0c::t_c61c798806ad33 6
+frontend/src/components/SmartImportDialog.tsx
+  s_324f8e01490936::t_ff20dd383a236f 204-207
+  s_840e57de9ab92f::t_e784d53ae13e27 1-3,10-29,31-36,40-43,46-54,56-141,145-156,158-193,195-203,208-233
+  s_840e57de9ab92f::t_8fa71b427bd1b3 157
+  s_840e57de9ab92f::t_3ca203f0f43262 30
+  s_324f8e01490936::t_cb5828d80b4ae8 38
+  s_840e57de9ab92f::t_a16fa0090c8732 142-144
+  s_840e57de9ab92f::t_ac1131fab67e82 4-9
+  s_840e57de9ab92f::t_aa61b6516da83d 37,39
+  s_840e57de9ab92f::t_46780b158e0a20 44-45
+  s_324f8e01490936::t_6a8ac97a169aaf 55
+  s_840e57de9ab92f::t_002b5bad83e945 194
+backend/services/news/crawler.py
+  s_840e57de9ab92f::t_1a0001744f6a38 19-20
+  s_840e57de9ab92f::t_21e0a16e99b1ef 8
+  s_840e57de9ab92f::t_747d3be1824359 88-94
+  s_b22a3c6a777a25::t_5573806616d721 3,97,102-103,110-112,117-118,121-126,137-143,146,148-150,152-155,158,161-164
+backend/.env.example
+  s_840e57de9ab92f::t_f5283df12f5e7b 11-17
+  s_8e99bc97b07cf2::t_f15d96a9daefd8 4-10
+  s_840e57de9ab92f::t_5b85b96edcb495 18
+backend/services/embedding_store.py
+  s_840e57de9ab92f::t_e5633171b4001b 1-141
+backend/tests/test_news_processor.py
+  s_8e99bc97b07cf2::t_b808a1204fe2ac 109-129
+  s_840e57de9ab92f::t_425d2f3127b2ad 130-131
+  s_8e99bc97b07cf2::t_fc966fc388a1ae 2
+backend/tests/test_backtest_ai.py
+  s_2cc0e78e027298::t_39b160179b1a0a 51-54
+  s_2cc0e78e027298::t_53fe860edac75b 6
+  s_2cc0e78e027298::t_3623a2298ad317 35-46,49,55-65
+  s_840e57de9ab92f::t_143de02501ddb0 47-48,50
+  s_840e57de9ab92f::t_0646d8d7b89b49 1-2,5,7-9,11-13,22-34
+  s_2cc0e78e027298::t_1e1cddd782eac5 3-4
+  s_2cc0e78e027298::t_2b6e47abf74a0b 10
+  s_840e57de9ab92f::t_4e9c444c73d211 14-21
+frontend/src/i18n/vi.ts
+  s_840e57de9ab92f::t_37c4308df5b6f8 281
+  s_5283a3a52084e6::t_af8929b1084f90 456-457,461,463
+  s_7ef68de1a9c3a7::t_b80bd6ca0da03a 286
+  s_ce9d142a7e1880::t_cd5a43b62d1445 35-64
+  s_96148787dcbd0c::t_20ecc569ba2309 417-425
+  s_324f8e01490936::t_96fb0f5c5605a7 481-489,499,508-510
+  s_324f8e01490936::t_d96e1fd13d4375 5
+  s_840e57de9ab92f::t_06dc10dca80880 195-198
+  s_96148787dcbd0c::t_5f7b70aca63c93 17
+  s_840e57de9ab92f::t_fd660d41976a67 458-459,462,464-467
+  s_ab2697edb080bd::t_9cc3cc812e5b64 288-289
+  s_d25702f5603246::t_b94428422261ac 273-280,282-285
+  s_96148787dcbd0c::t_7a17e12cd29f05 494-495,505-507
+  s_b22a3c6a777a25::t_f3d030a1d80646 238-240
+  s_ce9d142a7e1880::t_0d16d252a49228 380-386
+  s_324f8e01490936::t_8a81419c892ae5 468-480
+  s_8e99bc97b07cf2::t_322f1afc7cf55f 287
+backend/services/news/processor.py
+  s_8e99bc97b07cf2::t_6a6f58bccee794 23-24
+  s_840e57de9ab92f::t_5cc159d3138751 6,8-9,13,22
+  s_8e99bc97b07cf2::t_b6c79af420f245 5
+  s_840e57de9ab92f::t_c9b0314994973e 15-19,21
+  s_8e99bc97b07cf2::t_512fe5677e4439 25-27
+backend/config.py
+  s_840e57de9ab92f::t_cd3605f236880d 28
+  s_7ef68de1a9c3a7::t_51343b4a335acf 30-32
+  s_3dce0f2aed3707::t_d53e0baf303f39 24-27,29
+  s_8e99bc97b07cf2::t_7a7fc2b923f605 17-23
+backend/api/import_export.py
+  s_840e57de9ab92f::t_a89f607a1953af 1
+  s_840e57de9ab92f::t_d071e13779b9ec 4,9-13,15
+  s_840e57de9ab92f::t_10659ce886bcd3 60-85,87-90,95-107
+  s_840e57de9ab92f::t_29ea0696e82891 86,91-94
+  s_840e57de9ab92f::t_91758ab86cc72c 2-3
+backend/api/news.py
+  s_7ef68de1a9c3a7::t_77369b882576ef 194-200
+  s_840e57de9ab92f::t_ce5f751ca30ef0 211
+  s_7ef68de1a9c3a7::t_22d2a178b3a443 12
+  s_ab2697edb080bd::t_50785c736615db 232,236
+  s_b22a3c6a777a25::t_ecfebe8fc76973 1,3-5,8,31,212,344-399,409-415
+  s_d25702f5603246::t_bc6c27ea7cfb59 14,16-17,22,28,79,93,102-111,138-142,145,151-168,170-181,201-203,205-210
+  s_b22a3c6a777a25::t_2f8d14e509ba47 400-408
+  s_7ef68de1a9c3a7::t_0683f80538cb81 416-425
+  s_840e57de9ab92f::t_39952ea0c43fd4 182-193,204
+  s_840e57de9ab92f::t_3716cf299723a5 34
+frontend/src/pages/Backtest.tsx
+  s_840e57de9ab92f::t_53877c1a132b66 248
+  s_840e57de9ab92f::t_0d34658ad77d26 3
+  s_840e57de9ab92f::t_4fb20c77253a86 202-243
+  s_840e57de9ab92f::t_a93f6b16a763d2 21
+  s_840e57de9ab92f::t_86ec9ce48d6f6a 29
+  s_840e57de9ab92f::t_d14381eb284293 118
+  s_840e57de9ab92f::t_bf13609b5b966e 60-63,66-84
+  s_840e57de9ab92f::t_e8cd7598d94344 39-41
+backend/services/news/dictionaries/symbols.py
+  s_840e57de9ab92f::t_a5a7aea28a873a 10
+frontend/src/api/import.ts
+  s_840e57de9ab92f::t_39b810768ebdaa 1-53
+backend/requirements.txt
+  s_840e57de9ab92f::t_d10adccc9d6a75 14
+frontend/src/pages/EnvConfig.tsx
+  s_96148787dcbd0c::t_8988e2d713ade4 1-210
+frontend/src/pages/News.tsx
+  s_ab2697edb080bd::t_de81ca1fda0eb7 570,575-583,586-589
+  s_7ef68de1a9c3a7::t_6af71a7a623379 731
+  s_8e99bc97b07cf2::t_b0e6711602ea31 240-243,245-246
+  s_7ef68de1a9c3a7::t_8f1c2a92cdf4a0 763
+  s_d25702f5603246::t_03624e0b1327cc 29
+  s_7ef68de1a9c3a7::t_8a008b201ef92c 723-728
+  s_b22a3c6a777a25::t_23697ea274df7c 531-533,538-553,556-567
+  s_d25702f5603246::t_33f4b79fa95ea3 269,272-278,280,283,286-313,340,357-369,372,375-381,384,388-393,395,416-419,465-466,480-486,510-513
+  s_d25702f5603246::t_3fa54f5b9c740f 284
+  s_7ef68de1a9c3a7::t_d7fd64d46eecc5 420,422-428,487
+  s_d25702f5603246::t_1b25f98b6b4f52 792-797,808-813
+  s_840e57de9ab92f::t_51ef37f9331d33 467-479
+  s_840e57de9ab92f::t_7670a53b3a437c 761-762,764-765
+  s_d25702f5603246::t_87303368b964a6 642-653,656-659,661-679,681-722,729-730,732-760,766-778
+  s_ab2697edb080bd::t_10f27f5daf8764 10-11,129-149,151,157-166,170,173,175-190,194,196,198-206
+  s_840e57de9ab92f::t_aff210892971e8 48
+  s_840e57de9ab92f::t_9c3a30671c4b78 266
+  s_ab2697edb080bd::t_6e3bb8d927cb07 4-5,14,20-21,75-107,255-256
+  s_b22a3c6a777a25::t_7af9caf74da1a7 502,506-509,554-555
+  s_ab2697edb080bd::t_540b4ab1fce09c 279
+  s_b22a3c6a777a25::t_5ee1b666c59a16 39-40
+  s_ab2697edb080bd::t_20e65025a66d82 407,584-585
+  s_7ef68de1a9c3a7::t_3f070001d9b1ce 30
+  s_ab2697edb080bd::t_deab9cc0151671 568,593-618
+  s_8e99bc97b07cf2::t_fe7832a4057a3b 235-239,244
+  s_ab2697edb080bd::t_3bf343ef3ab468 405-406
+  s_d25702f5603246::t_4725a4fd86ba0d 1-2,7-9,12,18,28,35,53,108-128,150,152-156,167-169,171-172,174,191-193,195,197,207-211
+  s_b22a3c6a777a25::t_653d1122e47970 314-334,341-354
+  s_d25702f5603246::t_d94313bd1c4581 212
+  s_7ef68de1a9c3a7::t_f0e369ae4d0d44 421
+  s_7ef68de1a9c3a7::t_3b21f11183343c 488
+backend/scripts/retag_news.py
+  s_2cc0e78e027298::t_f0e7e6870bc38b 1-13,15-19,21-24,28-29,31-32,34-36,38-42,45,57-93,95-113,124-141
+  s_2cc0e78e027298::t_ea982fb5d55719 20,25-27,30,33,37,43-44,46-56,94,114-123
+  s_2cc0e78e027298::t_80bf8356189467 14
+frontend/src/components/OnboardingTour.tsx
+  s_324f8e01490936::t_2ae1d0a8c5aceb 4
+  s_324f8e01490936::t_d90be5174fc120 126
+backend/services/env_config.py
+  s_96148787dcbd0c::t_03505fb5191c7b 1-99,102-113,119-173
+  s_96148787dcbd0c::t_71e19105766830 100-101,114-118
+frontend/src/pages/Dashboard.tsx
+  s_ce9d142a7e1880::t_2d6599fb44653e 2-15,31,36,46-87,119-161,169,212-244,279-325,327-368,370-384,386-403,407-422,425-483,485-488,490-599,602,620
+  s_ce9d142a7e1880::t_1c8509c0a677af 43
+  s_324f8e01490936::t_0a1d5d3c36626c 404-406
+backend/tests/test_smart_import.py
+  s_468134a4b87e1c::t_8087090536335a 4
+  s_468134a4b87e1c::t_2aff6213efd43a 6
+  s_840e57de9ab92f::t_2f1ba9ad680679 38-40,50
+  s_840e57de9ab92f::t_ad03cbdee8cd6d 1-3,5,7-37,41-49,51-72
+backend/services/rag_context.py
+  s_5283a3a52084e6::t_0e288a5b9208e6 32
+  s_840e57de9ab92f::t_43a539a0891f88 1-25,27-31,33-157
+  s_840e57de9ab92f::t_dc0235aca314de 26
+backend/tests/test_news_feed.py
+  s_ab2697edb080bd::t_b95bbfbb5ce1e8 15,24
+  s_ab2697edb080bd::t_7c1f4ce08bfbe9 85-96
+backend/tests/test_ai_status.py
+  s_840e57de9ab92f::t_84784f4794abb1 1-7
+backend/api/ai.py
+  s_3dce0f2aed3707::t_d61eb679933479 1-11
+backend/services/ai_queue.py
+  s_3dce0f2aed3707::t_8517d7f75aa531 1-88
+frontend/src/pages/Settings.tsx
+  s_840e57de9ab92f::t_714f18fd759d32 21
+  s_840e57de9ab92f::t_2b32a0f462e9a4 416-426
+  s_96148787dcbd0c::t_707a7c7166ef2c 3
+  s_840e57de9ab92f::t_479b322621f505 357,378-391
+  s_840e57de9ab92f::t_7c701491a18722 6
+frontend/src/contexts/AiQueueContext.tsx
+  s_3dce0f2aed3707::t_574f176c19fba6 1-6,8-9,11-27,29-30,32-33,35-38,40-41,43-61,63-65
+  s_324f8e01490936::t_1cd4bad62e3885 10,62
+  s_7ef68de1a9c3a7::t_cf733203fc0a0e 28,31,34,39,42
+  s_7ef68de1a9c3a7::t_e1d23da00568d2 7
+frontend/src/api/client.ts
+  s_324f8e01490936::t_77c649b0d5a134 19,21
+  s_324f8e01490936::t_2b5d0773ea751e 2
+backend/schemas.py
+  s_840e57de9ab92f::t_5856012b4e5f01 150-156
+  s_840e57de9ab92f::t_7dd72576e54c07 412
+  s_d25702f5603246::t_8a6b476ae1ec70 4,388-411
+  s_840e57de9ab92f::t_8b72977226f1f9 2
+  s_840e57de9ab92f::t_e902a354e69db4 298-313
+  s_840e57de9ab92f::t_8a693c359882ff 157-158
+frontend/src/components/ui/Toast.tsx
+  s_5283a3a52084e6::t_b9968b3c1b4d00 32-37
+  s_5283a3a52084e6::t_9d5e47c04e99bc 2,4
+frontend/src/contexts/ToastContext.tsx
+  s_324f8e01490936::t_a7a2e8f576cfd2 4,52
+backend/main.py
+  s_3dce0f2aed3707::t_d013e0efce86e3 6
+  s_3dce0f2aed3707::t_fe17373e30dc87 39
+backend/api/settings.py
+  s_96148787dcbd0c::t_9f5d6049ee6f7c 120-121
+  s_96148787dcbd0c::t_b4481edd7153f2 1,9
+  s_96148787dcbd0c::t_5effed2c8a1243 109-119
+backend/tests/test_news_ai_summary.py
+  s_5283a3a52084e6::t_af2799ab1cce68 1-11,13-24
+  s_840e57de9ab92f::t_821b236237770b 25
+  s_840e57de9ab92f::t_1e9d67f741053d 12
+start.ps1
+  s_8e99bc97b07cf2::t_92cfb9d97e2d14 229-249,251-252,255-259,262-311,326-331
+  s_6b75247b91ce26::t_408da7f85774e7 253-254,260-261
+  s_6b75247b91ce26::t_b24f8712622905 312-325
+  s_076d8519493262::t_3d4053819d9b81 250
+backend/database.py
+  s_840e57de9ab92f::t_3ac8aeb9659eec 25
+  s_5283a3a52084e6::t_ebd51d0b9b3849 62-63
+  s_840e57de9ab92f::t_87b141259f5787 6-7
+  s_7ef68de1a9c3a7::t_76affe076ec7c1 24
+  s_840e57de9ab92f::t_9aadc96f3b8fc6 49-52,55-61,64-70,74
+  s_5283a3a52084e6::t_497642be289359 53-54
+backend/services/news/ai.py
+  s_d25702f5603246::t_b80c2314dadf0e 2-4,6-25,28,38-42,44-49,51-63,67-84,92,96-98,100-101
+  s_840e57de9ab92f::t_5d0a901f32e5c6 29-37,43,50
+  s_840e57de9ab92f::t_85ae12f0410139 64-66,87
+  s_3dce0f2aed3707::t_de43549695d262 1,5,27
+  s_3dce0f2aed3707::t_6e44b0c38b4385 85-86,88-91,93-95,99
+frontend/src/main.tsx
+  s_3dce0f2aed3707::t_f3212562daa590 6
+  s_3dce0f2aed3707::t_efe82901f20af5 23-27
+backend/services/prompt_parser.py
+  s_2cc0e78e027298::t_6bfc9bf27c22b1 4
+  s_2cc0e78e027298::t_c476c72cd776e1 45
+  s_840e57de9ab92f::t_06e315fae3f6f8 1-3,5-44,46-116
+backend/api/backtest.py
+  s_840e57de9ab92f::t_a866e9922643fa 1,5-10,12,20-29
+backend/tests/test_ai_queue.py
+  s_840e57de9ab92f::t_30a65c3e0618da 44,55-60
+  s_c396c3baaf1396::t_058d83f04679e0 28
+  s_c396c3baaf1396::t_fcf0bb3a65a43a 26-27,29-31
+  s_840e57de9ab92f::t_0f65f3f4a7647c 1-25,32-43,45-54,61-68
+backend/services/smart_import.py
+  s_5283a3a52084e6::t_f9827c0262750d 80,84-85,90
+  s_c396c3baaf1396::t_007c24936ab799 208-210,213
+  s_840e57de9ab92f::t_e7c40532add187 1-15,17,19-79,81-83,86-89,91-207,211-212,214-337
+  s_c396c3baaf1396::t_b9e4de9ad0da35 16,18
+backend/services/news/tagging.py
+  s_8e99bc97b07cf2::t_05572c16d7de56 1-4,6-27,37-41,45-51,55-77,81,83,91,93,96-147,149-150,152-160,162-169
+  s_840e57de9ab92f::t_5e05b164b3a83e 28-36,44,54
+  s_3dce0f2aed3707::t_452bf189d1a6de 5
+  s_840e57de9ab92f::t_3a50455d7ca045 78-80,82
+  s_840e57de9ab92f::t_e2f341a7f8e721 148,151,161
+  s_2cc0e78e027298::t_a96fa6d6735f7b 42-43,52-53
+  s_3dce0f2aed3707::t_d3a0f296bc2da6 84-90,92,94-95
+frontend/src/App.tsx
+  s_96148787dcbd0c::t_43cdd90939d4be 7,27
+backend/services/news/feed.py
+  s_ab2697edb080bd::t_10627d9eb760d3 232,234,238-244
+  s_d25702f5603246::t_c39e2915ab71b2 2,20,22,30-32,67-96,100-123,133-135,146-156,171-187
+  s_d25702f5603246::t_72d7d5be6d2b12 188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "9918849e5c405d62d8079a883869ed55a73e9cdf",
+  "prompts": {},
+  "sessions": {
+    "s_076d8519493262": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "baea081f-a3f7-4aa1-ba2e-61e277fcbc51",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_2cc0e78e027298": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "9faaa698-af7b-4a1b-af39-fdf2d0eaa45f",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_324f8e01490936": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "2a62fda0-1095-4098-af37-3488beb0b6c3",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_3dce0f2aed3707": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "95326b6a-1134-41c9-8242-df31ba872b1c",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_468134a4b87e1c": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "5b0ea16d-6edf-4fee-ae17-200d6dfc066e",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_5283a3a52084e6": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "1532da4d-a54b-43e9-b312-876c7cd44c70",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_6b75247b91ce26": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "8b182ba2-4be1-4474-ab13-171a9b9a5078",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_7ef68de1a9c3a7": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "79ce5eb9-4834-468e-aac7-371cffb5cd59",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_840e57de9ab92f": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "9baa1475-cd9b-45e3-827a-9a5679b1a116",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_8e99bc97b07cf2": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "d61e84b4-7f32-459f-b5f7-76a83fdfe2a1",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_96148787dcbd0c": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "e396d944-1e7b-4ec9-8750-b4e97725bc94",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_ab2697edb080bd": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "ac995c1d-c646-4585-9fcb-f89db07ea84b",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_b22a3c6a777a25": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "1507f746-5d90-4a72-ba73-9e23ef98c724",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_c396c3baaf1396": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "2685aedc-8e80-44b0-adba-dbcc422b58e1",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_ce9d142a7e1880": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "e1604d60-fbb2-48b6-91cb-5a33ad429e12",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_d25702f5603246": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "6f680359-d057-4855-856f-4d332cacc759",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
