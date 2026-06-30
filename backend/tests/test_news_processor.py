@@ -1,4 +1,5 @@
 from services.news.processor import NewsProcessor
+from services.news.tagging import KeywordTagger, LocalTagger, TaggingService
 
 
 def test_extract_vn_symbol():
@@ -105,3 +106,26 @@ def test_extract_known_symbol_overrides_stop_word():
     text = "Cổ phiếu SAN tăng trong phiên giao dịch bất động sản"
     symbols = processor.extract_symbols(text)
     assert "SAN" in symbols
+
+
+def test_keyword_tagger_vietnamese():
+    tagger = KeywordTagger()
+    tags = tagger.generate(
+        title="Cổ phiếu ngân hàng tăng mạnh nhờ lãi suất",
+        summary="Nhóm cổ phiếu ngân hàng dẫn dắt thị trường",
+        language="vi",
+    )
+    assert "ngân hàng" in tags
+    assert "cổ phiếu" in tags
+
+
+def test_local_tagger_clean():
+    tagger = LocalTagger()
+    raw = "cổ phiếu, ngân hàng, lãi suất, thị trường"
+    assert tagger._clean(raw) == ["cổ phiếu", "ngân hàng", "lãi suất", "thị trường"]
+
+
+def test_local_tagger_clean_truncates():
+    tagger = LocalTagger(max_tags=2)
+    raw = "chứng khoán, cổ phiếu, ngân hàng, lãi suất"
+    assert tagger._clean(raw) == ["chứng khoán", "cổ phiếu"]

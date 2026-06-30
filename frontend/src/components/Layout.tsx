@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   BookOpen,
+  Cog,
   Coins,
   FlaskConical,
   HelpCircle,
@@ -30,6 +31,7 @@ const nav = [
   { path: "/market", label: labels.nav.market, icon: LineChart },
   { path: "/news", label: labels.nav.news, icon: Newspaper },
   { path: "/settings", label: labels.nav.settings, icon: Settings, tour: "settings" },
+  { path: "/env-config", label: labels.nav.envConfig, icon: Cog },
 ];
 
 const tourSteps: TourStep[] = [
@@ -74,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {labels.app.shortTitle}
             </h1>
             <p className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
-              Wealth Management
+              {labels.app.subtitle}
             </p>
           </div>
         </div>

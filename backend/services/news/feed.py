@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -17,8 +17,9 @@ class NewsFeedService:
     def _base_article_query(self):
         return select(NewsArticle).where(NewsArticle.is_active == True)
 
-    def list_articles(
+    def _apply_article_filters(
         self,
+        query,
         symbol: Optional[str] = None,
         source_id: Optional[int] = None,
         sentiment: Optional[str] = None,
@@ -26,11 +27,9 @@ class NewsFeedService:
         search: Optional[str] = None,
         date_from: Optional[datetime.date] = None,
         date_to: Optional[datetime.date] = None,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> List[NewsArticle]:
-        query = self._base_article_query()
-
+        tag: Optional[str] = None,
+    ):
+        """Apply shared filtering logic to a news query (list or count)."""
         if symbol:
             query = query.join(NewsSymbol).where(NewsSymbol.symbol == symbol.upper())
 
@@ -65,8 +64,62 @@ class NewsFeedService:
         if date_to:
             query = query.where(NewsArticle.published_at <= datetime.datetime.combine(date_to, datetime.time.max))
 
+        if tag:
+            pattern = f"%{tag}%"
+            query = query.where(NewsArticle.tags.ilike(pattern))
+
+        return query
+
+    def list_articles(
+        self,
+        symbol: Optional[str] = None,
+        source_id: Optional[int] = None,
+        sentiment: Optional[str] = None,
+        min_impact: Optional[float] = None,
+        search: Optional[str] = None,
+        date_from: Optional[datetime.date] = None,
+        date_to: Optional[datetime.date] = None,
+        tag: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[NewsArticle]:
+        query = self._apply_article_filters(
+            self._base_article_query(),
+            symbol=symbol,
+            source_id=source_id,
+            sentiment=sentiment,
+            min_impact=min_impact,
+            search=search,
+            date_from=date_from,
+            date_to=date_to,
+            tag=tag,
+        )
         query = query.order_by(NewsArticle.published_at.desc()).offset(offset).limit(limit)
         return list(self.session.exec(query).all())
+
+    def count_articles(
+        self,
+        symbol: Optional[str] = None,
+        source_id: Optional[int] = None,
+        sentiment: Optional[str] = None,
+        min_impact: Optional[float] = None,
+        search: Optional[str] = None,
+        date_from: Optional[datetime.date] = None,
+        date_to: Optional[datetime.date] = None,
+        tag: Optional[str] = None,
+    ) -> int:
+        query = self._apply_article_filters(
+            select(func.count(func.distinct(NewsArticle.id))).where(NewsArticle.is_active == True),
+            symbol=symbol,
+            source_id=source_id,
+            sentiment=sentiment,
+            min_impact=min_impact,
+            search=search,
+            date_from=date_from,
+            date_to=date_to,
+            tag=tag,
+        )
+        return self.session.exec(query).one()
 
     def get_article(self, article_id: int) -> Optional[NewsArticle]:
         return self.session.get(NewsArticle, article_id)
@@ -77,13 +130,9 @@ class NewsFeedService:
         ).all()
         return list(symbols)
 
-    def personalized_feed(
-        self,
-        include_portfolio: bool = True,
-        include_watchlist: bool = True,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> List[NewsArticle]:
+    def _personalized_symbols(
+        self, include_portfolio: bool = True, include_watchlist: bool = True
+    ) -> set[str]:
         symbols: set[str] = set()
 
         if include_portfolio:
@@ -93,6 +142,17 @@ class NewsFeedService:
         if include_watchlist:
             watchlist = self.session.exec(select(Watchlist.symbol)).all()
             symbols.update(w.upper() for w in watchlist if w)
+
+        return symbols
+
+    def personalized_feed(
+        self,
+        include_portfolio: bool = True,
+        include_watchlist: bool = True,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> List[NewsArticle]:
+        symbols = self._personalized_symbols(include_portfolio, include_watchlist)
 
         if not symbols:
             return []
@@ -107,6 +167,24 @@ class NewsFeedService:
             .limit(limit)
         )
         return list(self.session.exec(query).all())
+
+    def count_personalized_feed(
+        self,
+        include_portfolio: bool = True,
+        include_watchlist: bool = True,
+    ) -> int:
+        symbols = self._personalized_symbols(include_portfolio, include_watchlist)
+
+        if not symbols:
+            return 0
+
+        query = (
+            select(func.count(func.distinct(NewsArticle.id)))
+            .join(NewsSymbol)
+            .where(NewsSymbol.symbol.in_(list(symbols)))
+            .where(NewsArticle.is_active == True)
+        )
+        return self.session.exec(query).one()
 
     def trending(
         self,
@@ -151,14 +229,19 @@ class NewsFeedService:
             "sentiment": sentiment_counts,
         }
 
-    def daily_brief(self, hours: int = 24) -> Dict[str, any]:
+    def daily_brief(self, hours: int = 24, scope: Optional[str] = None) -> Dict[str, any]:
         since = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
-        articles = self.session.exec(
+        query = (
             select(NewsArticle)
             .where(NewsArticle.published_at >= since)
             .where(NewsArticle.is_active == True)
-            .order_by(NewsArticle.impact_score.desc(), NewsArticle.published_at.desc())
-            .limit(10)
+        )
+        if scope == "vn":
+            query = query.where(NewsArticle.language == "vi")
+        elif scope == "global":
+            query = query.where(NewsArticle.language != "vi")
+        articles = self.session.exec(
+            query.order_by(NewsArticle.impact_score.desc(), NewsArticle.published_at.desc()).limit(10)
         ).all()
 
         return {

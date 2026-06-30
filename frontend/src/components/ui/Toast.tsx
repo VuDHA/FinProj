@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { CheckCircle, AlertCircle, X, Info } from "lucide-react";
+import { CheckCircle, AlertCircle, AlertTriangle, X, Info } from "lucide-react";
 
-export type ToastType = "success" | "error" | "info";
+export type ToastType = "success" | "error" | "info" | "warning";
 
 interface ToastProps {
   id: string;
@@ -28,6 +28,12 @@ const config: Record<ToastType, { icon: typeof CheckCircle; color: string; borde
     color: "text-blue-600",
     border: "border-blue-200",
     bg: "bg-blue-50",
+  },
+  warning: {
+    icon: AlertTriangle,
+    color: "text-amber-600",
+    border: "border-amber-200",
+    bg: "bg-amber-50",
   },
 };
 

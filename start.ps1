@@ -226,6 +226,109 @@ $envFile = Join-Path $BackendDir ".env"
 $envExample = Join-Path $BackendDir ".env.example"
 if ((-not (Test-Path $envFile)) -and (Test-Path $envExample)) { Copy-Item $envExample $envFile }
 
+$ollamaProc = $null
+
+function Test-OllamaHealth($url) {
+    try {
+        $client = New-Object System.Net.Sockets.TcpClient
+        $uri = [System.Uri]$url
+        $result = $client.BeginConnect($uri.Host, $uri.Port, $null, $null)
+        $success = $result.AsyncWaitHandle.WaitOne(2000, $false)
+        if ($success) {
+            $client.EndConnect($result)
+            $client.Close()
+            return $true
+        }
+        $client.Close()
+        return $false
+    } catch {
+        return $false
+    }
+}
+
+# --- Ollama (local AI tagger) ---
+$ollamaEnabled = $true
+$ollamaModel = "qwen2.5:1.5b"
+$ollamaBaseUrl = "http://localhost:11434"
+$ollamaEmbeddingEnabled = $false
+$ollamaEmbeddingModel = "nomic-embed-text"
+if (Test-Path $envFile) {
+    $envContent = Get-Content $envFile -Raw
+    if ($envContent -match "OLLAMA_ENABLED\s*=\s*true") { $ollamaEnabled = $true }
+    if ($envContent -match "OLLAMA_MODEL\s*=\s*([^\s#]+)") { $ollamaModel = $Matches[1].Trim() }
+    if ($envContent -match "OLLAMA_BASE_URL\s*=\s*([^\s#]+)") { $ollamaBaseUrl = $Matches[1].Trim() }
+    if ($envContent -match "OLLAMA_EMBEDDING_ENABLED\s*=\s*true") { $ollamaEmbeddingEnabled = $true }
+    if ($envContent -match "OLLAMA_EMBEDDING_MODEL\s*=\s*([^\s#]+)") { $ollamaEmbeddingModel = $Matches[1].Trim() }
+}
+
+if ($ollamaEnabled) {
+    if (-not (Test-Command ollama)) {
+        Write-Info "Đang cài đặt Ollama..."
+        $ollamaInstaller = Join-Path $TempDir "OllamaSetup.exe"
+        if (-not (Test-Path $ollamaInstaller)) {
+            Show-Spinner "Đang tải Ollama" 2
+            Invoke-WebRequest -Uri "https://ollama.com/download/OllamaSetup.exe" -OutFile $ollamaInstaller -UseBasicParsing
+        }
+        Show-Spinner "Đang cài Ollama" 2
+        Start-Process $ollamaInstaller -ArgumentList "/S" -Wait -NoNewWindow
+        Refresh-Path
+        if (-not (Test-Command ollama)) {
+            Write-Warn "Không thể cài đặt Ollama tự động. Vui lòng cài thủ công từ https://ollama.com. Hệ thống sẽ dùng tagger từ khóa."
+        } else {
+            Write-Ok "Ollama đã được cài đặt"
+        }
+    }
+
+    if (Test-Command ollama) {
+        $ollamaRunning = Test-OllamaHealth $ollamaBaseUrl
+        if (-not $ollamaRunning) {
+            Write-Info "Đang khởi động Ollama server..."
+            $ollamaProc = Start-Process ollama -ArgumentList "serve" -WindowStyle Hidden -PassThru
+            for ($i = 0; $i -lt 30; $i++) {
+                if (Test-OllamaHealth $ollamaBaseUrl) {
+                    $ollamaRunning = $true
+                    break
+                }
+                Start-Sleep -Seconds 1
+            }
+            if (-not $ollamaRunning) {
+                Write-Warn "Không thể khởi động Ollama server. Hệ thống sẽ dùng tagger từ khóa."
+            }
+        }
+
+        if ($ollamaRunning) {
+            $modelList = & ollama list 2>$null | Out-String
+            if ($modelList -notmatch [regex]::Escape($ollamaModel)) {
+                Write-Info "Đang tải model $ollamaModel..."
+                & ollama pull $ollamaModel
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Warn "Tải model $ollamaModel thất bại. Hệ thống sẽ dùng tagger từ khóa."
+                } else {
+                    Write-Ok "Đã tải model $ollamaModel"
+                }
+            } else {
+                Write-Ok "Model $ollamaModel đã có sẵn"
+            }
+
+            if ($ollamaEmbeddingEnabled) {
+                if ($modelList -notmatch [regex]::Escape($ollamaEmbeddingModel)) {
+                    Write-Info "Đang tải model embedding $ollamaEmbeddingModel..."
+                    & ollama pull $ollamaEmbeddingModel
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Warn "Tải model embedding $ollamaEmbeddingModel thất bại. RAG tương tự bài viết sẽ không hoạt động."
+                    } else {
+                        Write-Ok "Đã tải model embedding $ollamaEmbeddingModel"
+                    }
+                } else {
+                    Write-Ok "Model embedding $ollamaEmbeddingModel đã có sẵn"
+                }
+            }
+        }
+    }
+} else {
+    Write-Info "Ollama chưa được bật (OLLAMA_ENABLED=false). Hệ thống sẽ dùng tagger từ khóa."
+}
+
 # --- Dependencies ---
 Write-Info "Cài đặt / cập nhật thư viện backend..."
 Show-Progress 10 "cập nhật backend"

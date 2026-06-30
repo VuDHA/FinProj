@@ -7,6 +7,7 @@ COMMON_VN_SYMBOLS: List[str] = [
     "TPB", "EIB", "OCB", "LPB", "NVB", "ABB", "BAB", "MSB", "SSB", "PGB",
     "KLB", "NAB", "VAB", "VBB", "VIB", "VPB", "PVT", "PLX", "VJC", "SCS",
     "DGW", "MWG", "PNJ", "CII", "ROS", "FLC", "HBC", "NTC", "REE", "SAM",
+    "SAN",
     "KBC", "SZC", "NLG", "PDR", "KDH", "NVL", "DIG", "TCH", "SCR", "QCG",
     "ITC", "HAG", "HNG", "LSS", "SBT", "BCM", "VSH", "DPM", "DGC", "DDV",
     "GMD", "VSC", "PVS", "PVD", "HOT", "KSB", "VAF", "ALT", "API", "APC",

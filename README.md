@@ -98,6 +98,34 @@ File này chứa tài sản, giao dịch, thu nhập và cài đặt của bạn
 
 ---
 
+## Gắn nhãn chủ đề tự động (tùy chọn)
+
+Phần mềm có thể tự động gắn nhãn chủ đề (tags) cho từng tin tức bằng một AI cục bộ nhỏ chạy trên máy của bạn, không gửi dữ liệu ra ngoài.
+
+### Yêu cầu
+
+- Cài đặt Ollama từ https://ollama.com (tương tự cài một phần mềm bình thường).
+- Máy cần thêm khoảng 2 GB RAM để chạy mô hình nhỏ.
+
+### Bật tính năng
+
+1. Mở ứng dụng Ollama, chạy lệnh sau một lần duy nhất để tải mô hình tiếng Việt nhẹ:
+
+```bash
+ollama pull qwen2.5:1.5b
+```
+
+2. Tạo file `backend/.env` với nội dung:
+
+```env
+OLLAMA_ENABLED=true
+OLLAMA_MODEL=qwen2.5:1.5b
+```
+
+3. Chạy lại `start.bat`. Các tin tức mới từ nay sẽ có tags như "cổ phiếu", "ngân hàng", "lãi suất"...
+
+Nếu không bật Ollama, phần mềm vẫn tự gắn nhãn cơ bản bằng từ khóa, không cần thêm gì.
+
 ## Cập nhật phần mềm
 
 Khi có phiên bản mới, chỉ cần thay thế toàn bộ thư mục `FinProj` bằng thư mục mới. Nhưng **trước khi thay**, hãy copy thư mục `backend/data/` sang nơi an toàn, sau đó chép lại vào đúng vị trí cũ để giữ dữ liệu.

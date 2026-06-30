@@ -3,6 +3,8 @@ import os
 from sqlalchemy import event, inspect, text
 from sqlmodel import SQLModel, create_engine, Session
 
+import sqlite_vec
+
 from config import settings
 
 
@@ -19,6 +21,8 @@ if settings.DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
     def _enable_wal(dbapi_conn, connection_record):
         dbapi_conn.execute("PRAGMA journal_mode=WAL")
+        dbapi_conn.enable_load_extension(True)
+        sqlite_vec.load(dbapi_conn)
 else:
     engine = create_engine(settings.DATABASE_URL, echo=False)
 
@@ -42,9 +46,32 @@ def _seed_default_source_settings(session):
     seed_default_sources(session)
 
 
+def _create_embedding_table():
+    """Create the sqlite-vec virtual table for article embeddings."""
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        return
+    if not settings.OLLAMA_EMBEDDING_ENABLED:
+        return
+    dim = settings.OLLAMA_EMBEDDING_DIMENSION
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                f"""
+                CREATE VIRTUAL TABLE IF NOT EXISTS article_embeddings USING vec0(
+                    article_id INTEGER,
+                    embedding FLOAT[{dim}],
+                    chunk_size=64
+                )
+                """
+            )
+        )
+        conn.commit()
+
+
 def init_db():
     SQLModel.metadata.create_all(engine)
     _ensure_columns()
+    _create_embedding_table()
     with Session(engine) as session:
         _seed_default_source_settings(session)
 

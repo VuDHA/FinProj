@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, useState, useMemo, ReactNode } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Toast, ToastType } from "../components/ui/Toast";
+import { labels } from "../i18n/vi";
 
 interface ToastItem {
   id: string;
@@ -48,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error("useToast must be used within ToastProvider");
+    throw new Error(labels.errors.useToastContext);
   }
   return context;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { labels } from "../i18n/vi";
 
 export interface TourStep {
   target: string;
@@ -92,7 +93,7 @@ export function OnboardingTour({ steps, onComplete, onSkip }: OnboardingTourProp
                 <button
                   onClick={onSkip}
                   className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                  aria-label="Close tour"
+                  aria-label={labels.common.closeTour}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -115,14 +116,14 @@ export function OnboardingTour({ steps, onComplete, onSkip }: OnboardingTourProp
                       className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4 mr-0.5" />
-                      Back
+                      {labels.common.back}
                     </button>
                   )}
                   <button
                     onClick={next}
                     className="inline-flex items-center rounded-lg bg-gradient-to-r from-accent-blue to-accent-violet px-3 py-1.5 text-xs font-semibold text-white shadow-md hover:shadow-lg transition-all"
                   >
-                    {isLast ? "Finish" : "Next"}
+                    {isLast ? labels.common.finish : labels.common.next}
                     {!isLast && <ChevronRight className="w-4 h-4 ml-0.5" />}
                   </button>
                 </div>

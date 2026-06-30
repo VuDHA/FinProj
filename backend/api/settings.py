@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -6,6 +6,7 @@ from sqlmodel import Session, select
 from database import get_session
 from models import AllocationTarget, Setting
 from schemas import AllocationTargetCreate, AllocationTargetRead, AssetSourceInfo, SettingCreate, SettingRead
+from services.env_config import get_env_config, update_env_config
 from services.source_config import get_default_sources, is_valid_source_for_type, set_default_sources
 from services.sources import registry
 
@@ -103,6 +104,19 @@ def save_allocation_targets(
     for item in result:
         session.refresh(item)
     return result
+
+
+@router.get("/env-config", response_model=List[Dict[str, Any]])
+def list_env_config():
+    return get_env_config()
+
+
+@router.post("/env-config")
+def save_env_config(payload: Dict[str, str]):
+    try:
+        return update_env_config(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/{key}")

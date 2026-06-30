@@ -1,27 +1,37 @@
+import asyncio
 import datetime
-from typing import List, Optional
+import json
+import threading
+from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlmodel import Session, select
 
+from config import Settings
 from database import get_session
-from models import NewsAlert, NewsArticle, NewsSymbol, Watchlist
+from models import NewsAlert, NewsArticle, NewsSource, NewsSymbol, Watchlist
 from schemas import (
+    AiSummaryRequest,
+    AiSummaryResponse,
     AlertRead,
     ArticleListResponse,
     ArticleRead,
     DailyBriefResponse,
-    RefreshResponse,
+    NewsSourceRead,
     TrendingResponse,
     TrendingSymbol,
     WatchlistCreate,
     WatchlistItem,
 )
+from services.news.ai import NewsAI
 from services.news.alerts import AlertService
 from services.news.crawler import NewsCrawlerService
+from services.news.refresh_tracker import RefreshTracker
 from services.news.dictionaries import impact_label, sentiment_label
 from services.news.feed import NewsFeedService
+from services.rag_context import RagContextService
 
 router = APIRouter(prefix="/news", tags=["news"])
 
@@ -66,6 +76,7 @@ def list_news(
     sentiment: Optional[str] = Query(None, pattern="^(positive|negative|neutral)$"),
     min_impact: Optional[float] = Query(None, ge=0, le=1),
     search: Optional[str] = Query(None),
+    tag: Optional[str] = Query(None),
     date_from: Optional[datetime.date] = Query(None),
     date_to: Optional[datetime.date] = Query(None),
     limit: int = Query(20, ge=1, le=100),
@@ -79,6 +90,7 @@ def list_news(
         sentiment=sentiment,
         min_impact=min_impact,
         search=search,
+        tag=tag,
         date_from=date_from,
         date_to=date_to,
         limit=limit,
@@ -87,9 +99,16 @@ def list_news(
     article_ids = [a.id for a in articles]
     symbol_map = _load_article_symbols(session, article_ids)
 
-    total = session.exec(
-        select(func.count(NewsArticle.id)).where(NewsArticle.is_active == True)
-    ).one()
+    total = service.count_articles(
+        symbol=symbol,
+        source_id=source_id,
+        sentiment=sentiment,
+        min_impact=min_impact,
+        search=search,
+        tag=tag,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
     return ArticleListResponse(
         items=[_article_to_schema(a, symbol_map.get(a.id, [])) for a in articles],
@@ -116,22 +135,81 @@ def personalized_feed(
     )
     article_ids = [a.id for a in articles]
     symbol_map = _load_article_symbols(session, article_ids)
+    total = service.count_personalized_feed(
+        include_portfolio=portfolio,
+        include_watchlist=watchlist,
+    )
+
     return ArticleListResponse(
         items=[_article_to_schema(a, symbol_map.get(a.id, [])) for a in articles],
-        total=len(articles),
+        total=total,
         limit=limit,
         offset=offset,
     )
 
 
-@router.get("/{article_id}", response_model=ArticleRead)
-def get_article(article_id: int, session: Session = Depends(get_session)):
+@router.get("/sources", response_model=List[NewsSourceRead])
+def list_sources(session: Session = Depends(get_session)):
+    rows = session.exec(
+        select(NewsSource)
+        .where(NewsSource.is_active == True)
+        .order_by(NewsSource.name)
+    ).all()
+    return [
+        NewsSourceRead(id=s.id, name=s.name, code=s.code)
+        for s in rows
+    ]
+
+
+@router.post("/ai-summary", response_model=AiSummaryResponse)
+def ai_summary(
+    payload: AiSummaryRequest,
+    session: Session = Depends(get_session),
+):
     service = NewsFeedService(session)
-    article = service.get_article(article_id)
-    if article is None:
-        raise HTTPException(status_code=404, detail="Bài viết không tồn tại")
-    symbols = service.get_article_symbols(article_id)
-    return _article_to_schema(article, symbols)
+    articles = service.list_articles(
+        symbol=payload.symbol,
+        source_id=payload.source_id,
+        sentiment=payload.sentiment,
+        min_impact=payload.min_impact,
+        search=payload.search,
+        tag=payload.tag,
+        date_from=payload.date_from,
+        date_to=payload.date_to,
+        limit=payload.limit,
+    )
+
+    rag = RagContextService(session)
+    language = articles[0].language if articles else "vi"
+    rag_context = rag.format_context(
+        rag.build_context(
+            title=articles[0].title if articles else None,
+            summary=articles[0].summary if articles else None,
+            include_user_facts=True,
+            include_similar_articles=True,
+        ),
+        language=language or "vi",
+    )
+
+    local_settings = Settings()
+    ai = NewsAI(
+        base_url=local_settings.OLLAMA_BASE_URL,
+        model=local_settings.OLLAMA_MODEL,
+        timeout=local_settings.OLLAMA_TIMEOUT,
+        enabled=local_settings.OLLAMA_ENABLED,
+    )
+    summary = ai.summarize(
+        [{"title": a.title, "summary": a.summary} for a in articles],
+        language=language or "vi",
+        rag_context=rag_context if rag_context else None,
+    )
+
+    return AiSummaryResponse(
+        summary=summary,
+        article_count=len(articles),
+        used_ollama=ai.enabled,
+        personalized=bool(rag_context),
+    )
 
 
 @router.get("/trending/now", response_model=TrendingResponse)
@@ -151,10 +229,11 @@ def trending(
 @router.get("/brief/daily", response_model=DailyBriefResponse)
 def daily_brief(
     hours: int = Query(24, ge=1, le=168),
+    scope: Optional[str] = Query(None, regex="^(vn|global)$"),
     session: Session = Depends(get_session),
 ):
     service = NewsFeedService(session)
-    data = service.daily_brief(hours=hours)
+    data = service.daily_brief(hours=hours, scope=scope)
     article_ids = [a.id for a in data["top_articles"]]
     symbol_map = _load_article_symbols(session, article_ids)
     return DailyBriefResponse(
@@ -262,13 +341,85 @@ def remove_watchlist(symbol: str, session: Session = Depends(get_session)):
     return {"ok": True}
 
 
-@router.post("/refresh", response_model=RefreshResponse)
-def refresh_news(
-    source: Optional[str] = Query(None),
-    session: Session = Depends(get_session),
-):
-    crawler = NewsCrawlerService(session)
-    results = crawler.refresh(source_code=source)
-    alerts_service = AlertService(session)
-    alerts_count = alerts_service.generate_alerts(hours=1)
-    return RefreshResponse(results=results, alerts_generated=alerts_count)
+def _run_refresh_job(job_id: str, source: Optional[str]) -> None:
+    """Background worker that crawls sources and updates the job state."""
+    from database import engine
+
+    job = RefreshTracker.get(job_id)
+    if job is None:
+        return
+
+    try:
+        with Session(engine) as session:
+            crawler = NewsCrawlerService(session)
+            results = crawler.refresh(source_code=source, progress=job)
+            alerts_service = AlertService(session)
+            alerts_count = alerts_service.generate_alerts(hours=1)
+            job.update(
+                status="completed",
+                results=results,
+                alerts_generated=alerts_count,
+                message="Hoàn tất",
+            )
+    except Exception as exc:
+        job.update(status="error", message=str(exc))
+        job.add_error(str(exc))
+
+
+async def _refresh_stream(job_id: str) -> AsyncGenerator[str, None]:
+    """SSE generator that yields progress events until the job finishes."""
+    job = RefreshTracker.get(job_id)
+    if job is None:
+        payload = json.dumps({"message": "Không tìm thấy tiến trình"})
+        yield f"event: error\ndata: {payload}\n\n"
+        return
+
+    last_state = None
+    while True:
+        current = job.to_dict()
+        if current != last_state:
+            yield f"event: progress\ndata: {json.dumps(current)}\n\n"
+            last_state = current
+        if current["status"] in ("completed", "error", "timeout"):
+            yield f"event: {current['status']}\ndata: {json.dumps(current)}\n\n"
+            break
+        await asyncio.sleep(0.5)
+
+
+@router.post("/refresh")
+def refresh_news_start(source: Optional[str] = Query(None)):
+    """Start a refresh job in the background and return its id."""
+    job = RefreshTracker.create(source_code=source)
+    thread = threading.Thread(
+        target=_run_refresh_job, args=(job.id, source), daemon=True
+    )
+    thread.start()
+    return {"job_id": job.id}
+
+
+@router.get("/refresh/{job_id}")
+def refresh_news_status(job_id: str):
+    """Poll the current status of a refresh job."""
+    job = RefreshTracker.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy tiến trình")
+    return job.to_dict()
+
+
+@router.get("/refresh/{job_id}/stream")
+def refresh_news_stream(job_id: str):
+    """Stream refresh progress via SSE (pure HTTP)."""
+    return StreamingResponse(
+        _refresh_stream(job_id),
+        media_type="text/event-stream",
+    )
+
+
+@router.get("/{article_id}", response_model=ArticleRead)
+def get_article(article_id: int, session: Session = Depends(get_session)):
+    service = NewsFeedService(session)
+    article = service.get_article(article_id)
+    if article is None:
+        raise HTTPException(status_code=404, detail="Bài viết không tồn tại")
+    symbols = service.get_article_symbols(article_id)
+    return _article_to_schema(article, symbols)

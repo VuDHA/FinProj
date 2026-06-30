@@ -1,4 +1,5 @@
 import axios from "axios";
+import { labels } from "../i18n/vi";
 
 const API = axios.create({
   baseURL: "/api/v1",
@@ -15,9 +16,9 @@ API.interceptors.response.use(
     if (detail) {
       error.message = detail;
     } else if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
-      error.message = "Yeu cau qua thoi gian. Vui long thu lai.";
+      error.message = labels.errors.timeout;
     } else if (!error.response) {
-      error.message = "Khong ket noi duoc den may chu. Vui long kiem tra backend.";
+      error.message = labels.errors.networkError;
     }
     return Promise.reject(error);
   }

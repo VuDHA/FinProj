@@ -1,7 +1,7 @@
 import datetime
-from typing import Optional, List
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class AssetSourceInfo(BaseModel):
@@ -147,6 +147,15 @@ class BacktestResult(BaseModel):
     warnings: List[str] = []
 
 
+class BacktestPromptRequest(BaseModel):
+    prompt: str = Field(..., min_length=5, max_length=1000)
+
+
+class BacktestPromptResponse(BaseModel):
+    request: BacktestRequest
+    result: BacktestResult
+
+
 class Performer(BaseModel):
     asset_id: int
     symbol: str
@@ -286,6 +295,22 @@ class CsvImportResult(BaseModel):
     errors: List[str]
 
 
+class SmartImportPreviewResponse(BaseModel):
+    filename: str
+    sheet_names: Optional[List[str]] = None
+    sheet: Optional[str] = None
+    headers: List[str]
+    sample_rows: List[Dict[str, Any]]
+    row_count: int
+    suggested_mapping: Dict[str, Optional[str]] = {}
+
+
+class SmartImportRequest(BaseModel):
+    import_type: str = Field(..., pattern="^(assets|transactions)$")
+    mapping: Dict[str, Optional[str]]
+    sheet: Optional[str] = None
+
+
 # News module schemas
 
 class ArticleRead(BaseModel):
@@ -360,3 +385,28 @@ class DailyBriefResponse(BaseModel):
 class RefreshResponse(BaseModel):
     results: dict
     alerts_generated: int
+
+
+class NewsSourceRead(BaseModel):
+    id: int
+    name: str
+    code: str
+
+
+class AiSummaryRequest(BaseModel):
+    search: Optional[str] = None
+    symbol: Optional[str] = None
+    sentiment: Optional[str] = Field(None, pattern="^(positive|negative|neutral)$")
+    min_impact: Optional[float] = Field(None, ge=0, le=1)
+    date_from: Optional[datetime.date] = None
+    date_to: Optional[datetime.date] = None
+    source_id: Optional[int] = None
+    tag: Optional[str] = None
+    limit: int = Field(5, ge=1, le=10)
+
+
+class AiSummaryResponse(BaseModel):
+    summary: str
+    article_count: int
+    used_ollama: bool
+    personalized: bool = False

@@ -4,9 +4,11 @@ from collections import defaultdict
 
 from sqlmodel import Session, select
 
+from config import settings
 from models import Asset, PriceSnapshot, Transaction
 from schemas import BacktestRequest, BacktestPoint, BacktestResult, BacktestTrade
 from services.market_data import MarketDataService
+from services.prompt_parser import PromptParser, PromptParserError
 
 
 class BacktestService:
@@ -85,6 +87,23 @@ class BacktestService:
             assets = self.session.exec(
                 select(Asset).where(Asset.symbol.in_(request.symbols), Asset.is_active == True)
             ).all()
+            existing_symbols = {a.symbol.upper() for a in assets}
+            for symbol in request.symbols:
+                if symbol.upper() not in existing_symbols:
+                    asset = Asset(
+                        symbol=symbol.upper(),
+                        name=symbol.upper(),
+                        type="STOCK",
+                        currency="VND",
+                        is_active=True,
+                    )
+                    self.session.add(asset)
+                    assets.append(asset)
+                    existing_symbols.add(symbol.upper())
+            if self.session.new:
+                self.session.commit()
+                for asset in assets:
+                    self.session.refresh(asset)
         else:
             assets = self.session.exec(select(Asset).where(Asset.is_active == True)).all()
 
@@ -253,3 +272,18 @@ class BacktestService:
             trades=trades,
             warnings=warnings,
         )
+
+    def run_from_prompt(self, prompt: str) -> Dict:
+        """Parse a natural-language prompt and run the backtest."""
+        if not settings.OLLAMA_ENABLED:
+            raise PromptParserError(
+                "Ollama is disabled. Please enable Ollama in settings or use the manual backtest form."
+            )
+
+        parser = PromptParser()
+        request = parser.parse_backtest_prompt(prompt=prompt)
+        result = self.run(request)
+        return {
+            "request": request.model_dump(),
+            "result": result,
+        }

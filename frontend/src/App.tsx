@@ -4,6 +4,7 @@ import { Analytics } from "./pages/Analytics";
 import { Assets } from "./pages/Assets";
 import { Backtest } from "./pages/Backtest";
 import { Dashboard } from "./pages/Dashboard";
+import { EnvConfig } from "./pages/EnvConfig";
 import { Market } from "./pages/Market";
 import { News } from "./pages/News";
 import { Rebalance } from "./pages/Rebalance";
@@ -23,6 +24,7 @@ function App() {
         <Route path="/market" element={<Market />} />
         <Route path="/news" element={<News />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/env-config" element={<EnvConfig />} />
       </Routes>
     </Layout>
   );

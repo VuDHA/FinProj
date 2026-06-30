@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import analytics, assets, backtest, gold_fx, import_export, income, news, portfolio, prices, rebalance, transactions
+from api import ai, analytics, assets, backtest, gold_fx, import_export, income, news, portfolio, prices, rebalance, transactions
 from api.settings import router as settings_router
 from config import settings
 from database import init_db
@@ -36,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(ai.router, prefix=settings.API_PREFIX)
 app.include_router(assets.router, prefix=settings.API_PREFIX)
 app.include_router(prices.router, prefix=settings.API_PREFIX)
 app.include_router(transactions.router, prefix=settings.API_PREFIX)

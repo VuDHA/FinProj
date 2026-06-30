@@ -1,10 +1,11 @@
 import datetime
 import hashlib
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
 from models import NewsArticle, NewsSource, NewsSymbol
+from services.embedding_store import EmbeddingStore
 from services.news.dictionaries import get_known_symbols
 from services.news.processor import NewsProcessor
 from services.news.sources import registry
@@ -15,7 +16,8 @@ class NewsCrawlerService:
 
     def __init__(self, session: Session):
         self.session = session
-        self.processor = NewsProcessor(known_symbols=get_known_symbols())
+        self.processor = NewsProcessor(known_symbols=get_known_symbols(), session=session)
+        self.embedding_store = EmbeddingStore()
 
     def _get_or_create_source(self, adapter) -> NewsSource:
         source = self.session.exec(
@@ -83,24 +85,44 @@ class NewsCrawlerService:
             link = NewsSymbol(article_id=article.id, symbol=symbol)
             self.session.add(link)
 
+        # Generate an embedding for the article so RAG can retrieve similar ones later.
+        text_for_embedding = " ".join(
+            filter(None, [article.title, article.summary])
+        ).strip()
+        if text_for_embedding:
+            self.embedding_store.create_embedding(article.id, text_for_embedding)
+
         return article
 
-    def crawl_source(self, code: str) -> int:
+    def crawl_source(self, code: str, progress: Optional[Any] = None) -> int:
         """Crawl a single source by code. Returns number of new articles stored."""
         adapter = registry.get(code)
         if adapter is None:
             print(f"[news:crawler] unknown source: {code}")
+            if progress is not None:
+                progress.add_error(f"unknown source: {code}")
             return 0
 
         source = self._get_or_create_source(adapter)
         if not source.is_active:
             return 0
 
+        if progress is not None:
+            progress.update(current_source=code, message=f"Fetching {code}...")
+
         try:
             raw_articles = adapter.fetch()
         except Exception as e:
             print(f"[news:crawler] error fetching {code}: {e}")
+            if progress is not None:
+                progress.add_error(f"{code}: {e}")
             return 0
+
+        if progress is not None:
+            progress.update(
+                processed=progress.processed + len(raw_articles),
+                message=f"Processing {len(raw_articles)} articles from {code}...",
+            )
 
         processed = self.processor.process_many(raw_articles)
         new_count = 0
@@ -112,17 +134,31 @@ class NewsCrawlerService:
         source.last_crawled_at = datetime.datetime.utcnow()
         self.session.commit()
         print(f"[news:crawler] {code}: {new_count} new articles out of {len(processed)}")
+
+        if progress is not None:
+            progress.update(
+                new_articles=progress.new_articles + new_count,
+                results={**progress.results, code: new_count},
+                message=f"{code}: +{new_count} new articles",
+            )
         return new_count
 
-    def crawl_all(self) -> Dict[str, int]:
+    def crawl_all(self, progress: Optional[Any] = None) -> Dict[str, int]:
         """Crawl all active sources. Returns mapping source_code -> new_count."""
+        adapters = registry.all()
+        if progress is not None:
+            progress.update(total_sources=len(adapters), current_source_index=0)
         results = {}
-        for adapter in registry.all():
-            results[adapter.code] = self.crawl_source(adapter.code)
+        for index, adapter in enumerate(adapters, start=1):
+            if progress is not None:
+                progress.update(current_source_index=index, current_source=adapter.code)
+            results[adapter.code] = self.crawl_source(adapter.code, progress=progress)
         return results
 
-    def refresh(self, source_code: Optional[str] = None) -> Dict[str, int]:
+    def refresh(self, source_code: Optional[str] = None, progress: Optional[Any] = None) -> Dict[str, int]:
         """Public entry point for manual or scheduled refresh."""
         if source_code:
-            return {source_code: self.crawl_source(source_code)}
-        return self.crawl_all()
+            if progress is not None:
+                progress.update(total_sources=1, current_source_index=1, current_source=source_code)
+            return {source_code: self.crawl_source(source_code, progress=progress)}
+        return self.crawl_all(progress=progress)

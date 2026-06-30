@@ -159,3 +159,4 @@ dist/
 build/
 *.manifest
 *.spec
+.tmp

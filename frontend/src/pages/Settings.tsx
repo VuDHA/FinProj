@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Check, Download, RefreshCw, Save, Upload } from "lucide-react";
+import { Download, RefreshCw, Save, Upload } from "lucide-react";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { SmartImportDialog } from "../components/SmartImportDialog";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -12,22 +13,12 @@ import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
 import { formatCurrency } from "../lib/utils";
 
-const API_KEYS = [
-  { key: "ssi_consumer_key", label: labels.settings.ssiKey },
-  { key: "ssi_consumer_secret", label: labels.settings.ssiSecret },
-  { key: "fireant_api_key", label: labels.settings.fireantKey },
-];
-
 const ASSET_TYPES = ["STOCK", "FUND", "ETF", "GOLD", "CRYPTO"];
 
 export function Settings() {
   const qc = useQueryClient();
   const { showToast } = useToast();
-
-  const settingsQuery = useQuery({
-    queryKey: ["settings"],
-    queryFn: async () => (await API.get("/settings/")).data,
-  });
+  const [smartImportType, setSmartImportType] = useState<"assets" | "transactions" | null>(null);
 
   const goldFx = useQuery({
     queryKey: ["gold-fx"],
@@ -37,19 +28,6 @@ export function Settings() {
   const targets = useQuery({
     queryKey: ["allocation-targets"],
     queryFn: async () => (await API.get("/settings/allocation-targets/")).data,
-  });
-
-  const save = useMutation({
-    mutationFn: (payload: { key: string; value: string }) => API.post("/settings/", payload),
-    onSuccess: (_data, variables) => {
-      qc.invalidateQueries({ queryKey: ["settings"] });
-      setSavedKey(variables.key);
-      setTimeout(() => setSavedKey(null), 2000);
-      showToast("Đã lưu cài đặt", "success");
-    },
-    onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể lưu cài đặt", "error");
-    },
   });
 
   const saveTargets = useMutation({
@@ -111,10 +89,8 @@ export function Settings() {
     },
   });
 
-  const [values, setValues] = useState<Record<string, string>>({});
   const [targetValues, setTargetValues] = useState<Record<string, string>>({});
   const [defaultSourceValues, setDefaultSourceValues] = useState<Record<string, string | null>>({});
-  const [savedKey, setSavedKey] = useState<string | null>(null);
 
   const getDefaultSource = (type: string) => {
     if (defaultSourceValues[type] !== undefined) return defaultSourceValues[type];
@@ -128,12 +104,6 @@ export function Settings() {
       if (value) payload[type] = value;
     });
     saveDefaultSources.mutate(payload);
-  };
-
-  const getValue = (key: string) => {
-    if (values[key] !== undefined) return values[key];
-    const found = settingsQuery.data?.find((s: any) => s.key === key);
-    return found ? found.value : "";
   };
 
   const getTarget = (type: string) => {
@@ -168,10 +138,8 @@ export function Settings() {
 
   return (
     <div className="space-y-6">
-      {settingsQuery.isError && <ErrorMessage error={settingsQuery.error} retry={() => settingsQuery.refetch()} />}
       {goldFx.isError && <ErrorMessage error={goldFx.error} retry={() => goldFx.refetch()} />}
       {targets.isError && <ErrorMessage error={targets.error} retry={() => targets.refetch()} />}
-      {save.isError && <ErrorMessage error={save.error} retry={() => save.reset()} />}
       {saveTargets.isError && <ErrorMessage error={saveTargets.error} retry={() => saveTargets.reset()} />}
       {defaultSources.isError && <ErrorMessage error={defaultSources.error} retry={() => defaultSources.refetch()} />}
       {saveDefaultSources.isError && <ErrorMessage error={saveDefaultSources.error} retry={() => saveDefaultSources.reset()} />}
@@ -180,49 +148,6 @@ export function Settings() {
       <SectionHeader title={labels.settings.title} />
 
       <FintechCard delay={0.1}>
-        <h3 className="card-title mb-4 inline-flex items-center">
-          {labels.settings.apiKeys}
-          <InfoTooltip content={labels.tooltips.settingsApiKeys} />
-        </h3>
-        <div className="space-y-3">
-          {API_KEYS.map((item) => (
-            <div key={item.key} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
-              <label className="text-sm font-medium text-slate-500 md:col-span-1">{item.label}</label>
-              <input
-                type="password"
-                className="md:col-span-2 input-fintech"
-                value={getValue(item.key)}
-                onChange={(e) => {
-                  setValues({ ...values, [item.key]: e.target.value });
-                  if (savedKey === item.key) setSavedKey(null);
-                }}
-                placeholder={item.label}
-              />
-              <button
-                onClick={() => save.mutate({ key: item.key, value: getValue(item.key) })}
-                disabled={save.isPending}
-                className="md:col-span-1 btn-primary"
-              >
-                {save.isPending ? (
-                  labels.settings.saving
-                ) : savedKey === item.key ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    {labels.settings.saved}
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    {labels.settings.save}
-                  </>
-                )}
-              </button>
-            </div>
-          ))}
-        </div>
-      </FintechCard>
-
-      <FintechCard delay={0.15}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="card-title inline-flex items-center">
             {labels.settings.goldFx}
@@ -429,7 +354,7 @@ export function Settings() {
           </div>
           <div className="space-y-3">
             <h4 className="font-medium text-slate-700">{labels.common.add}</h4>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <label className="btn-secondary cursor-pointer">
                 <Upload className="w-4 h-4" />
                 {labels.settings.importAssets}
@@ -450,6 +375,20 @@ export function Settings() {
                   onChange={(e) => handleFileChange(e, "transactions")}
                 />
               </label>
+              <button
+                onClick={() => setSmartImportType("assets")}
+                className="btn-secondary"
+              >
+                <Upload className="w-4 h-4" />
+                {labels.importExport.smartImportAssets}
+              </button>
+              <button
+                onClick={() => setSmartImportType("transactions")}
+                className="btn-secondary"
+              >
+                <Upload className="w-4 h-4" />
+                {labels.importExport.smartImportTransactions}
+              </button>
             </div>
           </div>
         </div>
@@ -474,6 +413,17 @@ export function Settings() {
           </div>
         )}
       </FintechCard>
+
+      {smartImportType && (
+        <SmartImportDialog
+          importType={smartImportType}
+          onClose={() => setSmartImportType(null)}
+          onSuccess={() => {
+            qc.invalidateQueries({ queryKey: ["assets"] });
+            qc.invalidateQueries({ queryKey: ["transactions"] });
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Loader2, Play } from "lucide-react";
+import { Loader2, Play, Sparkles } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -18,6 +18,7 @@ import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
+import { useAiQueue } from "../contexts/AiQueueContext";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
 
@@ -25,6 +26,7 @@ import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
 export function Backtest() {
   const today = new Date().toISOString().split("T")[0];
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const { isBusy, runAi } = useAiQueue();
 
   const [form, setForm] = useState({
     strategy: "buy_and_hold",
@@ -34,6 +36,9 @@ export function Backtest() {
     rebalance_frequency: "monthly",
     symbols: "",
   });
+  const [prompt, setPrompt] = useState("");
+  const [promptMode, setPromptMode] = useState(false);
+  const [result, setResult] = useState<any>(null);
 
   const assets = useQuery({
     queryKey: ["assets"],
@@ -52,9 +57,31 @@ export function Backtest() {
           ? form.symbols.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
           : undefined,
       }),
+    onSuccess: (response) => {
+      setResult(response.data);
+      setPromptMode(false);
+    },
   });
 
-  const result = run.data?.data;
+  const aiRun = useMutation({
+    mutationFn: () =>
+      runAi("backtest_prompt", () =>
+        API.post("/backtest/ai", { prompt }).then((res) => res.data)
+      ),
+    onSuccess: (data) => {
+      setResult(data.result);
+      setPromptMode(false);
+      // Optionally populate the form so the user can see the extracted parameters
+      setForm({
+        strategy: data.request.strategy,
+        start_date: data.request.start_date,
+        end_date: data.request.end_date,
+        initial_cash: String(data.request.initial_cash),
+        rebalance_frequency: data.request.rebalance_frequency,
+        symbols: data.request.symbols?.join(", ") ?? "",
+      });
+    },
+  });
 
   const benchmark = useQuery({
     queryKey: ["backtest-benchmark", form.start_date, form.end_date],
@@ -88,6 +115,7 @@ export function Backtest() {
     <div className="space-y-6">
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
       {run.isError && <ErrorMessage error={run.error} retry={() => run.mutate()} />}
+      {aiRun.isError && <ErrorMessage error={aiRun.error} retry={() => aiRun.mutate()} />}
       {benchmark.isError && <ErrorMessage error={benchmark.error} retry={() => benchmark.refetch()} />}
       <SectionHeader title={labels.backtest.title} />
 
@@ -171,19 +199,53 @@ export function Backtest() {
             />
           </div>
         </div>
-        <button
-          onClick={() => run.mutate()}
-          disabled={run.isPending || !form.start_date || !form.end_date}
-          className="btn-primary mt-4"
-        >
-          <Play className="w-4 h-4" />
-          {run.isPending ? labels.backtest.running : labels.backtest.run}
-        </button>
+        <div className="mt-4 flex flex-col gap-3">
+          <button
+            onClick={() => run.mutate()}
+            disabled={run.isPending || !form.start_date || !form.end_date || isBusy}
+            className="btn-primary"
+          >
+            <Play className="w-4 h-4" />
+            {run.isPending ? labels.backtest.running : labels.backtest.run}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPromptMode((m) => !m)}
+            className="text-sm text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1.5"
+          >
+            <Sparkles className="w-4 h-4" />
+            {promptMode ? labels.backtest.hidePrompt : labels.backtest.usePrompt}
+          </button>
+
+          {promptMode && (
+            <div className="space-y-2">
+              <textarea
+                className="input-fintech w-full min-h-[80px]"
+                placeholder={labels.backtest.promptPlaceholder}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+              />
+              <button
+                onClick={() => aiRun.mutate()}
+                disabled={aiRun.isPending || !prompt.trim() || isBusy}
+                className="btn-secondary w-full"
+              >
+                {aiRun.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {labels.backtest.runPrompt}
+              </button>
+            </div>
+          )}
+        </div>
       </FintechCard>
 
       {result && (
         <div className="relative">
-          {run.isPending && (
+          {(run.isPending || aiRun.isPending) && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-xl">
               <div className="flex items-center gap-2 text-slate-600">
                 <Loader2 className="w-5 h-5 animate-spin" />

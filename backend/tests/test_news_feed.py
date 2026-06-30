@@ -12,7 +12,7 @@ def _create_source(session, code="cafef", name="CafeF"):
     return source
 
 
-def _create_article(session, source, title, symbols=None, sentiment=0.0, impact=0.0, hours_ago=1):
+def _create_article(session, source, title, symbols=None, sentiment=0.0, impact=0.0, hours_ago=1, language="vi"):
     article = NewsArticle(
         source_id=source.id,
         url=f"https://example.com/{title.replace(' ', '-')}",
@@ -21,7 +21,7 @@ def _create_article(session, source, title, symbols=None, sentiment=0.0, impact=
         published_at=datetime.datetime.utcnow() - datetime.timedelta(hours=hours_ago),
         sentiment_score=sentiment,
         impact_score=impact,
-        language="vi",
+        language=language,
     )
     session.add(article)
     session.commit()
@@ -82,3 +82,15 @@ def test_daily_brief(session):
     brief = service.daily_brief()
     assert brief["total_articles"] >= 1
     assert brief["top_articles"][0].title == "Tin quan trọng"
+
+
+def test_daily_brief_scope(session):
+    vn_source = _create_source(session, code="cafef", name="CafeF")
+    global_source = _create_source(session, code="yahoo", name="Yahoo")
+    _create_article(session, vn_source, "Tin VN", symbols=["VHM"], impact=0.9)
+    _create_article(session, global_source, "Global news", symbols=["AAPL"], impact=0.9, language="en")
+    service = NewsFeedService(session)
+    assert service.daily_brief(scope="vn")["total_articles"] == 1
+    assert service.daily_brief(scope="global")["total_articles"] == 1
+    assert service.daily_brief(scope="vn")["top_articles"][0].title == "Tin VN"
+    assert service.daily_brief(scope="global")["top_articles"][0].title == "Global news"

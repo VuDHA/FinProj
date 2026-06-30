@@ -2,14 +2,34 @@ import datetime
 import re
 from typing import Dict, List, Optional, Set
 
+from sqlmodel import Session
+
 from services.news.dictionaries import analyze_impact, analyze_sentiment, get_known_symbols
+from services.news.tagging import TaggingService
+from services.rag_context import RagContextService
 
 
 class NewsProcessor:
-    """Rule-based processor that enriches raw articles with symbols, sentiment, and impact."""
+    """Rule-based processor that enriches raw articles with symbols, tags, sentiment, and impact."""
 
-    def __init__(self, known_symbols: Optional[Set[str]] = None):
+    def __init__(
+        self,
+        known_symbols: Optional[Set[str]] = None,
+        session: Optional[Session] = None,
+    ):
         self.known_symbols = known_symbols or get_known_symbols()
+        self.session = session
+        rag_context = None
+        if session is not None:
+            try:
+                rag = RagContextService(session)
+                rag_context = rag.format_context(
+                    rag.build_context(include_user_facts=True, include_similar_articles=False),
+                    language="vi",
+                )
+            except Exception as e:
+                print(f"[news:processor] failed to build RAG context: {e}")
+        self._tagger = TaggingService(context=rag_context)
 
     # Vietnamese/English terms that are not stock symbols but match ticker patterns
     _STOP_WORDS: Set[str] = {
@@ -114,8 +134,10 @@ class NewsProcessor:
             if len(summary) > 500:
                 summary = summary[:500] + "..."
 
+        tags = self._tagger.generate(article) if not article.get("tags") else []
         processed = dict(article)
         processed["symbols"] = symbols
+        processed["tags"] = article.get("tags") or self._tagger.join(tags)
         processed["sentiment_score"] = round(sentiment, 2)
         processed["impact_score"] = round(impact, 2)
         processed["summary"] = summary
