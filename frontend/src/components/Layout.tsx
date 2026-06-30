@@ -7,6 +7,7 @@ import {
   FlaskConical,
   HelpCircle,
   LineChart,
+  Newspaper,
   Receipt,
   Scale,
   Settings,
@@ -27,6 +28,7 @@ const nav = [
   { path: "/backtest", label: labels.nav.backtest, icon: FlaskConical },
   { path: "/rebalance", label: labels.nav.rebalance, icon: Scale },
   { path: "/market", label: labels.nav.market, icon: LineChart },
+  { path: "/news", label: labels.nav.news, icon: Newspaper },
   { path: "/settings", label: labels.nav.settings, icon: Settings, tour: "settings" },
 ];
 

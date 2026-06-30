@@ -3,10 +3,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import analytics, assets, backtest, gold_fx, import_export, income, portfolio, prices, rebalance, transactions
+from api import analytics, assets, backtest, gold_fx, import_export, income, news, portfolio, prices, rebalance, transactions
 from api.settings import router as settings_router
 from config import settings
 from database import init_db
+from jobs.news_updater import add_news_jobs
 from jobs.price_updater import start_scheduler
 
 
@@ -14,6 +15,8 @@ from jobs.price_updater import start_scheduler
 async def lifespan(app: FastAPI):
     init_db()
     scheduler = start_scheduler(settings.SCHEDULER_HOUR, settings.SCHEDULER_MINUTE)
+    if scheduler:
+        add_news_jobs(scheduler)
     yield
     if scheduler:
         scheduler.shutdown()
@@ -43,6 +46,7 @@ app.include_router(backtest.router, prefix=settings.API_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_PREFIX)
 app.include_router(gold_fx.router, prefix=settings.API_PREFIX)
 app.include_router(import_export.router, prefix=settings.API_PREFIX)
+app.include_router(news.router, prefix=settings.API_PREFIX)
 app.include_router(settings_router, prefix=settings.API_PREFIX)
 
 

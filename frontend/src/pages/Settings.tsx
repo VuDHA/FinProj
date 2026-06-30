@@ -5,8 +5,10 @@ import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
+import { Skeleton } from "../components/ui/Skeleton";
 import { SourceSelect } from "../components/SourceSelect";
 import { InfoTooltip } from "../components/InfoTooltip";
+import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
 import { formatCurrency } from "../lib/utils";
 
@@ -20,6 +22,7 @@ const ASSET_TYPES = ["STOCK", "FUND", "ETF", "GOLD", "CRYPTO"];
 
 export function Settings() {
   const qc = useQueryClient();
+  const { showToast } = useToast();
 
   const settingsQuery = useQuery({
     queryKey: ["settings"],
@@ -42,13 +45,23 @@ export function Settings() {
       qc.invalidateQueries({ queryKey: ["settings"] });
       setSavedKey(variables.key);
       setTimeout(() => setSavedKey(null), 2000);
+      showToast("Đã lưu cài đặt", "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể lưu cài đặt", "error");
     },
   });
 
   const saveTargets = useMutation({
     mutationFn: (payload: Array<{ type: string; target_percent: number }>) =>
       API.post("/settings/allocation-targets/", payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["allocation-targets"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["allocation-targets"] });
+      showToast("Đã lưu mục tiêu phân bổ", "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể lưu mục tiêu phân bổ", "error");
+    },
   });
 
   const defaultSources = useQuery({
@@ -58,7 +71,13 @@ export function Settings() {
 
   const saveDefaultSources = useMutation({
     mutationFn: (payload: Record<string, string>) => API.post("/settings/default-sources", payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["default-sources"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["default-sources"] });
+      showToast("Đã lưu nguồn dữ liệu mặc định", "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể lưu nguồn dữ liệu mặc định", "error");
+    },
   });
 
   const importAssets = useMutation({
@@ -67,8 +86,12 @@ export function Settings() {
       form.append("file", file);
       return (await API.post("/import-export/import/assets", form)).data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["assets"] });
+      showToast(`Nhập tài sản: ${data.created} đã tạo, ${data.skipped} bỏ qua${data.errors.length ? `, ${data.errors.length} lỗi` : ""}`, data.errors.length ? "error" : "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể nhập tài sản", "error");
     },
   });
 
@@ -78,9 +101,13 @@ export function Settings() {
       form.append("file", file);
       return (await API.post("/import-export/import/transactions", form)).data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
+      showToast(`Nhập giao dịch: ${data.created} đã tạo, ${data.skipped} bỏ qua${data.errors.length ? `, ${data.errors.length} lỗi` : ""}`, data.errors.length ? "error" : "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể nhập giao dịch", "error");
     },
   });
 
@@ -210,7 +237,7 @@ export function Settings() {
           </button>
         </div>
 
-        {goldFx.isLoading && <div className="text-slate-500">{labels.common.loading}</div>}
+        {goldFx.isLoading && <Skeleton className="h-48" />}
 
         {goldFx.data && (
           <div className="space-y-6">
@@ -356,18 +383,28 @@ export function Settings() {
             </div>
           ))}
         </div>
-        <div className="flex items-center justify-between mt-4">
-          <div className={`text-sm ${totalTarget > 100 ? "text-accent-rose" : "text-slate-500"}`}>
-            {labels.rebalance.targetAllocation}: {totalTarget.toFixed(2)}%
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className={`text-sm ${totalTarget > 100 ? "text-accent-rose" : totalTarget < 100 ? "text-amber-600" : "text-emerald-600"}`}>
+              {labels.rebalance.targetAllocation}: {totalTarget.toFixed(2)}%
+              {totalTarget > 100 && ` — ${labels.rebalance.totalTargetMustBe100}`}
+              {totalTarget < 100 && totalTarget > 0 && ` — Còn ${(100 - totalTarget).toFixed(2)}% chưa phân bổ`}
+            </div>
+            <button
+              onClick={handleSaveTargets}
+              disabled={totalTarget > 100 || saveTargets.isPending}
+              className="btn-primary"
+            >
+              <Save className="w-4 h-4" />
+              {saveTargets.isPending ? labels.settings.saving : labels.settings.save}
+            </button>
           </div>
-          <button
-            onClick={handleSaveTargets}
-            disabled={totalTarget > 100 || saveTargets.isPending}
-            className="btn-primary"
-          >
-            <Save className="w-4 h-4" />
-            {saveTargets.isPending ? labels.settings.saving : labels.settings.save}
-          </button>
+          <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${totalTarget > 100 ? "bg-accent-rose" : totalTarget < 100 ? "bg-amber-400" : "bg-emerald-500"}`}
+              style={{ width: `${Math.min(totalTarget, 100)}%` }}
+            />
+          </div>
         </div>
       </FintechCard>
 

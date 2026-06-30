@@ -20,28 +20,18 @@ import { EmptyState } from "../components/EmptyState";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { SummaryCards } from "../components/SummaryCards";
 import { FintechCard } from "../components/ui/FintechCard";
-import { MiniSparkline } from "../components/ui/MiniSparkline";
 import { SectionHeader } from "../components/ui/SectionHeader";
+import { Skeleton } from "../components/ui/Skeleton";
 import { TrendBadge } from "../components/ui/TrendBadge";
+import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
+import { chartTooltipStyle, formatCurrency, formatNumber, formatPercent } from "../lib/utils";
 
 const COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#FB7185", "#8B5CF6", "#3B82F6"];
 
-function holdingSparkline(item: any) {
-  const points = 18;
-  const arr: number[] = [];
-  let v = item.current_value * 0.88;
-  for (let i = 0; i < points; i++) {
-    v = v * (1 + (Math.random() - 0.48) * 0.04);
-    arr.push(v);
-  }
-  arr[arr.length - 1] = item.current_value;
-  return arr;
-}
-
 export function Dashboard() {
   const qc = useQueryClient();
+  const { showToast } = useToast();
 
   const portfolio = useQuery({
     queryKey: ["portfolio"],
@@ -76,6 +66,10 @@ export function Dashboard() {
       qc.invalidateQueries({ queryKey: ["portfolio-history"] });
       qc.invalidateQueries({ queryKey: ["portfolio-benchmark"] });
       qc.invalidateQueries({ queryKey: ["prices"] });
+      showToast("Đã cập nhật giá thành công", "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể cập nhật giá", "error");
     },
   });
 
@@ -122,7 +116,12 @@ export function Dashboard() {
       {refresh.isError && <ErrorMessage error={refresh.error} retry={() => refresh.mutate()} />}
 
       <SectionHeader title={labels.dashboard.title}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {portfolio.dataUpdatedAt > 0 && (
+            <span className="text-xs text-slate-500 hidden sm:inline">
+              Cập nhật: {new Date(portfolio.dataUpdatedAt).toLocaleString("vi-VN")}
+            </span>
+          )}
           <InfoTooltip content={labels.tooltips.refreshPrices} />
           <button
             onClick={() => refresh.mutate()}
@@ -135,7 +134,13 @@ export function Dashboard() {
         </div>
       </SectionHeader>
 
-      <SummaryCards {...data} />
+      {portfolio.isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-28" count={3} />
+        </div>
+      ) : (
+        <SummaryCards {...data} history={history.data} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <FintechCard className="lg:col-span-2" delay={0.2}>
@@ -146,7 +151,11 @@ export function Dashboard() {
             </h3>
             <span className="text-xs text-slate-500">{data.items.length} {labels.assets.symbol}</span>
           </div>
-          {data.items.length > 0 ? (
+          {portfolio.isLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-8" count={6} />
+            </div>
+          ) : data.items.length > 0 ? (
             <div className="overflow-x-auto scrollbar-thin">
               <table className="table-fintech">
                 <thead>
@@ -155,37 +164,46 @@ export function Dashboard() {
                     <th className="text-right">{labels.dashboard.quantity}</th>
                     <th className="text-right">{labels.dashboard.price}</th>
                     <th className="text-right">{labels.dashboard.value}</th>
+                    <th className="text-right">Giá vốn</th>
                     <th className="text-right">{labels.dashboard.pnl}</th>
-                    <th className="text-right">{labels.dashboard.trend}</th>
+                    <th className="text-right">Tỷ trọng</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.items.map((item: any) => (
-                    <tr key={item.asset_id}>
-                      <td>
-                        <div className="font-display font-semibold text-slate-900">{item.symbol}</div>
-                        <span className="text-xs text-slate-500">
-                          {labels.assetTypes[item.type as keyof typeof labels.assetTypes] ?? item.type}
-                        </span>
-                      </td>
-                      <td className="text-right font-mono">{formatNumber(item.quantity, 4)}</td>
-                      <td className="text-right font-mono">{formatCurrency(item.latest_price)}</td>
-                      <td className="text-right font-mono text-slate-900">{formatCurrency(item.current_value)}</td>
-                      <td className="text-right">
-                        <TrendBadge value={(item.pnl / (item.current_value - item.pnl || 1)) * 100} />
-                      </td>
-                      <td className="text-right">
-                        <div className="flex justify-end">
-                          <MiniSparkline
-                            data={holdingSparkline(item)}
-                            color={item.pnl >= 0 ? "emerald" : "rose"}
-                            width={90}
-                            height={28}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {data.items.map((item: any) => {
+                    const allocationPercent = data.total_value > 0 ? (item.current_value / data.total_value) * 100 : 0;
+                    return (
+                      <tr key={item.asset_id}>
+                        <td>
+                          <div className="font-display font-semibold text-slate-900">{item.symbol}</div>
+                          <span className="text-xs text-slate-500">
+                            {labels.assetTypes[item.type as keyof typeof labels.assetTypes] ?? item.type}
+                          </span>
+                        </td>
+                        <td className="text-right font-mono">{formatNumber(item.quantity, 4)}</td>
+                        <td className="text-right font-mono">{formatCurrency(item.latest_price)}</td>
+                        <td className="text-right font-mono text-slate-900">{formatCurrency(item.current_value)}</td>
+                        <td className="text-right font-mono text-slate-500">{formatCurrency(item.avg_cost)}</td>
+                        <td className="text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="font-mono text-xs text-slate-600">{formatCurrency(item.pnl)}</span>
+                            <TrendBadge value={item.pnl_percent} />
+                          </div>
+                        </td>
+                        <td className="text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="font-mono text-xs text-slate-600">{formatPercent(allocationPercent)}</span>
+                            <div className="h-1.5 w-16 rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-accent-blue"
+                                style={{ width: `${Math.min(allocationPercent, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -272,7 +290,9 @@ export function Dashboard() {
           </div>
         </div>
         <div className="h-72">
-          {trendData.length > 1 ? (
+          {history.isLoading ? (
+            <Skeleton className="h-full" />
+          ) : trendData.length > 1 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData}>
                 <defs>

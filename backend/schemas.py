@@ -284,3 +284,79 @@ class CsvImportResult(BaseModel):
     created: int
     skipped: int
     errors: List[str]
+
+
+# News module schemas
+
+class ArticleRead(BaseModel):
+    id: int
+    source_id: int
+    url: str
+    title: str
+    summary: Optional[str] = None
+    author: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[str] = None
+    published_at: Optional[datetime.datetime] = None
+    fetched_at: datetime.datetime
+    sentiment_score: Optional[float] = None
+    impact_score: Optional[float] = None
+    language: Optional[str] = None
+    symbols: List[str] = []
+    sentiment_label: Optional[str] = None
+    impact_label: Optional[str] = None
+
+
+class ArticleListResponse(BaseModel):
+    items: List[ArticleRead]
+    total: int
+    limit: int
+    offset: int
+
+
+class AlertRead(BaseModel):
+    id: int
+    alert_type: str
+    symbol: Optional[str] = None
+    article_id: int
+    title: str
+    message: str
+    is_read: bool
+    created_at: datetime.datetime
+
+
+class WatchlistItem(BaseModel):
+    id: int
+    symbol: str
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    added_at: datetime.datetime
+
+
+class WatchlistCreate(BaseModel):
+    symbol: str
+    name: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class TrendingSymbol(BaseModel):
+    symbol: str
+    mentions: int
+
+
+class TrendingResponse(BaseModel):
+    symbols: List[TrendingSymbol]
+    sentiment: dict
+
+
+class DailyBriefResponse(BaseModel):
+    generated_at: str
+    period_hours: int
+    total_articles: int
+    top_articles: List[ArticleRead]
+    key_symbols: List[TrendingSymbol]
+
+
+class RefreshResponse(BaseModel):
+    results: dict
+    alerts_generated: int

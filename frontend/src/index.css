@@ -67,6 +67,10 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-white/60 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-white hover:text-slate-900 active:scale-[0.98];
   }
 
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-accent-rose px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/25 transition-all hover:shadow-rose-500/40 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:brightness-100;
+  }
+
   .table-fintech {
     @apply w-full text-sm;
   }

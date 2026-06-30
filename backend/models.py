@@ -1,8 +1,8 @@
 import datetime
-from typing import Optional
+from typing import Optional, List
 
 from sqlalchemy import Index
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
 
 
 class Asset(SQLModel, table=True):
@@ -64,3 +64,70 @@ class Setting(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     key: str = Field(index=True, unique=True)
     value: str
+
+
+class NewsSource(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    code: str = Field(index=True, unique=True)
+    name: str
+    base_url: Optional[str] = None
+    source_type: str = Field(default="rss")  # rss, sitemap, html
+    feed_url: Optional[str] = None
+    config: Optional[str] = None  # JSON string for source-specific params
+    is_active: bool = Field(default=True)
+    last_crawled_at: Optional[datetime.datetime] = None
+    fetch_interval_minutes: int = Field(default=30)
+    priority: int = Field(default=0)
+    created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
+
+class NewsArticle(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    source_id: int = Field(foreign_key="newssource.id", index=True)
+    url: str = Field(index=True)
+    title: str
+    summary: Optional[str] = None
+    content_text: Optional[str] = None
+    content_html: Optional[str] = None
+    author: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[str] = None  # comma-separated tags
+    published_at: Optional[datetime.datetime] = Field(index=True)
+    fetched_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+    sentiment_score: Optional[float] = None  # -1.0 to +1.0
+    impact_score: Optional[float] = None  # 0.0 to 1.0
+    is_active: bool = Field(default=True)
+    language: Optional[str] = None  # vi, en, etc.
+
+    __table_args__ = (
+        Index("idx_articles_published_source", "published_at", "source_id"),
+    )
+
+
+class NewsSymbol(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    article_id: int = Field(foreign_key="newsarticle.id", index=True)
+    symbol: str = Field(index=True)
+
+    __table_args__ = (
+        Index("idx_news_symbols_lookup", "symbol", "article_id"),
+    )
+
+
+class Watchlist(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    symbol: str = Field(index=True, unique=True)
+    name: Optional[str] = None
+    notes: Optional[str] = None
+    added_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
+
+
+class NewsAlert(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    alert_type: str = Field(index=True)  # symbol, sentiment, volume, breaking
+    symbol: Optional[str] = Field(index=True)
+    article_id: int = Field(foreign_key="newsarticle.id", index=True)
+    title: str
+    message: str
+    is_read: bool = Field(default=False)
+    created_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)

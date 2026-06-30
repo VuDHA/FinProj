@@ -8,9 +8,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { RefreshCw, X } from "lucide-react";
+import { RefreshCw, X, Calendar, TrendingUp, TrendingDown } from "lucide-react";
 import API from "../api/client";
-import { formatCurrency, formatPercent } from "../lib/utils";
+import { formatCurrency, formatPercent, formatNumber } from "../lib/utils";
 import { labels } from "../i18n/vi";
 
 interface SymbolDetailModalProps {
@@ -121,6 +121,33 @@ function computeStats(points: HistoryPoint[]) {
   return { first, last, max, min, avg, totalReturn, annualized, volatility, days };
 }
 
+function formatAxisPrice(n: number) {
+  return formatNumber(n, 0);
+}
+
+function CompactStat({
+  label,
+  value,
+  positive,
+}: {
+  label: string;
+  value: string;
+  positive?: boolean;
+}) {
+  const colorClass =
+    positive === undefined
+      ? "text-slate-900"
+      : positive
+        ? "text-accent-emerald"
+        : "text-accent-rose";
+  return (
+    <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100">
+      <p className="text-xs text-slate-500 mb-1">{label}</p>
+      <p className={`text-base font-semibold font-mono ${colorClass}`}>{value}</p>
+    </div>
+  );
+}
+
 export default function SymbolDetailModal({
   symbol,
   name,
@@ -197,6 +224,7 @@ export default function SymbolDetailModal({
   );
 
   const stats = useMemo(() => computeStats(history), [history]);
+  const positive = useMemo(() => stats && stats.totalReturn >= 0, [stats]);
 
   const chartTickFormatter = (date: string) => {
     const d = new Date(date);
@@ -212,12 +240,22 @@ export default function SymbolDetailModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-slate-100"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto scrollbar-thin border border-slate-100"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">{symbol}</h2>
+        <div className="flex items-start justify-between px-6 py-5 border-b border-slate-100">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${type === "FUND"
+                    ? "bg-accent-violet/10 text-accent-violet ring-1 ring-inset ring-accent-violet/20"
+                    : "bg-accent-blue/10 text-accent-blue ring-1 ring-inset ring-accent-blue/20"
+                  }`}
+              >
+                {type === "FUND" ? labels.assetTypes.FUND : labels.assetTypes.STOCK}
+              </span>
+              <h2 className="text-xl font-bold text-slate-900">{symbol}</h2>
+            </div>
             <p className="text-sm text-slate-500 truncate max-w-md">{name}</p>
           </div>
           <button
@@ -229,22 +267,23 @@ export default function SymbolDetailModal({
         </div>
 
         <div className="p-6 space-y-6">
-          <div className="flex flex-col md:flex-row gap-3">
+          <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {PRESETS.map((preset) => (
                 <button
                   key={preset}
                   onClick={() => setRange(preset)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${range === preset
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${range === preset
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
                 >
                   {PRESET_LABELS[preset]}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar size={16} className="text-slate-400 shrink-0" />
               <input
                 type="date"
                 className="input-fintech text-sm"
@@ -268,7 +307,7 @@ export default function SymbolDetailModal({
               />
               <button
                 onClick={() => setRefreshKey((k) => k + 1)}
-                className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                className="ml-auto p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
                 title={labels.symbolDetail.reset}
               >
                 <RefreshCw size={16} />
@@ -282,113 +321,101 @@ export default function SymbolDetailModal({
             <div className="text-rose-500 py-8 text-center">{error}</div>
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.price}</p>
-                  <p className="text-lg font-semibold text-slate-900 font-mono">
-                    {stats ? formatCurrency(stats.last) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.change}</p>
-                  <p
-                    className={`text-lg font-semibold font-mono ${stats && stats.last - stats.first >= 0 ? "text-accent-emerald" : "text-accent-rose"
-                      }`}
-                  >
-                    {stats ? formatCurrency(stats.last - stats.first) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.changePercent}</p>
-                  <p
-                    className={`text-lg font-semibold font-mono ${stats && stats.totalReturn >= 0 ? "text-accent-emerald" : "text-accent-rose"
-                      }`}
-                  >
-                    {stats ? formatPercent(stats.totalReturn) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.high}</p>
-                  <p className="text-lg font-semibold text-slate-900 font-mono">
-                    {stats ? formatCurrency(stats.max) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.low}</p>
-                  <p className="text-lg font-semibold text-slate-900 font-mono">
-                    {stats ? formatCurrency(stats.min) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.avg}</p>
-                  <p className="text-lg font-semibold text-slate-900 font-mono">
-                    {stats ? formatCurrency(stats.avg) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.annualized}</p>
-                  <p
-                    className={`text-lg font-semibold font-mono ${stats && stats.annualized >= 0 ? "text-accent-emerald" : "text-accent-rose"
-                      }`}
-                  >
-                    {stats ? formatPercent(stats.annualized) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.volatility}</p>
-                  <p className="text-lg font-semibold text-slate-900 font-mono">
-                    {stats ? formatPercent(stats.volatility) : "—"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-slate-50">
-                  <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.exchange}</p>
-                  <p className="text-lg font-semibold text-slate-900">{exchange}</p>
+              <div className="glass-card p-5">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">
+                      {labels.symbolDetail.price}
+                    </p>
+                    <p className="text-3xl font-bold text-slate-900 font-mono tracking-tight">
+                      {stats ? formatCurrency(stats.last) : "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-5">
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.change}</p>
+                      <p
+                        className={`text-lg font-semibold font-mono flex items-center gap-1 ${positive ? "text-accent-emerald" : "text-accent-rose"
+                          }`}
+                      >
+                        {positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                        {stats ? formatCurrency(stats.last - stats.first) : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.changePercent}</p>
+                      <p
+                        className={`text-lg font-semibold font-mono ${positive ? "text-accent-emerald" : "text-accent-rose"
+                          }`}
+                      >
+                        {stats ? formatPercent(stats.totalReturn) : "—"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <CompactStat label={labels.symbolDetail.high} value={stats ? formatCurrency(stats.max) : "—"} />
+                <CompactStat label={labels.symbolDetail.low} value={stats ? formatCurrency(stats.min) : "—"} />
+                <CompactStat label={labels.symbolDetail.avg} value={stats ? formatCurrency(stats.avg) : "—"} />
+                <CompactStat
+                  label={labels.symbolDetail.annualized}
+                  value={stats ? formatPercent(stats.annualized) : "—"}
+                  positive={stats ? stats.annualized >= 0 : undefined}
+                />
+                <CompactStat
+                  label={labels.symbolDetail.volatility}
+                  value={stats ? formatPercent(stats.volatility) : "—"}
+                />
+                <CompactStat label={labels.symbolDetail.exchange} value={exchange} />
+                <CompactStat
+                  label={labels.symbolDetail.sessions}
+                  value={stats ? `${stats.days} ${labels.symbolDetail.sessions}` : "—"}
+                />
+              </div>
+
               {fundDetail && (
-                <div className="p-4 rounded-xl bg-slate-50 space-y-2">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 space-y-3">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     Thông tin quỹ
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     {fundDetail.fund_type && (
-                      <div>
-                        <span className="text-slate-500">Loại quỹ:</span>{" "}
+                      <div className="flex justify-between md:justify-start md:gap-2">
+                        <span className="text-slate-500">Loại quỹ:</span>
                         <span className="font-medium text-slate-900">{fundDetail.fund_type}</span>
                       </div>
                     )}
                     {fundDetail.owner && (
-                      <div>
-                        <span className="text-slate-500">Công ty quản lý:</span>{" "}
+                      <div className="flex justify-between md:justify-start md:gap-2">
+                        <span className="text-slate-500">Công ty quản lý:</span>
                         <span className="font-medium text-slate-900">{fundDetail.owner}</span>
                       </div>
                     )}
                     {fundDetail.management_fee !== undefined && (
-                      <div>
-                        <span className="text-slate-500">Phí quản lý:</span>{" "}
-                        <span className="font-medium text-slate-900">
-                          {fundDetail.management_fee}%
-                        </span>
+                      <div className="flex justify-between md:justify-start md:gap-2">
+                        <span className="text-slate-500">Phí quản lý:</span>
+                        <span className="font-medium text-slate-900">{fundDetail.management_fee}%</span>
                       </div>
                     )}
                     {fundDetail.inception_date && (
-                      <div>
-                        <span className="text-slate-500">Ngày thành lập:</span>{" "}
+                      <div className="flex justify-between md:justify-start md:gap-2">
+                        <span className="text-slate-500">Ngày thành lập:</span>
                         <span className="font-medium text-slate-900">
                           {new Date(fundDetail.inception_date).toLocaleDateString("vi-VN")}
                         </span>
                       </div>
                     )}
                     {fundDetail.vsd_fee_id && (
-                      <div>
-                        <span className="text-slate-500">Mã VSD:</span>{" "}
+                      <div className="flex justify-between md:justify-start md:gap-2">
+                        <span className="text-slate-500">Mã VSD:</span>
                         <span className="font-medium text-slate-900">{fundDetail.vsd_fee_id}</span>
                       </div>
                     )}
                     {fundDetail.nav_update_at && (
-                      <div>
-                        <span className="text-slate-500">Cập nhật NAV:</span>{" "}
+                      <div className="flex justify-between md:justify-start md:gap-2">
+                        <span className="text-slate-500">Cập nhật NAV:</span>
                         <span className="font-medium text-slate-900">
                           {new Date(fundDetail.nav_update_at).toLocaleDateString("vi-VN")}
                         </span>
@@ -398,7 +425,7 @@ export default function SymbolDetailModal({
                 </div>
               )}
 
-              <div className="h-72">
+              <div className="h-80">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-sm font-semibold text-slate-700">{labels.symbolDetail.priceHistory}</p>
                   <span className="text-xs text-slate-400">
@@ -412,26 +439,32 @@ export default function SymbolDetailModal({
                         <linearGradient id={`detailGradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
                           <stop
                             offset="0%"
-                            stopColor={stats && stats.totalReturn >= 0 ? "#10b981" : "#f43f5e"}
+                            stopColor={positive ? "#10b981" : "#f43f5e"}
                             stopOpacity={0.3}
                           />
                           <stop
                             offset="100%"
-                            stopColor={stats && stats.totalReturn >= 0 ? "#10b981" : "#f43f5e"}
+                            stopColor={positive ? "#10b981" : "#f43f5e"}
                             stopOpacity={0}
                           />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" vertical={false} />
                       <XAxis
                         dataKey="date"
                         tick={{ fontSize: 12, fill: "#64748b" }}
                         tickFormatter={chartTickFormatter}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={8}
                       />
                       <YAxis
                         tick={{ fontSize: 12, fill: "#64748b" }}
-                        tickFormatter={(v: number) => formatCurrency(v).replace("₫", "")}
-                        width={80}
+                        tickFormatter={formatAxisPrice}
+                        width={70}
+                        axisLine={false}
+                        tickLine={false}
+                        dx={-4}
                       />
                       <Tooltip
                         contentStyle={{
@@ -439,23 +472,26 @@ export default function SymbolDetailModal({
                           border: "1px solid rgba(15, 23, 42, 0.08)",
                           borderRadius: "12px",
                           color: "#1e293b",
+                          boxShadow: "0 4px 24px rgba(15, 23, 42, 0.08)",
                         }}
                         formatter={(value: number) => [formatCurrency(value), labels.symbolDetail.price]}
-                        labelFormatter={(date: string) => `Ngày ${new Date(date).toLocaleDateString("vi-VN")}`}
+                        labelFormatter={(date: string) =>
+                          `Ngày ${new Date(date).toLocaleDateString("vi-VN")}`
+                        }
                       />
                       <Area
                         type="monotone"
                         dataKey="price"
-                        stroke={stats && stats.totalReturn >= 0 ? "#10b981" : "#f43f5e"}
-                        strokeWidth={2}
+                        stroke={positive ? "#10b981" : "#f43f5e"}
+                        strokeWidth={2.5}
                         fill={`url(#detailGradient-${symbol})`}
                         dot={false}
-                        activeDot={{ r: 5 }}
+                        activeDot={{ r: 5, strokeWidth: 0 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex items-center justify-center h-full text-slate-500">
+                  <div className="flex items-center justify-center h-full text-slate-500 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                     {labels.symbolDetail.noData}
                   </div>
                 )}

@@ -30,12 +30,24 @@ export function SummaryCards({
   total_cost,
   total_pnl,
   total_pnl_percent,
+  history,
 }: {
   total_value: number;
   total_cost: number;
   total_pnl: number;
   total_pnl_percent: number;
+  history?: Array<{ date: string; value: number; cost: number }>;
 }) {
+  const valueSparkline = history?.length
+    ? history.map((h) => h.value)
+    : generateSparkline(total_value, 24, "up");
+  const costSparkline = history?.length
+    ? history.map((h) => h.cost)
+    : generateSparkline(total_cost, 24, "neutral");
+  const pnlSparkline = history?.length
+    ? history.map((h) => h.value - h.cost)
+    : generateSparkline(Math.abs(total_pnl) || 1, 24, total_pnl >= 0 ? "up" : "down");
+
   const cards = [
     {
       label: labels.summary.totalValue,
@@ -45,7 +57,7 @@ export function SummaryCards({
       icon: Wallet,
       color: "cyan" as const,
       trend: "up" as const,
-      sparkline: generateSparkline(total_value, 24, "up"),
+      sparkline: valueSparkline,
       badge: total_pnl_percent,
     },
     {
@@ -56,7 +68,7 @@ export function SummaryCards({
       icon: PiggyBank,
       color: "blue" as const,
       trend: "neutral" as const,
-      sparkline: generateSparkline(total_cost, 24, "neutral"),
+      sparkline: costSparkline,
     },
     {
       label: labels.summary.pnl,
@@ -66,7 +78,7 @@ export function SummaryCards({
       icon: total_pnl >= 0 ? TrendingUp : TrendingDown,
       color: total_pnl >= 0 ? ("emerald" as const) : ("rose" as const),
       trend: total_pnl >= 0 ? ("up" as const) : ("down" as const),
-      sparkline: generateSparkline(Math.abs(total_pnl) || 1, 24, total_pnl >= 0 ? "up" : "down"),
+      sparkline: pnlSparkline,
       badge: total_pnl_percent,
     },
   ];
