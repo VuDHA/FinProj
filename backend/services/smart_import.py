@@ -9,7 +9,6 @@ from models import Asset, Transaction
 from schemas import CsvImportResult
 from services.asset_type_config import get_asset_type_codes
 from services.file_utils import read_excel_sheet_names, read_rows
-from services.ollama_client import OllamaClient, OllamaClientError
 
 
 ASSET_TARGET_FIELDS = ["symbol", "name", "type", "exchange", "currency"]
@@ -19,11 +18,14 @@ REQUIRED_TRANSACTION_FIELDS = ["symbol", "type", "quantity", "price", "date"]
 
 
 class SmartImportService:
-    """Preview and import CSV/Excel files with AI-assisted header mapping."""
+    """Preview and import CSV/Excel files with AI-assisted header mapping.
+
+    Uses Gemini batch when AI_PROVIDER=gemini; otherwise falls back to Ollama
+    or keyword-based matching.
+    """
 
     def __init__(self, model: str = settings.OLLAMA_MODEL):
         self.model = model
-        self._client = OllamaClient()
 
     @staticmethod
     def _is_csv(filename: str) -> bool:

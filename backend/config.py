@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com"
     GEMINI_MODEL: str = "gemini-3.1-flash-lite"
-    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
     GEMINI_EMBEDDING_DIMENSION: int = 768
 
     # Local LLM for tag generation (Ollama). Lightweight: runs on CPU/RAM.

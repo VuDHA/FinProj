@@ -1,9 +1,6 @@
 import time
 from typing import Any, Dict, List, Optional
 
-from google import genai
-from google.genai import types
-
 from config import settings
 
 
@@ -31,9 +28,16 @@ class GeminiClient:
         self.timeout = timeout
         self._client = self._build_client()
 
-    def _build_client(self) -> genai.Client:
+    def _build_client(self) -> Any:
         if not self.api_key:
             raise GeminiClientError("GEMINI_API_KEY is not configured")
+        try:
+            from google import genai
+            from google.genai import types
+        except ImportError as e:
+            raise GeminiClientError(
+                "google-genai SDK is not installed. Run: pip install google-genai"
+            ) from e
         return genai.Client(
             api_key=self.api_key,
             http_options=types.HttpOptions(
@@ -64,6 +68,8 @@ class GeminiClient:
         task_name: str = "gemini_generate",
     ) -> str:
         """Generate text from a single prompt."""
+        from google.genai import types
+
         start = time.time()
         try:
             response = self._client.models.generate_content(
@@ -94,6 +100,8 @@ class GeminiClient:
         The caller is responsible for building the batched prompt and parsing
         the batched response.
         """
+        from google.genai import types
+
         start = time.time()
         try:
             response = self._client.models.generate_content(
@@ -117,6 +125,7 @@ class GeminiClient:
         text: str,
         model: str = settings.GEMINI_EMBEDDING_MODEL,
         task_name: str = "gemini_embed",
+        dimension: int = settings.GEMINI_EMBEDDING_DIMENSION,
     ) -> List[float]:
         """Create an embedding vector for a single text."""
         start = time.time()
@@ -124,6 +133,7 @@ class GeminiClient:
             response = self._client.models.embed_content(
                 model=model,
                 contents=text,
+                config=self._embed_config(dimension),
             )
             vector = self._extract_embedding(response)
             self._log(task_name, time.time() - start, True)
@@ -137,6 +147,7 @@ class GeminiClient:
         texts: List[str],
         model: str = settings.GEMINI_EMBEDDING_MODEL,
         task_name: str = "gemini_embed_batch",
+        dimension: int = settings.GEMINI_EMBEDDING_DIMENSION,
     ) -> List[List[float]]:
         """Create embedding vectors for a list of texts."""
         if not texts:
@@ -146,6 +157,7 @@ class GeminiClient:
             response = self._client.models.embed_content(
                 model=model,
                 contents=texts,
+                config=self._embed_config(dimension),
             )
             vectors = [self._extract_embedding(item) for item in response.embeddings]
             self._log(task_name, time.time() - start, True)
@@ -153,6 +165,14 @@ class GeminiClient:
         except Exception as e:
             self._log(task_name, time.time() - start, False, error=str(e))
             raise GeminiClientError(f"Gemini batch embedding failed: {e}") from e
+
+    def _embed_config(self, dimension: int) -> Optional[Any]:
+        try:
+            from google.genai import types
+
+            return types.EmbedContentConfig(output_dimensionality=dimension)
+        except Exception:
+            return None
 
     @staticmethod
     def _extract_embedding(response: Any) -> List[float]:

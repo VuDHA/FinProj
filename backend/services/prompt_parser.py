@@ -5,7 +5,6 @@ from typing import Dict
 
 from config import settings
 from schemas import BacktestRequest
-from services.ollama_client import OllamaClient, OllamaClientError
 
 
 class PromptParserError(Exception):
@@ -15,7 +14,7 @@ class PromptParserError(Exception):
 
 
 class PromptParser:
-    """Use the local LLM to extract structured data from natural-language prompts."""
+    """Use Gemini or the local LLM to extract structured data from natural-language prompts."""
 
     def __init__(
         self,
@@ -24,7 +23,6 @@ class PromptParser:
     ):
         self.model = model
         self.timeout = timeout
-        self._client = OllamaClient(timeout=timeout)
 
     def _parse_json(self, raw: str) -> Dict:
         """Extract a JSON object from a possibly chatty LLM response."""

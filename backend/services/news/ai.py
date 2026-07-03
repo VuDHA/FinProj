@@ -4,15 +4,12 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 from config import settings
-from services.ollama_client import OllamaClient, OllamaClientError
 
 
 class NewsAI:
-    """Lightweight AI helper for news tasks via a local Ollama model.
+    """Lightweight AI helper for news tasks via Gemini or a local Ollama model.
 
-    The model is kept outside the Python process, so the app only pays for an
-    HTTP call.  Prompts are intentionally small to work well with tiny models
-    like qwen2.5:1.5b.
+    Uses Gemini when AI_PROVIDER=gemini; otherwise falls back to Ollama.
     """
 
     _summary_cache: Dict[str, Tuple[float, str]] = {}
@@ -32,7 +29,6 @@ class NewsAI:
         self.enabled = enabled if enabled is not None else (
             settings.AI_PROVIDER == "gemini" or settings.OLLAMA_ENABLED
         )
-        self._client = OllamaClient(base_url=base_url, timeout=timeout)
 
     def _summary_cache_key(
         self, articles: List[Dict], language: str, rag_context: Optional[str] = None

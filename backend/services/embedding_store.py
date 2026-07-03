@@ -1,12 +1,12 @@
 import json
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import text
 from sqlmodel import Session
 
 from config import settings
 from database import engine
-from services.ollama_client import OllamaClient, OllamaClientError
+from services.ollama_client import OllamaClient
 
 
 class EmbeddingStore:
@@ -60,59 +60,107 @@ class EmbeddingStore:
 
     def create_embedding(self, article_id: int, text: str) -> Optional[List[float]]:
         """Generate and store an embedding for a single article."""
-        if not self.enabled:
-            return None
-        if not text or not text.strip():
-            return None
+        results = self.create_embeddings_batch([(article_id, text)])
+        return results.get(article_id)
 
-        text = text.strip()[:1000]
+    def create_embeddings_batch(
+        self, items: List[Tuple[int, str]]
+    ) -> Dict[int, Optional[List[float]]]:
+        """Generate and store embeddings for multiple articles in one API call.
+
+        Returns a mapping of article_id to embedding vector (or None on failure).
+        """
+        result: Dict[int, Optional[List[float]]] = {}
+        if not self.enabled or not items:
+            return result
+
+        valid_items = [
+            (aid, text.strip()[:1000]) for aid, text in items if text and text.strip()
+        ]
+        if not valid_items:
+            return result
+
+        texts = [text for _, text in valid_items]
+        ids = [aid for aid, _ in valid_items]
+        vectors: List[Optional[List[float]]] = []
+
         try:
             if self.use_gemini:
-                vector = self._get_gemini_client().embed(
-                    text=text,
-                    task_name=f"article_embedding:{article_id}",
+                batch_vectors = self._get_gemini_client().embed_batch(
+                    texts,
+                    task_name="article_embedding_batch",
                 )
+                vectors.extend(batch_vectors)
             else:
-                vector = self._get_ollama_client().embed(
-                    text=text,
-                    model=self.model,
-                    task_name=f"article_embedding:{article_id}",
-                )
-        except Exception as e:
-            print(f"[embedding_store] failed to embed article {article_id}: {e}")
-            # Try Ollama as fallback if Gemini failed.
-            if self.use_gemini:
-                try:
+                for text in texts:
                     vector = self._get_ollama_client().embed(
                         text=text,
-                        model=settings.OLLAMA_EMBEDDING_MODEL,
-                        task_name=f"article_embedding:{article_id}:fallback",
+                        model=self.model,
+                        task_name="article_embedding_batch",
                     )
+                    vectors.append(vector)
+        except Exception as e:
+            print(f"[embedding_store] batch embed failed: {e}")
+            # Fall back to single-item calls.
+            for text in texts:
+                try:
+                    if self.use_gemini:
+                        vectors.append(
+                            self._get_gemini_client().embed(
+                                text=text,
+                                task_name="article_embedding_single",
+                            )
+                        )
+                    else:
+                        vectors.append(
+                            self._get_ollama_client().embed(
+                                text=text,
+                                model=self.model,
+                                task_name="article_embedding_single",
+                            )
+                        )
                 except Exception as e2:
-                    print(f"[embedding_store] ollama fallback failed: {e2}")
-                    return None
-            else:
-                return None
+                    print(f"[embedding_store] single embed failed: {e2}")
+                    vectors.append(None)
 
-        self.save(article_id, vector)
-        return vector
+        # Save all successful embeddings in a single transaction.
+        to_save = [(aid, vector) for aid, vector in zip(ids, vectors) if vector is not None]
+        try:
+            self.save_batch(to_save)
+        except Exception as e:
+            print(f"[embedding_store] failed to save embedding batch: {e}")
+            for aid, _ in to_save:
+                result[aid] = None
+            return result
+
+        for aid, vector in zip(ids, vectors):
+            result[aid] = vector
+        return result
 
     def save(self, article_id: int, vector: List[float]) -> None:
         """Insert or replace an embedding vector."""
-        with engine.connect() as conn:
-            conn.execute(
-                text(
-                    f"""
-                    INSERT OR REPLACE INTO {self.TABLE_NAME} (article_id, embedding)
-                    VALUES (:article_id, :embedding)
-                    """
-                ),
-                {
-                    "article_id": article_id,
-                    "embedding": self._serialize(vector),
-                },
-            )
-            conn.commit()
+        self.save_batch([(article_id, vector)])
+
+    def save_batch(
+        self, items: List[Tuple[int, List[float]]]
+    ) -> None:
+        """Insert or replace multiple embedding vectors in one transaction."""
+        if not items:
+            return
+        with engine.begin() as conn:
+            for article_id, vector in items:
+                conn.execute(
+                    text(
+                        f"""
+                        INSERT OR REPLACE INTO {self.TABLE_NAME} (article_id, embedding)
+                        VALUES (:article_id, :embedding)
+                        """
+                    ),
+                    {
+                        "article_id": article_id,
+                        "embedding": self._serialize(vector),
+                    },
+                )
 
     def find_similar(
         self,
@@ -191,9 +239,8 @@ class EmbeddingStore:
 
     def delete_for_article(self, article_id: int) -> None:
         """Remove an embedding."""
-        with engine.connect() as conn:
+        with engine.begin() as conn:
             conn.execute(
                 text(f"DELETE FROM {self.TABLE_NAME} WHERE article_id = :article_id"),
                 {"article_id": article_id},
             )
-            conn.commit()

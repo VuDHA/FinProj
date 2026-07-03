@@ -54,10 +54,9 @@ def test_gemini_client_generate_error(mock_settings_gemini):
 
 def test_gemini_client_embed(mock_settings_gemini):
     client = GeminiClient()
-    item = MagicMock()
-    item.values = [0.1, 0.2, 0.3]
     response = MagicMock()
-    response.embeddings = [item]
+    response.values = None
+    response.embeddings = [MagicMock(values=[0.1, 0.2, 0.3])]
     with patch.object(
         client._client.models, "embed_content", return_value=response
     ) as mock_embed:
@@ -155,3 +154,25 @@ def test_ai_provider_factory_gemini_primary():
                 with patch("services.ai_provider.settings.AI_TIMEOUT_SECONDS", 30):
                     provider = AIProviderFactory.primary_provider()
                     assert provider is not None
+
+
+def test_batch_ai_create_embeddings_uses_gemini(mock_settings_gemini):
+    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
+        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+            service = BatchAIService(batch_size=2)
+            response = MagicMock()
+            response.values = None
+            response.embeddings = [
+                MagicMock(values=[0.1, 0.2]),
+                MagicMock(values=[0.3, 0.4]),
+            ]
+            with patch.object(
+                service._primary._client.models,
+                "embed_content",
+                return_value=response,
+            ) as mock_embed:
+                results = service.create_embeddings(["text 1", "text 2"])
+                assert len(results) == 2
+                assert results[0] == [0.1, 0.2]
+                assert results[1] == [0.3, 0.4]
+                mock_embed.assert_called_once()

@@ -1,17 +1,17 @@
 import json
 import re
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from config import settings
-from services.ollama_client import OllamaClient, OllamaClientError
+from services.ollama_client import OllamaClient
 
 
 class RelevanceScorer:
     """Score how relevant a news article is to finance/investing.
 
-    Uses a local Ollama model when enabled; otherwise falls back to a
-    deterministic rule-based score. The score is stored so it is only computed
-    once per article.
+    Uses Gemini batch when AI_PROVIDER=gemini; otherwise uses a local Ollama
+    model when enabled. Falls back to a deterministic rule-based score when no
+    AI provider is available.
     """
 
     def __init__(

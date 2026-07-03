@@ -4,9 +4,9 @@ import re
 from typing import Any, Dict, List, Optional
 
 from config import settings
-from services.ai_provider import AIProviderError, AIProviderFactory
+from services.ai_provider import AIProviderFactory
 from services.gemini_client import GeminiClient, GeminiClientError
-from services.ollama_client import OllamaClient, OllamaClientError
+from services.ollama_client import OllamaClient
 
 
 class BatchAIError(Exception):
@@ -85,10 +85,39 @@ class BatchAIService:
         match = re.search(r"```(?:json)?\s*([\{\[].*?[\}\]])\s*```", text, re.DOTALL)
         if match:
             return match.group(1)
-        # Try bare JSON object or array
-        match = re.search(r"([\{\[].*[\}\]])", text, re.DOTALL)
-        if match:
-            return match.group(1)
+        # Try bare JSON object or array, from the first { or [ to the matching end.
+        start = -1
+        for i, ch in enumerate(text):
+            if ch in "{[":
+                start = i
+                break
+        if start == -1:
+            return None
+        # Count braces/brackets to find the matching end.
+        open_char = text[start]
+        close_char = "}" if open_char == "{" else "]"
+        depth = 0
+        in_string = False
+        escape = False
+        for i in range(start, len(text)):
+            ch = text[i]
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == open_char:
+                depth += 1
+            elif ch == close_char:
+                depth -= 1
+                if depth == 0:
+                    return text[start : i + 1]
         return None
 
     def _parse_single_json(self, text: str) -> Optional[Dict[str, Any]]:
@@ -145,7 +174,7 @@ class BatchAIService:
             try:
                 raw = self._generate_with_fallback(
                     batch_prompt,
-                    max_tokens=128,
+                    max_tokens=1024,
                     task_name=task_name,
                 )
                 parsed = self._parse_batch_response(raw)
@@ -224,14 +253,31 @@ class BatchAIService:
 
         task_name = "batch_relevance"
         instructions = (
-            "Bạn là chuyên gia đánh giá tin tức tài chính. Với mỗi tin bên dưới, trả về:\n"
+            "Bạn là chuyên gia phân tích tin tức tài chính. Với mỗi tin bên dưới, "
+            "đánh giá mức độ liên quan đến đầu tư (chứng khoán, ngân hàng, vĩ mô, doanh nghiệp, "
+            "thị trường toàn cầu, hàng hóa, trái phiếu, tiền tệ). "
+            "Tin từ Bloomberg, Reuters, CNBC, Financial Times về thị trường là rất liên quan.\n"
+            "Thang điểm:\n"
+            "- 0.8–1.0: tin lớn ảnh hưởng toàn thị trường (Fed, lãi suất, lợi nhuận lớn, khủng hoảng)\n"
+            "- 0.6–0.79: tin đáng chú ý cho nhà đầu tư (doanh nghiệp, ngành, kinh tế vĩ mô)\n"
+            "- 0.4–0.59: tin liên quan nhẹ, không đủ nổi bật\n"
+            "- 0.0–0.39: tin ít liên quan hoặc không liên quan đến đầu tư\n"
+            "Trả về:\n"
             "- relevance_score: số thực từ 0.0 đến 1.0\n"
-            "- standout: true nếu tin đáng chú ý cho nhà đầu tư\n"
+            "- standout: true nếu tin quan trọng và đáng chú ý cho nhà đầu tư, ngược lại false\n"
             "- reason: giải thích ngắn trong 1 câu\n\n"
             if language == "vi"
-            else "You are a financial news evaluator. For each article below, return:\n"
+            else "You are a financial analyst. For each article below, evaluate relevance to investing "
+            "(stocks, banking, macroeconomics, corporate earnings, global markets, commodities, bonds, currencies). "
+            "News from Bloomberg, Reuters, CNBC, Financial Times about markets is highly relevant.\n"
+            "Scale:\n"
+            "- 0.8–1.0: major market-moving news (Fed, rates, big earnings, crises)\n"
+            "- 0.6–0.79: notable for investors (companies, sectors, macro)\n"
+            "- 0.4–0.59: lightly related, not standout\n"
+            "- 0.0–0.39: little or no investment relevance\n"
+            "Return:\n"
             "- relevance_score: float from 0.0 to 1.0\n"
-            "- standout: true if the article is notable for investors\n"
+            "- standout: true if the article is notable and valuable to investors, otherwise false\n"
             "- reason: one-sentence explanation\n\n"
         )
 
@@ -251,13 +297,21 @@ class BatchAIService:
             try:
                 raw = self._generate_with_fallback(
                     batch_prompt,
-                    max_tokens=256,
+                    max_tokens=2048,
                     task_name=task_name,
                 )
+                print(f"[relevance:raw] len={len(raw)} first={raw[:200]!r} last={raw[-200:]!r}")
                 parsed = self._parse_batch_response(raw)
+                print(f"[relevance:parsed] {parsed}")
                 for i, entry in enumerate(parsed):
                     if i < len(batch):
-                        results[batch_start + i] = self._clean_relevance(entry, threshold)
+                        cleaned = self._clean_relevance(entry, threshold)
+                        title = batch[i].get("title", "")[:60]
+                        print(
+                            f"[relevance] {title!r} score={cleaned['relevance_score']} "
+                            f"standout={cleaned['is_standout']} reason={cleaned['reason'][:60]}"
+                        )
+                        results[batch_start + i] = cleaned
             except Exception as e:
                 print(f"[batch_ai] relevance batch failed: {e}")
                 for i, item in enumerate(batch):
@@ -310,7 +364,12 @@ class BatchAIService:
                 task_name="ollama_relevance_fallback",
             )
             entry = self._parse_single_json(raw) or {}
-            return self._clean_relevance(entry, threshold)
+            cleaned = self._clean_relevance(entry, threshold)
+            print(
+                f"[relevance:fallback] {title[:60]!r} score={cleaned['relevance_score']} "
+                f"standout={cleaned['is_standout']}"
+            )
+            return cleaned
         except Exception as e:
             print(f"[batch_ai] single relevance fallback failed: {e}")
             return self._default_relevance(threshold)
@@ -663,13 +722,20 @@ class BatchAIService:
 
     @staticmethod
     def _parse_batch_response(raw: str) -> List[Dict[str, Any]]:
-        json_text = BatchAIService._extract_json(raw)
-        if json_text is None:
-            return []
+        # Try direct parse first.
+        text = raw.strip()
         try:
-            data = json.loads(json_text)
+            data = json.loads(text)
         except json.JSONDecodeError:
-            return []
+            json_text = BatchAIService._extract_json(text)
+            if json_text is None:
+                print(f"[batch_ai] could not extract JSON from response")
+                return []
+            try:
+                data = json.loads(json_text)
+            except json.JSONDecodeError as e:
+                print(f"[batch_ai] JSON parse failed: {e}")
+                return []
         if isinstance(data, dict):
             # Sometimes the model wraps the array under a key like "results"
             for value in data.values():
@@ -700,14 +766,16 @@ class BatchAIService:
     def _clean_relevance(entry: Dict[str, Any], threshold: float) -> Dict[str, Any]:
         score = float(entry.get("relevance_score", 0.0))
         score = max(0.0, min(1.0, score))
-        standout = entry.get("standout", score >= threshold)
+        standout = entry.get("standout", False)
         if isinstance(standout, str):
             standout = standout.strip().lower() in ("true", "yes", "1")
         else:
             standout = bool(standout)
+        # Prioritize relevance score: a high score is enough to be standout.
+        is_standout = standout or score >= threshold
         return {
             "relevance_score": round(score, 2),
-            "is_standout": standout,
+            "is_standout": is_standout,
             "reason": str(entry.get("reason", "")),
         }
 

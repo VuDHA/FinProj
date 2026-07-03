@@ -24,6 +24,7 @@ ENV_REGISTRY: List[Dict[str, Any]] = [
     {"key": "GEMINI_MODEL", "type": "str", "requires_restart": False, "description": "Gemini generation model name"},
     {"key": "GEMINI_EMBEDDING_MODEL", "type": "str", "requires_restart": False, "description": "Gemini embedding model name"},
     {"key": "GEMINI_EMBEDDING_DIMENSION", "type": "int", "requires_restart": False, "description": "Gemini embedding vector dimension"},
+    {"key": "NEWS_RELEVANCE_THRESHOLD", "type": "float", "requires_restart": False, "description": "Minimum relevance score to save a news article"},
     {"key": "OLLAMA_ENABLED", "type": "bool", "requires_restart": False, "description": "Enable local Ollama LLM for AI features"},
     {"key": "OLLAMA_BASE_URL", "type": "str", "requires_restart": False, "description": "Ollama server URL"},
     {"key": "OLLAMA_MODEL", "type": "str", "requires_restart": False, "description": "Ollama model name for generation"},
@@ -77,6 +78,11 @@ def _parse_value(raw: str, var_type: str) -> Any:
             return int(raw)
         except ValueError:
             return 0
+    if var_type == "float":
+        try:
+            return float(raw)
+        except ValueError:
+            return 0.0
     if var_type == "list":
         import json
 
@@ -121,11 +127,15 @@ def _validate_updates(updates: Dict[str, str]) -> Tuple[Dict[str, str], List[str
         try:
             if meta["type"] == "int":
                 int(raw)
+            elif meta["type"] == "float":
+                float(raw)
             elif meta["type"] == "list":
                 json.loads(raw)
         except ValueError as exc:
             if meta["type"] == "list":
                 errors.append(f"{key} must be a valid JSON array")
+            elif meta["type"] == "float":
+                errors.append(f"{key} must be a valid number")
             else:
                 errors.append(f"{key} must be a valid integer")
         else:

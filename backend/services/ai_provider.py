@@ -2,7 +2,7 @@ from typing import Optional, Union
 
 from config import settings
 from services.gemini_client import GeminiClient, GeminiClientError
-from services.ollama_client import OllamaClient, OllamaClientError
+from services.ollama_client import OllamaClient
 
 
 class AIProviderError(Exception):

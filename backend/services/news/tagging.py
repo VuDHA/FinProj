@@ -6,11 +6,10 @@ from services.ollama_client import OllamaClient, OllamaClientError
 
 
 class LocalTagger:
-    """Generate article tags using a small local LLM via Ollama.
+    """Generate article tags using a local Ollama LLM as fallback.
 
-    The model runs outside Python in Ollama, so the Python process stays
-    lightweight and only pays the cost of an HTTP call. This keeps RAM/CPU
-    usage low compared to loading transformers/torch inside the app.
+    Kept for Ollama fallback only. Gemini batch processing is preferred when
+    AI_PROVIDER=gemini.
     """
 
     def __init__(

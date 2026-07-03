@@ -110,14 +110,17 @@ class NewsCrawlerService:
             link = NewsSymbol(article_id=article.id, symbol=symbol)
             self.session.add(link)
 
-        # Generate an embedding for the article so RAG can retrieve similar ones later.
-        text_for_embedding = " ".join(
-            filter(None, [article.title, article.summary])
-        ).strip()
-        if text_for_embedding:
-            self.embedding_store.create_embedding(article.id, text_for_embedding)
-
         return article
+
+    def _embed_batch(self, articles: List[NewsArticle]) -> None:
+        """Generate embeddings for a list of saved articles in one API call."""
+        items = []
+        for article in articles:
+            text = " ".join(filter(None, [article.title, article.summary])).strip()
+            if text:
+                items.append((article.id, text))
+        if items:
+            self.embedding_store.create_embeddings_batch(items)
 
     def crawl_source(self, code: str, progress: Optional[Any] = None) -> int:
         """Crawl a single source by code. Returns number of new articles stored."""
@@ -160,14 +163,21 @@ class NewsCrawlerService:
             )
 
         processed = self.processor.process_many(new_articles)
-        new_count = 0
+        saved_articles: List[NewsArticle] = []
         for article in processed:
             saved = self._save_article(source, article)
             if saved:
-                new_count += 1
+                saved_articles.append(saved)
 
+        # Commit articles/symbol links first so the embedding writer does not
+        # compete with the open session transaction for the SQLite lock.
         source.last_crawled_at = datetime.datetime.utcnow()
         self.session.commit()
+
+        # Generate embeddings for all saved articles in one batched API call.
+        self._embed_batch(saved_articles)
+
+        new_count = len(saved_articles)
         print(f"[news:crawler] {code}: {new_count} new articles out of {len(processed)}")
 
         if progress is not None:
