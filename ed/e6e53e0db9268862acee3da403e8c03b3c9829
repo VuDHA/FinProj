@@ -1,0 +1,213 @@
+backend/common/exceptions.py
+  s_2ac3db32fc114a::t_edf26b14a2195f 1-13
+frontend/src/features/assets/components/SourceSelect.tsx
+  s_2ac3db32fc114a::t_236454c91c7654 2
+  s_2ac3db32fc114a::t_11ab163607e8d6 3
+backend/services/ai/ai_insights/prompts.py
+  s_8457f461f1e346::t_7d49d65a79181b 149-157
+frontend/src/features/market/index.ts
+  s_2ac3db32fc114a::t_c28fb3ce78caef 1
+backend/services/market/gold_fx.py
+  s_2ac3db32fc114a::t_152e592d4ac0b3 7
+  s_2ac3db32fc114a::t_c5601bb7240812 33-88
+  s_2ac3db32fc114a::t_efda251471e972 8
+frontend/src/pages/Analytics.tsx
+  s_2ac3db32fc114a::t_1d6e7eff3da32b 24-26,91,96,104,111
+  s_2ac3db32fc114a::t_4d7a4e92c2892b 86
+  s_2ac3db32fc114a::t_c86903077c768e 41-42
+frontend/src/components/Layout.tsx
+  s_2ac3db32fc114a::t_97a3bf91eff06d 23-24
+backend/tests/test_compare.py
+  s_8457f461f1e346::t_04842d65a4fa16 3
+backend/tests/test_api_services.py
+  s_8457f461f1e346::t_954b5acdd13e16 4-5
+backend/services/ai/batch_ai.py
+  s_2ac3db32fc114a::t_1c0c9f09972ab1 8
+  s_2ac3db32fc114a::t_710989a4aac040 110-113
+  s_2ac3db32fc114a::t_980409f1f21c1c 7
+  s_2ac3db32fc114a::t_ad904a09ec04bf 9-11
+frontend/src/api/assets.ts
+  s_2ac3db32fc114a::t_57b8cc23a6afc1 1-36
+frontend/src/features/assets/index.ts
+  s_2ac3db32fc114a::t_f0243afcec960e 1
+frontend/src/features/dashboard/components/SummaryCards.tsx
+  s_2ac3db32fc114a::t_989381ca73a072 7
+  s_2ac3db32fc114a::t_29075592bca9b5 8-10
+frontend/src/api/backtest.ts
+  s_2ac3db32fc114a::t_870e90b8fece48 11
+  s_2ac3db32fc114a::t_4e98b331b2d881 7
+  s_2ac3db32fc114a::t_dbf5df89319e67 1-6,8-10,12-60
+backend/common/http.py
+  s_2ac3db32fc114a::t_10784930c5aa16 17
+  s_2ac3db32fc114a::t_fafb2631e5e955 1-16,18-29
+frontend/src/pages/Rebalance.tsx
+  s_2ac3db32fc114a::t_5a95a9e17a0cea 32
+  s_2ac3db32fc114a::t_d2a200a4db29d8 218
+  s_2ac3db32fc114a::t_ebfe22d2a9abbf 190
+  s_2ac3db32fc114a::t_ea12cbdde0c3ae 4-5,43,48,55
+  s_2ac3db32fc114a::t_c85cdbf6056851 17
+frontend/src/components/ui/TrendBadge.tsx
+  s_2ac3db32fc114a::t_0019a8c03c5b45 2
+frontend/src/features/dashboard/components/PriceAlertsSection.tsx
+  s_2ac3db32fc114a::t_bbacb32a9483b9 4
+backend/tests/test_smart_import.py
+  s_8457f461f1e346::t_22ca2963ea949c 4-5
+backend/tests/test_backtest_ai.py
+  s_8457f461f1e346::t_8f2d307481d744 6-8
+backend/tests/test_news_feed.py
+  s_8457f461f1e346::t_9887113aa66e6f 3
+frontend/src/api/analytics.ts
+  s_2ac3db32fc114a::t_380b8938454a7b 1-39
+backend/tests/test_services_utils.py
+  s_8457f461f1e346::t_a864408f1727bd 21-22
+frontend/src/api/news.ts
+  s_2ac3db32fc114a::t_2491b92e3b99d8 133
+frontend/src/api/market.ts
+  s_2ac3db32fc114a::t_581a9929f27fa9 22
+  s_2ac3db32fc114a::t_f1baae59088f5c 3,67,71
+  s_2ac3db32fc114a::t_38b8b64d72b5a8 1-2,4-5,8-21,23-66,68-70,72-170
+  s_2ac3db32fc114a::t_954f1d74bb4aa2 6-7
+frontend/src/features/dashboard/components/OnboardingTour.tsx
+  s_2ac3db32fc114a::t_f8eda6bb1e739b 4
+backend/services/market/market_data.py
+  s_2ac3db32fc114a::t_679d01770d35b5 7
+  s_2ac3db32fc114a::t_c003cfa4cbb20f 105-231
+  s_2ac3db32fc114a::t_80ee47508ef943 358
+  s_2ac3db32fc114a::t_1510f40b19cbfe 8-10
+frontend/src/api/portfolio.ts
+  s_2ac3db32fc114a::t_25281332384efc 29
+  s_2ac3db32fc114a::t_cab1c73ef86414 1-28,30-43
+backend/services/ai/ollama_client.py
+  s_2ac3db32fc114a::t_b88a3643d7fa82 5
+  s_2ac3db32fc114a::t_e660c30b9cf4b0 33-36
+  s_2ac3db32fc114a::t_de15dd6f9f1322 4
+  s_2ac3db32fc114a::t_8311a24c797bcc 6
+frontend/src/pages/Transactions.tsx
+  s_2ac3db32fc114a::t_6ebabde438d83a 5-12,15,60,65,70,75,103,128,142
+  s_2ac3db32fc114a::t_ddd13a6afe7d0c 13-14,78,106
+  s_2ac3db32fc114a::t_0ecec541e9d2f3 101
+  s_2ac3db32fc114a::t_88e2cd6cfc1918 26
+  s_2ac3db32fc114a::t_f15eaffebe6aef 175,236,549
+frontend/src/api/transactions.ts
+  s_2ac3db32fc114a::t_f36eb0b5c8e251 1-69
+frontend/src/api/settings.ts
+  s_2ac3db32fc114a::t_4ea415bb617377 28,30
+  s_2ac3db32fc114a::t_205e79113b3c87 42-43,47-48
+  s_2ac3db32fc114a::t_aa613cf44f1414 9-12
+  s_2ac3db32fc114a::t_7ea3abc807ba1e 1-8,13-27,29,31-41,44-46,49-103
+frontend/src/api/compare.ts
+  s_2ac3db32fc114a::t_e3b80a15426281 25,42
+frontend/src/pages/Compare.tsx
+  s_2ac3db32fc114a::t_6243f37bcbca1c 241
+  s_2ac3db32fc114a::t_e970b84b33a637 21
+  s_2ac3db32fc114a::t_09701435d8ed0a 36-37
+backend/common/date_utils.py
+  s_2ac3db32fc114a::t_017b5d0a784809 1-47
+frontend/src/pages/Assets.tsx
+  s_2ac3db32fc114a::t_0aa535922ed3f5 5
+  s_2ac3db32fc114a::t_b01e5c4c59deef 4
+frontend/src/pages/Settings.tsx
+  s_2ac3db32fc114a::t_224e20aed90c0e 12,14
+  s_2ac3db32fc114a::t_94aa9c7adb7218 4-9,17
+  s_2ac3db32fc114a::t_9a91ac9dd94d76 10-11
+backend/common/json_utils.py
+  s_2ac3db32fc114a::t_9b7b258bc36d54 1-67
+frontend/src/api/rebalance.ts
+  s_2ac3db32fc114a::t_1b2ed5b76e6920 1-30
+frontend/src/api/import.ts
+  s_2ac3db32fc114a::t_3750e821f1fe72 54-85
+frontend/src/api/index.ts
+  s_2ac3db32fc114a::t_2e2925b150742d 1-14
+frontend/src/features/dashboard/index.ts
+  s_2ac3db32fc114a::t_73fa44c52b0e32 1-4
+backend/api/backtest.py
+  s_8457f461f1e346::t_c5e63b52217224 7
+  s_85c98d75e6af95::t_33df1acf35477f 1-2
+  s_8457f461f1e346::t_d1a184950b6638 6
+frontend/src/pages/News.tsx
+  s_2ac3db32fc114a::t_22cc88a267aeb5 432
+  s_2ac3db32fc114a::t_b9bba4ee5091b0 31
+frontend/src/lib/format.ts
+  s_2ac3db32fc114a::t_7d5265f6f98ae8 1-21
+backend/services/market/sources/utils.py
+  s_2ac3db32fc114a::t_3350b2c318e48c 1-6
+  s_2ac3db32fc114a::t_cbec93c208a547 7-9
+backend/tests/test_gemini_batch.py
+  s_8457f461f1e346::t_e6e7eeb43b554c 6-9,13-24,26-30,34
+  s_8457f461f1e346::t_247d7e8ef16fed 25
+backend/tests/test_jobs.py
+  s_8457f461f1e346::t_d79422fc2537b6 3
+frontend/src/pages/Backtest.tsx
+  s_2ac3db32fc114a::t_9c573c646d1f69 21,197
+  s_2ac3db32fc114a::t_2439baecb01fee 30-31
+  s_2ac3db32fc114a::t_e163b31f5c8554 20,109,113,159,163
+  s_2ac3db32fc114a::t_5c48b74e95515d 19,64,108,124-125,132
+backend/tests/test_ai_insights.py
+  s_8457f461f1e346::t_9c9444a3328616 5-7,13
+frontend/src/features/import/index.ts
+  s_2ac3db32fc114a::t_4f6f3ad4ad85dd 1
+backend/tests/test_services_financial.py
+  s_2ac3db32fc114a::t_651206c7d2071d 12-14
+  s_8457f461f1e346::t_e849c6ced236ee 10-11
+  s_8457f461f1e346::t_13a14957862e7c 7-9
+frontend/src/features/import/components/SmartImportDialog.tsx
+  s_2ac3db32fc114a::t_c47d6ad65c33d0 9-13
+frontend/src/pages/EnvConfig.tsx
+  s_2ac3db32fc114a::t_2240fa045eab63 4,52-53
+  s_2ac3db32fc114a::t_9353e5e0da7757 19
+  s_2ac3db32fc114a::t_85f446e0873e43 47
+backend/api/gold_fx.py
+  s_3a6fc3ed7ead74::t_72bb8244c5ee03 3-4
+backend/services/analytics/backtest.py
+  s_3a6fc3ed7ead74::t_2ec3d9ff8b45c8 7-10
+backend/tests/test_news_ai_summary.py
+  s_5283a3a52084e6::t_a55befe7e5e095 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ede6e53e0db9268862acee3da403e8c03b3c9829",
+  "prompts": {},
+  "sessions": {
+    "s_2ac3db32fc114a": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "bc21414b-1293-4df0-9e42-90bfe71cf9af",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_3a6fc3ed7ead74": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "cba925e7-1213-4e85-9416-ca261db25842",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_5283a3a52084e6": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "1532da4d-a54b-43e9-b312-876c7cd44c70",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_8457f461f1e346": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "6bf6e72f-bd18-4a61-a703-0b9b222b46a6",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_85c98d75e6af95": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "ce9cc274-4b2a-47df-b23b-2e66d0e244db",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
