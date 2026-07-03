@@ -2,7 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowDownUp, Plus, Search, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import API from "../api/client";
+import { getAssets } from "../api/assets";
+import {
+  createIncome,
+  createTransaction,
+  deleteIncome,
+  deleteTransaction,
+  getIncome,
+  getTransactions,
+  type IncomeCreate,
+  type TransactionCreate,
+} from "../api/transactions";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { InfoTooltip } from "../components/InfoTooltip";
@@ -13,7 +23,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../contexts/ToastContext";
 import { usePersistentState } from "../hooks/usePersistentState";
 import { labels } from "../i18n/vi";
-import { formatCurrency } from "../lib/utils";
+import { formatCurrency } from "../lib/format";
 import { hasErrors, nonNegativeNumber, notFutureDate, positiveNumber, required, validateForm } from "../lib/validation";
 
 export function Transactions() {
@@ -47,24 +57,25 @@ export function Transactions() {
 
   const transactions = useQuery({
     queryKey: ["transactions"],
-    queryFn: async () => (await API.get("/transactions/")).data,
+    queryFn: async () => getTransactions(),
   });
 
   const income = useQuery({
     queryKey: ["income"],
-    queryFn: async () => (await API.get("/income/")).data,
+    queryFn: async () => getIncome(),
   });
 
   const assets = useQuery({
     queryKey: ["assets"],
-    queryFn: async () => (await API.get("/assets/")).data,
+    queryFn: async () => getAssets(),
   });
 
   const create = useMutation({
     mutationFn: () =>
-      API.post("/transactions/", {
+      createTransaction({
         ...form,
         asset_id: Number(form.asset_id),
+        type: form.type as TransactionCreate["type"],
         quantity: Number(form.quantity),
         fee: Number(form.fee),
       }),
@@ -87,11 +98,12 @@ export function Transactions() {
     },
   });
 
-  const createIncome = useMutation({
+  const createIncomeMutation = useMutation({
     mutationFn: () =>
-      API.post("/income/", {
+      createIncome({
         ...incomeForm,
         asset_id: Number(incomeForm.asset_id),
+        type: incomeForm.type as IncomeCreate["type"],
         amount: Number(incomeForm.amount),
       }),
     onSuccess: () => {
@@ -113,7 +125,7 @@ export function Transactions() {
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => API.delete(`/transactions/${id}`),
+    mutationFn: (id: number) => deleteTransaction(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
@@ -127,7 +139,7 @@ export function Transactions() {
   });
 
   const removeIncome = useMutation({
-    mutationFn: (id: number) => API.delete(`/income/${id}`),
+    mutationFn: (id: number) => deleteIncome(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["income"] });
       qc.invalidateQueries({ queryKey: ["analytics"] });
@@ -160,7 +172,7 @@ export function Transactions() {
     });
     setIncomeErrors(validationErrors);
     if (hasErrors(validationErrors)) return;
-    createIncome.mutate();
+    createIncomeMutation.mutate();
   };
 
   const assetById = (id: number) => (assets.data || []).find((a: any) => a.id === id);
@@ -221,7 +233,7 @@ export function Transactions() {
       {income.isError && <ErrorMessage error={income.error} retry={() => income.refetch()} />}
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
       {create.isError && <ErrorMessage error={create.error} retry={() => create.mutate()} />}
-      {createIncome.isError && <ErrorMessage error={createIncome.error} retry={() => createIncome.mutate()} />}
+      {createIncomeMutation.isError && <ErrorMessage error={createIncomeMutation.error} retry={() => createIncomeMutation.mutate()} />}
       {remove.isError && <ErrorMessage error={remove.error} retry={() => remove.reset()} />}
       {removeIncome.isError && <ErrorMessage error={removeIncome.error} retry={() => removeIncome.reset()} />}
       <SectionHeader title={labels.transactions.title} />
@@ -534,7 +546,7 @@ export function Transactions() {
               </div>
               <button
                 onClick={handleSubmitIncome}
-                disabled={createIncome.isPending}
+                disabled={createIncomeMutation.isPending}
                 className="btn-primary mt-3"
               >
                 <Plus className="w-4 h-4" />

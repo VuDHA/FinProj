@@ -1,11 +1,11 @@
 import datetime
 
-from models import Asset, NewsAlert, NewsArticle, NewsSource, NewsSymbol, Watchlist
+from common.models import Asset, NewsAlert, NewsArticle, NewsSource, NewsSymbol, Watchlist
 from services.news.feed import NewsFeedService
 
 
-def _create_source(session, code="cafef", name="CafeF"):
-    source = NewsSource(code=code, name=name, source_type="rss", language="vi")
+def _create_source(session, code="cafef", name="CafeF", region="vn"):
+    source = NewsSource(code=code, name=name, source_type="rss", language="vi", region=region)
     session.add(source)
     session.commit()
     session.refresh(source)
@@ -22,6 +22,7 @@ def _create_article(session, source, title, symbols=None, sentiment=0.0, impact=
         sentiment_score=sentiment,
         impact_score=impact,
         language=language,
+        region=source.region,
     )
     session.add(article)
     session.commit()
@@ -86,7 +87,7 @@ def test_daily_brief(session):
 
 def test_daily_brief_scope(session):
     vn_source = _create_source(session, code="cafef", name="CafeF")
-    global_source = _create_source(session, code="yahoo", name="Yahoo")
+    global_source = _create_source(session, code="yahoo", name="Yahoo", region="global")
     _create_article(session, vn_source, "Tin VN", symbols=["VHM"], impact=0.9)
     _create_article(session, global_source, "Global news", symbols=["AAPL"], impact=0.9, language="en")
     service = NewsFeedService(session)

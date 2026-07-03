@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from schemas import GoldFxResponse
-from services.gold_fx import get_gold_fx
+from common.schemas import GoldFxResponse
+from services.market.gold_fx import get_gold_fx
 
 router = APIRouter(prefix="/gold-fx", tags=["gold-fx"])
 

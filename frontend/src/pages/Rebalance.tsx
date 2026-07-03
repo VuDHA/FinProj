@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Bot, Save, Scale } from "lucide-react";
-import API from "../api/client";
+import { getRebalance } from "../api/rebalance";
+import { getAllocationTargets, getAssetTypes, saveAllocationTargets } from "../api/settings";
 import { getRebalanceInsight } from "../api/ai";
 import { AiGenerateButton } from "../components/AiGenerateButton";
 import { AiInsightCard } from "../components/AiInsightCard";
@@ -13,7 +14,7 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { formatCurrency, formatPercent } from "../lib/utils";
+import { formatCurrency, formatPercent } from "../lib/format";
 
 type AssetTypeConfig = {
   label: string;
@@ -28,7 +29,7 @@ export function Rebalance() {
 
   const assetTypes = useQuery<AssetTypeMap>({
     queryKey: ["asset-types"],
-    queryFn: async () => (await API.get("/settings/asset-types")).data.types,
+    queryFn: async () => getAssetTypes(),
   });
 
   const typeConfig = useMemo(() => assetTypes.data || {}, [assetTypes.data]);
@@ -39,19 +40,19 @@ export function Rebalance() {
 
   const rebalance = useQuery({
     queryKey: ["rebalance"],
-    queryFn: async () => (await API.get("/rebalance/")).data,
+    queryFn: async () => getRebalance(),
   });
 
   const targets = useQuery({
     queryKey: ["allocation-targets"],
-    queryFn: async () => (await API.get("/settings/allocation-targets/")).data,
+    queryFn: async () => getAllocationTargets(),
   });
 
   const [targetMap, setTargetMap] = useState<Record<string, string>>({});
 
   const save = useMutation({
     mutationFn: (payload: Array<{ type: string; target_percent: number }>) =>
-      API.post("/settings/allocation-targets/", payload),
+      saveAllocationTargets(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["allocation-targets"] });
       qc.invalidateQueries({ queryKey: ["rebalance"] });
@@ -186,7 +187,7 @@ export function Rebalance() {
           {labels.rebalance.suggestedTrades}
           <InfoTooltip content={labels.tooltips.rebalanceSuggestion} />
         </h3>
-        {data?.trades?.length > 0 ? (
+        {(data?.trades?.length ?? 0) > 0 ? (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="table-fintech">
               <thead>
@@ -214,7 +215,7 @@ export function Rebalance() {
                 </tr>
               </thead>
               <tbody>
-                {data.trades.map((trade: any) => (
+                {data?.trades.map((trade: any) => (
                   <tr key={`${trade.symbol}-${trade.action}`}>
                     <td>
                       <div className="font-display font-semibold text-slate-900">{trade.symbol}</div>

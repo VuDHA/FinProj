@@ -3,7 +3,7 @@ import json
 import time
 from typing import Dict, List, Optional, Tuple
 
-from config import settings
+from common.config import settings
 
 
 class NewsAI:
@@ -117,7 +117,7 @@ class NewsAI:
 
         try:
             start = time.time()
-            from services.batch_ai import BatchAIService
+            from services.ai.batch_ai import BatchAIService
 
             service = BatchAIService(batch_size=1)
             result = service.summarize(articles, language=language, context=rag_context)

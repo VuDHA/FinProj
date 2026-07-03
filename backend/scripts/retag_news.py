@@ -20,9 +20,9 @@ if _BACKEND_DIR not in sys.path:
 
 from sqlmodel import Session, select
 
-from config import settings
-from database import engine, init_db
-from models import NewsArticle, NewsSymbol
+from common.config import settings
+from common.database import engine, init_db
+from common.models import NewsArticle, NewsSymbol
 from services.news.dictionaries import get_known_symbols
 from services.news.processor import NewsProcessor
 

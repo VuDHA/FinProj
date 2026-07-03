@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlmodel import select
 
-from models import Asset
-from schemas import BacktestRequest
-from services.prompt_parser import PromptParser, PromptParserError
+from common.models import Asset
+from common.schemas import BacktestRequest
+from services.ai.prompt_parser import PromptParser, PromptParserError
 
 
 def test_backtest_ai_parses_prompt_and_runs(client, session):
@@ -23,7 +23,7 @@ def test_backtest_ai_parses_prompt_and_runs(client, session):
     )
 
     with patch(
-        "services.backtest.PromptParser.parse_backtest_prompt",
+        "services.ai.prompt_parser.PromptParser.parse_backtest_prompt",
         return_value=mock_request,
     ):
         response = client.post("/api/v1/backtest/ai", json={"prompt": "kiểm thử VCB tháng 1/2023"})
@@ -35,7 +35,7 @@ def test_backtest_ai_parses_prompt_and_runs(client, session):
 
 
 def test_backtest_ai_creates_unknown_symbols_on_the_fly(client, session):
-    from models import Asset
+    from common.models import Asset
 
     mock_request = BacktestRequest(
         symbols=["XYZABC"],
@@ -47,7 +47,7 @@ def test_backtest_ai_creates_unknown_symbols_on_the_fly(client, session):
     )
 
     with patch(
-        "services.backtest.PromptParser.parse_backtest_prompt",
+        "services.ai.prompt_parser.PromptParser.parse_backtest_prompt",
         return_value=mock_request,
     ):
         response = client.post(
@@ -70,7 +70,7 @@ def test_backtest_ai_creates_unknown_symbols_on_the_fly(client, session):
 def test_backtest_ai_invalid_ai_output_returns_400(client):
     """Regression: Pydantic ValidationError from bad AI output must not become 500."""
     with patch(
-        "services.backtest.PromptParser.parse_backtest_prompt",
+        "services.ai.prompt_parser.PromptParser.parse_backtest_prompt",
         side_effect=PromptParserError("AI returned invalid backtest data"),
     ):
         response = client.post(
@@ -97,7 +97,7 @@ def test_backtest_prompt_parser_handles_validation_error():
 
     parser = PromptParser()
     with patch(
-        "services.prompt_parser.BatchAIService",
+        "services.ai.batch_ai.BatchAIService",
         return_value=mock_service,
     ):
         with pytest.raises(PromptParserError):

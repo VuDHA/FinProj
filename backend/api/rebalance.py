@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
-from database import get_session
-from schemas import RebalanceAIInsightResponse, RebalanceResult
+from common.database import get_session
+from common.schemas import RebalanceAIInsightResponse, RebalanceResult
 from .ai_utils import handle_ai_insight_error
-from services.ai_insights import RebalanceInsightService
-from services.rebalance import RebalanceService
+from services.ai.ai_insights import RebalanceInsightService
+from services.portfolio.rebalance import RebalanceService
 
 router = APIRouter(prefix="/rebalance", tags=["rebalance"])
 

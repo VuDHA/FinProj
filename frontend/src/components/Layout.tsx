@@ -20,8 +20,8 @@ import { useState } from "react";
 import { labels } from "../i18n/vi";
 import { HelpModal } from "./HelpModal";
 import { InfoTooltip } from "./InfoTooltip";
-import { OnboardingTour, TourStep } from "./OnboardingTour";
-import { PriceAlertsBell } from "./PriceAlertsBell";
+import { OnboardingTour, TourStep } from "../features/dashboard/components/OnboardingTour";
+import { PriceAlertsBell } from "../features/dashboard/components/PriceAlertsBell";
 
 const nav = [
   { path: "/", label: labels.nav.dashboard, icon: BarChart3, tour: "dashboard" },

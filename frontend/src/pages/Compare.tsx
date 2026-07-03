@@ -18,7 +18,7 @@ import {
   getCorrelation,
   getHistory,
   getMetrics,
-  getQuotes,
+  getCompareQuotes,
   getSymbols,
 } from "../api/compare";
 import { getCompareInsight } from "../api/ai";
@@ -33,7 +33,8 @@ import { TrendBadge } from "../components/ui/TrendBadge";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
+import { chartTooltipStyle } from "../lib/utils";
+import { formatCurrency, formatPercent } from "../lib/format";
 
 const MAX_SYMBOLS = 8;
 const TABS = ["quotes", "chart", "metrics", "correlation"] as const;
@@ -237,7 +238,7 @@ export function Compare() {
 
   const quotes = useQuery({
     queryKey: ["compare-quotes", symbolsList.join(","), typesList.join(",")],
-    queryFn: () => getQuotes(symbolsList, typesList),
+    queryFn: () => getCompareQuotes(symbolsList, typesList),
     enabled: symbolsList.length > 0,
   });
 

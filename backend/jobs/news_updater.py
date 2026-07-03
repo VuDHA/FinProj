@@ -10,7 +10,7 @@ except ImportError:
     CronTrigger = None
     APSCHEDULER_AVAILABLE = False
 
-from database import engine
+from common.database import engine
 from services.news.alerts import AlertService
 from services.news.crawler import NewsCrawlerService
 

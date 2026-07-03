@@ -2,9 +2,9 @@ import csv
 import datetime
 import io
 
-from models import Asset, NewsArticle, NewsSource, NewsSymbol
+from common.models import Asset, NewsArticle, NewsSource, NewsSymbol
 from services.news.alerts import AlertService
-from services.smart_import import SmartImportService
+from services.import_data.smart_import import SmartImportService
 from sqlmodel import select
 
 

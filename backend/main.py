@@ -8,11 +8,11 @@ from sqlmodel import Session
 from api import ai, alerts, analytics, assets, backtest, compare, gold_fx, import_export, income, news, portfolio, prices, rebalance, transactions
 from api.settings import router as settings_router
 from api.transactions import repair_zero_price_transactions
-from config import settings, PROJECT_ROOT
-from database import engine, init_db
+from common.config import settings, PROJECT_ROOT
+from common.database import engine, init_db
 from jobs.news_updater import add_news_jobs
 from jobs.price_updater import start_scheduler
-from services.logging_config import setup_logging
+from common.logging_config import setup_logging
 
 
 @asynccontextmanager

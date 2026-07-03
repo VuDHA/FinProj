@@ -1,6 +1,6 @@
 import datetime
 
-from models import Asset, NewsArticle, NewsSource, NewsSymbol
+from common.models import Asset, NewsArticle, NewsSource, NewsSymbol
 from services.news.alerts import AlertService
 from sqlmodel import Session, select
 
@@ -29,8 +29,8 @@ def test_update_news_job(session, monkeypatch):
     _wrap_session(news_updater, session)
 
     monkeypatch.setattr(
-        "services.news.crawler.NewsCrawlerService.refresh",
-        lambda self, source_code=None: {"test": 1},
+        "services.news.crawler.NewsCrawlerService.crawl_region",
+        lambda self, region: {"test": 1},
     )
 
     source = NewsSource(code="cafef", name="CafeF", source_type="rss", language="vi")
@@ -58,7 +58,7 @@ def test_update_news_job(session, monkeypatch):
     session.add(NewsSymbol(article_id=article.id, symbol="HPG"))
     session.commit()
 
-    news_updater.update_news()
+    news_updater.update_vn_news()
 
     alerts = AlertService(session).list_alerts(limit=10)
     assert len(alerts) >= 1
@@ -76,7 +76,7 @@ def test_update_all_prices_job(session, monkeypatch):
     session.refresh(asset)
 
     monkeypatch.setattr(
-        "services.market_data.MarketDataService.fetch_price_with_warnings",
+        "services.market.market_data.MarketDataService.fetch_price_with_warnings",
         lambda self, asset: ({"price": 100, "change": 1, "change_percent": 1, "date": today}, []),
     )
 

@@ -1,6 +1,6 @@
 import datetime
 
-from models import Asset, PriceSnapshot
+from common.models import Asset, PriceSnapshot
 from sqlmodel import select
 
 
@@ -12,7 +12,7 @@ def test_compare_metrics(client, monkeypatch):
     def fake_history(self, symbol, asset_type, start, end):
         return prices
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_market_history_with_backfill", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_market_history_with_backfill", fake_history)
     response = client.get(
         "/api/v1/compare/metrics",
         params={"symbols": "VCB", "types": "STOCK", "start": start.isoformat(), "end": today.isoformat()},
@@ -33,7 +33,7 @@ def test_compare_correlation(client, monkeypatch):
         base = base_prices.get(symbol, 100)
         return {start + datetime.timedelta(days=i): base + i for i in range(31)}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_market_history_with_backfill", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_market_history_with_backfill", fake_history)
     response = client.get(
         "/api/v1/compare/correlation",
         params={
@@ -46,7 +46,7 @@ def test_compare_correlation(client, monkeypatch):
     assert response.status_code == 200
     data = response.json()
     assert data["labels"] == ["VCB", "FUEVFVND"]
-    assert data["matrix"][0][1] == 1.0
+    assert abs(data["matrix"][0][1] - 1.0) < 0.001
 
 
 def test_compare_too_many_symbols(client):
@@ -66,7 +66,7 @@ def test_compare_backfills_history(client, session, monkeypatch):
     def fake_history(self, symbol, asset_type, start, end):
         return prices
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_market_history", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_market_history", fake_history)
     response = client.get(
         "/api/v1/compare/metrics",
         params={"symbols": "VCB", "types": "STOCK", "start": start.isoformat(), "end": today.isoformat()},

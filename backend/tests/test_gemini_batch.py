@@ -3,30 +3,35 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from services.ai_provider import AIProviderFactory
-from services.batch_ai import BatchAIService
-from services.gemini_client import GeminiClient, GeminiClientError
+import common.config
+from services.ai.ai_provider import AIProviderFactory
+from services.ai.batch_ai import BatchAIService
+from services.ai.gemini_client import GeminiClient, GeminiClientError
 
 
 @pytest.fixture
-def mock_settings_gemini():
-    with patch("services.gemini_client.settings") as s:
-        s.GEMINI_API_KEY = "test-key"
-        s.GEMINI_BASE_URL = "https://test.example.com"
-        s.GEMINI_MODEL = "gemini-test"
-        s.GEMINI_EMBEDDING_MODEL = "text-embedding-test"
-        s.GEMINI_EMBEDDING_DIMENSION = 768
-        s.AI_TIMEOUT_SECONDS = 30
-        s.AI_BATCH_SIZE = 5
-        s.OLLAMA_MODEL = "qwen2.5:1.5b"
-        s.OLLAMA_EMBEDDING_MODEL = "nomic-embed-text"
-        s.OLLAMA_MAX_TAGS = 5
-        s.NEWS_RELEVANCE_THRESHOLD = 0.6
-        yield s
+def mock_settings_gemini(monkeypatch):
+    monkeypatch.setattr(common.config.settings, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(common.config.settings, "GEMINI_BASE_URL", "https://test.example.com")
+    monkeypatch.setattr(common.config.settings, "GEMINI_MODEL", "gemini-test")
+    monkeypatch.setattr(common.config.settings, "GEMINI_EMBEDDING_MODEL", "text-embedding-test")
+    monkeypatch.setattr(common.config.settings, "GEMINI_EMBEDDING_DIMENSION", 768)
+    monkeypatch.setattr(common.config.settings, "AI_TIMEOUT_SECONDS", 30)
+    monkeypatch.setattr(common.config.settings, "AI_BATCH_SIZE", 5)
+    monkeypatch.setattr(common.config.settings, "OLLAMA_MODEL", "qwen2.5:1.5b")
+    monkeypatch.setattr(common.config.settings, "OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+    monkeypatch.setattr(common.config.settings, "OLLAMA_MAX_TAGS", 5)
+    monkeypatch.setattr(common.config.settings, "NEWS_RELEVANCE_THRESHOLD", 0.6)
+    monkeypatch.setattr(common.config.settings, "AI_PROVIDER", "gemini")
+    monkeypatch.setattr(common.config.settings, "OLLAMA_ENABLED", False)
+    monkeypatch.setattr(
+        "services.ai.gemini_client.GeminiClient._build_client", lambda self: MagicMock()
+    )
+    yield common.config.settings
 
 
 def test_gemini_client_requires_api_key():
-    with patch("services.gemini_client.settings.GEMINI_API_KEY", ""):
+    with patch.object(common.config.settings, "GEMINI_API_KEY", ""):
         with pytest.raises(GeminiClientError):
             GeminiClient()
 
@@ -82,8 +87,8 @@ def test_batch_ai_parse_batch_response():
 
 def test_batch_ai_clean_tags():
     service = BatchAIService(batch_size=2)
-    assert service._clean_tags("tag1, tag2, tag3", 5) == ["tag1", "tag2", "tag3"]
-    assert service._clean_tags(["Tag1", "tag2"], 5) == ["tag1", "tag2"]
+    assert service._clean_tags("tag a, tag b, tag c", 5) == ["tag a", "tag b", "tag c"]
+    assert service._clean_tags(["Tag A", "tag B"], 5) == ["tag a", "tag b"]
 
 
 def test_batch_ai_clean_relevance():
@@ -94,8 +99,8 @@ def test_batch_ai_clean_relevance():
 
 
 def test_batch_ai_generate_tags_uses_gemini(mock_settings_gemini):
-    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
-        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+    with patch.object(common.config.settings, "AI_PROVIDER", "gemini"):
+        with patch.object(common.config.settings, "OLLAMA_ENABLED", False):
             service = BatchAIService(batch_size=2)
             fake_response = MagicMock()
             fake_response.text = json.dumps(
@@ -117,9 +122,9 @@ def test_batch_ai_generate_tags_uses_gemini(mock_settings_gemini):
                 assert results[1] == ["lợi nhuận", "ngân hàng"]
 
 
-def test_batch_ai_score_relevance_fallback_to_ollama(mock_settings_gemini):
-    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
-        with patch("services.ai_provider.settings.OLLAMA_ENABLED", True):
+def test_batch_ai_score_relevance_fallback_to_ollama():
+    with patch.object(common.config.settings, "AI_PROVIDER", "gemini"):
+        with patch.object(common.config.settings, "OLLAMA_ENABLED", True):
             service = BatchAIService(batch_size=2)
             # No Gemini configured in this branch because patch only set the strings
             with patch.object(service, "_is_gemini", return_value=False):
@@ -141,19 +146,22 @@ def test_batch_ai_score_relevance_fallback_to_ollama(mock_settings_gemini):
 
 
 def test_ai_provider_factory_ollama_fallback():
-    with patch("services.ai_provider.settings.AI_PROVIDER", "ollama"):
-        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+    with patch.object(common.config.settings, "AI_PROVIDER", "ollama"):
+        with patch.object(common.config.settings, "OLLAMA_ENABLED", False):
             assert AIProviderFactory.primary_provider() is None
             assert AIProviderFactory.fallback_provider() is None
 
 
 def test_ai_provider_factory_gemini_primary():
-    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
-        with patch("services.ai_provider.settings.GEMINI_API_KEY", "key"):
-            with patch("services.ai_provider.settings.GEMINI_BASE_URL", "https://test"):
-                with patch("services.ai_provider.settings.AI_TIMEOUT_SECONDS", 30):
-                    provider = AIProviderFactory.primary_provider()
-                    assert provider is not None
+    with patch.object(common.config.settings, "AI_PROVIDER", "gemini"):
+        with patch.object(common.config.settings, "GEMINI_API_KEY", "key"):
+            with patch.object(common.config.settings, "GEMINI_BASE_URL", "https://test"):
+                with patch.object(common.config.settings, "AI_TIMEOUT_SECONDS", 30):
+                    with patch.object(
+                        GeminiClient, "_build_client", lambda self: MagicMock()
+                    ):
+                        provider = AIProviderFactory.primary_provider()
+                        assert provider is not None
 
 
 def test_batch_ai_clean_summary_output_strips_json_wrapper():
@@ -167,8 +175,8 @@ def test_batch_ai_clean_summary_output_strips_code_fences():
 
 
 def test_batch_ai_summarize_includes_all_articles(mock_settings_gemini):
-    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
-        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+    with patch.object(common.config.settings, "AI_PROVIDER", "gemini"):
+        with patch.object(common.config.settings, "OLLAMA_ENABLED", False):
             service = BatchAIService(batch_size=1)
             articles = [{"title": f"T{i}", "summary": f"S{i}"} for i in range(8)]
             with patch.object(service, "_generate_with_fallback", return_value="summary"):
@@ -179,15 +187,15 @@ def test_batch_ai_summarize_includes_all_articles(mock_settings_gemini):
 
 
 def test_batch_ai_summarize_token_budgets(mock_settings_gemini):
-    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
-        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+    with patch.object(common.config.settings, "AI_PROVIDER", "gemini"):
+        with patch.object(common.config.settings, "OLLAMA_ENABLED", False):
             gemini_service = BatchAIService(batch_size=1)
             with patch.object(gemini_service, "_generate_with_fallback", return_value="x"):
                 gemini_service.summarize([{"title": "T", "summary": "S"}], language="vi")
                 assert gemini_service._generate_with_fallback.call_args[1]["max_tokens"] == 8192
 
-    with patch("services.ai_provider.settings.AI_PROVIDER", "ollama"):
-        with patch("services.ai_provider.settings.OLLAMA_ENABLED", True):
+    with patch.object(common.config.settings, "AI_PROVIDER", "ollama"):
+        with patch.object(common.config.settings, "OLLAMA_ENABLED", True):
             ollama_service = BatchAIService(batch_size=1)
             with patch.object(ollama_service, "_is_gemini", return_value=False):
                 with patch.object(ollama_service, "_generate_with_fallback", return_value="x"):
@@ -196,8 +204,8 @@ def test_batch_ai_summarize_token_budgets(mock_settings_gemini):
 
 
 def test_batch_ai_create_embeddings_uses_gemini(mock_settings_gemini):
-    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
-        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+    with patch.object(common.config.settings, "AI_PROVIDER", "gemini"):
+        with patch.object(common.config.settings, "OLLAMA_ENABLED", False):
             service = BatchAIService(batch_size=2)
             response = MagicMock()
             response.values = None

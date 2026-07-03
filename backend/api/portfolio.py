@@ -4,14 +4,14 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
-from database import get_session
-from schemas import PortfolioAIInsightResponse, PortfolioHistoryPoint, PortfolioSummary
+from common.database import get_session
+from common.schemas import PortfolioAIInsightResponse, PortfolioHistoryPoint, PortfolioSummary
 from .ai_utils import handle_ai_insight_error
-from services.ai_insights import PortfolioInsightService
-from services.portfolio import PortfolioService
-from services.portfolio_history import PortfolioHistoryService
-from services.rebalance import RebalanceService
-from services.risk_metrics import RiskMetricsService
+from services.ai.ai_insights import PortfolioInsightService
+from services.portfolio.portfolio import PortfolioService
+from services.portfolio.portfolio_history import PortfolioHistoryService
+from services.portfolio.rebalance import RebalanceService
+from services.portfolio.risk_metrics import RiskMetricsService
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 

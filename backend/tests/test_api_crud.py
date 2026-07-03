@@ -5,9 +5,9 @@ import json
 
 import pytest
 
-from models import Asset, Income, Transaction
-from schemas import AllocationTargetCreate, SettingCreate
-from services.source_config import DEFAULT_SOURCES
+from common.models import Asset, Income, Transaction
+from common.schemas import AllocationTargetCreate, SettingCreate
+from services.market.source_config import DEFAULT_SOURCES
 from sqlmodel import select
 
 
@@ -334,7 +334,7 @@ def test_settings_env_config(client):
 
 def test_settings_env_config_update(tmp_path, client, monkeypatch):
     env_file = tmp_path / ".env"
-    monkeypatch.setattr("services.env_config._ENV_PATH", env_file)
+    monkeypatch.setattr("common.env_config._ENV_PATH", env_file)
     env_file.write_text("OLLAMA_ENABLED=true\n")
     response = client.post(
         "/api/v1/settings/env-config",

@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileSpreadsheet, Plus, Save, Trash2, Upload } from "lucide-react";
-import API from "../api/client";
+import { exportAssetsUrl, exportTransactionsUrl, importAssets, importTransactions } from "../api/import";
+import {
+  getAllocationTargets,
+  getAssetTypes,
+  getDefaultSources,
+  saveAllocationTargets,
+  saveAssetTypes,
+  saveDefaultSources,
+} from "../api/settings";
 import { ErrorMessage } from "../components/ErrorMessage";
-import { SmartImportDialog } from "../components/SmartImportDialog";
+import { SmartImportDialog } from "../features/import/components/SmartImportDialog";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
-import { SourceSelect } from "../components/SourceSelect";
+import { SourceSelect } from "../features/assets/components/SourceSelect";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
@@ -43,11 +51,11 @@ export function Settings() {
 
   const assetTypes = useQuery<AssetTypeMap>({
     queryKey: ["asset-types"],
-    queryFn: async () => (await API.get("/settings/asset-types")).data.types,
+    queryFn: async () => getAssetTypes(),
   });
 
-  const saveAssetTypes = useMutation({
-    mutationFn: (payload: AssetTypeMap) => API.post("/settings/asset-types", { types: payload }),
+  const saveAssetTypesMutation = useMutation({
+    mutationFn: (payload: AssetTypeMap) => saveAssetTypes(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["asset-types"] });
       qc.invalidateQueries({ queryKey: ["default-sources"] });
@@ -61,12 +69,12 @@ export function Settings() {
 
   const targets = useQuery({
     queryKey: ["allocation-targets"],
-    queryFn: async () => (await API.get("/settings/allocation-targets/")).data,
+    queryFn: async () => getAllocationTargets(),
   });
 
   const saveTargets = useMutation({
     mutationFn: (payload: Array<{ type: string; target_percent: number }>) =>
-      API.post("/settings/allocation-targets/", payload),
+      saveAllocationTargets(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["allocation-targets"] });
       showToast("Đã lưu mục tiêu phân bổ", "success");
@@ -78,11 +86,11 @@ export function Settings() {
 
   const defaultSources = useQuery({
     queryKey: ["default-sources"],
-    queryFn: async () => (await API.get("/settings/default-sources")).data,
+    queryFn: async () => getDefaultSources(),
   });
 
-  const saveDefaultSources = useMutation({
-    mutationFn: (payload: Record<string, string>) => API.post("/settings/default-sources", payload),
+  const saveDefaultSourcesMutation = useMutation({
+    mutationFn: (payload: Record<string, string>) => saveDefaultSources(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["default-sources"] });
       showToast("Đã lưu nguồn dữ liệu mặc định", "success");
@@ -92,12 +100,8 @@ export function Settings() {
     },
   });
 
-  const importAssets = useMutation({
-    mutationFn: async (file: File) => {
-      const form = new FormData();
-      form.append("file", file);
-      return (await API.post("/import-export/import/assets", form)).data;
-    },
+  const importAssetsMutation = useMutation({
+    mutationFn: (file: File) => importAssets(file),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["assets"] });
       showToast(`Nhập tài sản: ${data.created} đã tạo, ${data.skipped} bỏ qua${data.errors.length ? `, ${data.errors.length} lỗi` : ""}`, data.errors.length ? "error" : "success");
@@ -107,12 +111,8 @@ export function Settings() {
     },
   });
 
-  const importTransactions = useMutation({
-    mutationFn: async (file: File) => {
-      const form = new FormData();
-      form.append("file", file);
-      return (await API.post("/import-export/import/transactions", form)).data;
-    },
+  const importTransactionsMutation = useMutation({
+    mutationFn: (file: File) => importTransactions(file),
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
@@ -156,7 +156,7 @@ export function Settings() {
       const value = getDefaultSource(type);
       if (value) payload[type] = value;
     });
-    saveDefaultSources.mutate(payload);
+    saveDefaultSourcesMutation.mutate(payload);
   };
 
   const getTarget = (type: string) => {
@@ -176,16 +176,16 @@ export function Settings() {
   };
 
   const handleExport = (type: "assets" | "transactions") => {
-    window.open(`/api/v1/import-export/export/${type}`, "_blank");
+    window.open(type === "assets" ? exportAssetsUrl() : exportTransactionsUrl(), "_blank");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "assets" | "transactions") => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (type === "assets") {
-      importAssets.mutate(file);
+      importAssetsMutation.mutate(file);
     } else {
-      importTransactions.mutate(file);
+      importTransactionsMutation.mutate(file);
     }
   };
 
@@ -236,19 +236,19 @@ export function Settings() {
         marketPrice: item.marketPrice,
       };
     }
-    saveAssetTypes.mutate(payload);
+    saveAssetTypesMutation.mutate(payload);
   };
 
   return (
     <div className="space-y-6">
       {assetTypes.isError && <ErrorMessage error={assetTypes.error} retry={() => assetTypes.refetch()} />}
-      {saveAssetTypes.isError && <ErrorMessage error={saveAssetTypes.error} retry={() => saveAssetTypes.reset()} />}
+      {saveAssetTypesMutation.isError && <ErrorMessage error={saveAssetTypesMutation.error} retry={() => saveAssetTypesMutation.reset()} />}
       {targets.isError && <ErrorMessage error={targets.error} retry={() => targets.refetch()} />}
       {saveTargets.isError && <ErrorMessage error={saveTargets.error} retry={() => saveTargets.reset()} />}
       {defaultSources.isError && <ErrorMessage error={defaultSources.error} retry={() => defaultSources.refetch()} />}
-      {saveDefaultSources.isError && <ErrorMessage error={saveDefaultSources.error} retry={() => saveDefaultSources.reset()} />}
-      {importAssets.isError && <ErrorMessage error={importAssets.error} retry={() => importAssets.reset()} />}
-      {importTransactions.isError && <ErrorMessage error={importTransactions.error} retry={() => importTransactions.reset()} />}
+      {saveDefaultSourcesMutation.isError && <ErrorMessage error={saveDefaultSourcesMutation.error} retry={() => saveDefaultSourcesMutation.reset()} />}
+      {importAssetsMutation.isError && <ErrorMessage error={importAssetsMutation.error} retry={() => importAssetsMutation.reset()} />}
+      {importTransactionsMutation.isError && <ErrorMessage error={importTransactionsMutation.error} retry={() => importTransactionsMutation.reset()} />}
       <SectionHeader title={labels.settings.title} />
 
       <FintechCard delay={0.05}>
@@ -259,11 +259,11 @@ export function Settings() {
           </div>
           <button
             onClick={handleSaveAssetTypes}
-            disabled={saveAssetTypes.isPending || typeList.length === 0}
+            disabled={saveAssetTypesMutation.isPending || typeList.length === 0}
             className="btn-primary"
           >
             <Save className="w-4 h-4" />
-            {saveAssetTypes.isPending ? labels.settings.saving : labels.settings.save}
+            {saveAssetTypesMutation.isPending ? labels.settings.saving : labels.settings.save}
           </button>
         </div>
         <div className="space-y-4">
@@ -329,11 +329,11 @@ export function Settings() {
           </div>
           <button
             onClick={handleSaveDefaultSources}
-            disabled={saveDefaultSources.isPending}
+            disabled={saveDefaultSourcesMutation.isPending}
             className="btn-primary"
           >
             <Save className="w-4 h-4" />
-            {saveDefaultSources.isPending ? labels.settings.saving : labels.settings.save}
+            {saveDefaultSourcesMutation.isPending ? labels.settings.saving : labels.settings.save}
           </button>
         </div>
         <div className="space-y-3">
@@ -497,21 +497,21 @@ export function Settings() {
           </div>
         </div>
 
-        {(importAssets.data || importTransactions.data) && (
+        {(importAssetsMutation.data || importTransactionsMutation.data) && (
           <div className="mt-4 p-3 rounded-lg bg-slate-50 text-sm space-y-1">
             <div className="font-medium text-slate-700">{labels.settings.importResult}</div>
-            {importAssets.data && (
+            {importAssetsMutation.data && (
               <div className="text-slate-600">
-                {labels.settings.importAssets}: {labels.settings.created} {importAssets.data.created},
-                {" "}{labels.settings.skipped} {importAssets.data.skipped},
-                {" "}{labels.settings.errors} {importAssets.data.errors.length}
+                {labels.settings.importAssets}: {labels.settings.created} {importAssetsMutation.data.created},
+                {" "}{labels.settings.skipped} {importAssetsMutation.data.skipped},
+                {" "}{labels.settings.errors} {importAssetsMutation.data.errors.length}
               </div>
             )}
-            {importTransactions.data && (
+            {importTransactionsMutation.data && (
               <div className="text-slate-600">
-                {labels.settings.importTransactions}: {labels.settings.created} {importTransactions.data.created},
-                {" "}{labels.settings.skipped} {importTransactions.data.skipped},
-                {" "}{labels.settings.errors} {importTransactions.data.errors.length}
+                {labels.settings.importTransactions}: {labels.settings.created} {importTransactionsMutation.data.created},
+                {" "}{labels.settings.skipped} {importTransactionsMutation.data.skipped},
+                {" "}{labels.settings.errors} {importTransactionsMutation.data.errors.length}
               </div>
             )}
           </div>

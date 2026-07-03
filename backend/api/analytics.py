@@ -4,13 +4,13 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
-from database import get_session
-from schemas import AnalyticsAIInsightResponse, AnalyticsSummary, RiskMetrics
+from common.database import get_session
+from common.schemas import AnalyticsAIInsightResponse, AnalyticsSummary, RiskMetrics
 from .ai_utils import handle_ai_insight_error
-from services.ai_insights import AnalyticsInsightService
-from services.analytics import AnalyticsService
-from services.portfolio import PortfolioService
-from services.risk_metrics import RiskMetricsService
+from services.ai.ai_insights import AnalyticsInsightService
+from services.analytics.analytics import AnalyticsService
+from services.portfolio.portfolio import PortfolioService
+from services.portfolio.risk_metrics import RiskMetricsService
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 

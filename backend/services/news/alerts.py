@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from models import Asset, NewsAlert, NewsArticle, NewsSymbol, Watchlist
+from common.models import Asset, NewsAlert, NewsArticle, NewsSymbol, Watchlist
 from services.news.dictionaries import sentiment_label
 
 

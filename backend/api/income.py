@@ -3,9 +3,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from database import get_session
-from models import Asset, Income
-from schemas import IncomeCreate, IncomeRead
+from common.database import get_session
+from common.models import Asset, Income
+from common.schemas import IncomeCreate, IncomeRead
 
 router = APIRouter(prefix="/income", tags=["income"])
 

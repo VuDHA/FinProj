@@ -1,4 +1,4 @@
-from models import NewsArticle, NewsSource
+from common.models import NewsArticle, NewsSource
 
 
 def test_ai_summary_returns_summary(client, session):

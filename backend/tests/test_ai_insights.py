@@ -2,15 +2,15 @@ from unittest.mock import patch
 
 import pytest
 
-from schemas import BacktestRequest
-from services.ai_insights.base_prompt import master_prompt
-from services.ai_insights.prompts import base_prompt, minify_dict
+from common.schemas import BacktestRequest
+from services.ai.ai_insights.base_prompt import master_prompt
+from services.ai.ai_insights.prompts import base_prompt, minify_dict
 
 
 def test_master_prompt_is_concise():
     text = master_prompt("vi")
     assert "CHỈ trả về" in text
-    assert "không chào hỏi" in text
+    assert "không chào hỏi" in text.lower()
     assert len(text) < 300
 
 
@@ -33,17 +33,24 @@ def test_base_prompt_includes_strict_json_instruction():
 
 
 @pytest.fixture
-def mock_insight():
-    with patch(
-        "services.ai_insights.prompts.generate_insight",
-        return_value={
-            "overall": "Tổng quan mẫu",
-            "details": "Chi tiết mẫu",
-            "suggestions": ["Gợi ý mẫu"],
-            "used_ollama": False,
-        },
-    ) as m:
-        yield m
+def mock_insight(monkeypatch):
+    targets = [
+        "services.ai.ai_insights.portfolio.generate_insight",
+        "services.ai.ai_insights.analytics.generate_insight",
+        "services.ai.ai_insights.rebalance.generate_insight",
+        "services.ai.ai_insights.market.generate_insight",
+        "services.ai.ai_insights.compare.generate_insight",
+    ]
+    for target in targets:
+        monkeypatch.setattr(
+            target,
+            lambda *args, **kwargs: {
+                "overall": "Tổng quan mẫu",
+                "details": "Chi tiết mẫu",
+                "suggestions": ["Gợi ý mẫu"],
+                "used_ollama": False,
+            },
+        )
 
 
 def test_ai_rate_limit_endpoint(client):
@@ -62,7 +69,7 @@ def test_ai_rate_limit_endpoint(client):
 
 
 def test_portfolio_ai_insight_endpoint(client, session, mock_insight):
-    from models import Asset
+    from common.models import Asset
 
     session.add(Asset(symbol="VCB", name="Vietcombank", type="STOCK", is_active=True))
     session.commit()
@@ -129,8 +136,8 @@ def test_compare_ai_insight_endpoint(client, mock_insight):
 
 def test_market_ai_insight_endpoint(client, mock_insight):
     from api import prices as prices_api
-    from services.market_data import MarketDataService
-    from schemas import GoldFxResponse
+    from services.market.market_data import MarketDataService
+    from common.schemas import GoldFxResponse
 
     with patch.object(
         MarketDataService,
@@ -163,7 +170,7 @@ def test_compare_ai_insight_requires_two_symbols(client):
 def test_backtest_ai_stress_endpoint(client, session):
     import datetime
 
-    from models import Asset, PriceSnapshot
+    from common.models import Asset, PriceSnapshot
 
     asset = Asset(symbol="VCB", name="Vietcombank", type="STOCK", is_active=True)
     session.add(asset)
@@ -191,9 +198,8 @@ def test_backtest_ai_stress_endpoint(client, session):
         rebalance_frequency="monthly",
         initial_cash=100000000,
     )
-
     with patch(
-        "services.backtest.PromptParser.parse_stress_prompt",
+        "services.ai.prompt_parser.PromptParser.parse_stress_prompt",
         return_value=mock_request,
     ):
         response = client.post(

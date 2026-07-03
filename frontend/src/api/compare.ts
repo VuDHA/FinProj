@@ -22,7 +22,7 @@ export interface CompareCorrelation {
   matrix: number[][];
 }
 
-export interface Quote {
+export interface CompareQuote {
   symbol: string;
   price: number;
   change: number;
@@ -39,7 +39,7 @@ export async function getSymbols(): Promise<CompareSymbol[]> {
   return [...(stocks.data || []), ...(funds.data || [])];
 }
 
-export async function getQuotes(symbols: string[], types: string[]): Promise<Quote[]> {
+export async function getCompareQuotes(symbols: string[], types: string[]): Promise<CompareQuote[]> {
   if (symbols.length === 0) return [];
   const { data } = await API.get("/prices/quote", {
     params: { symbols: symbols.join(","), types: types.join(",") },

@@ -130,7 +130,7 @@ export async function getDailyBrief(hours = 24, scope?: "vn" | "global"): Promis
   return data;
 }
 
-export async function getAlerts(unread_only = false): Promise<Alert[]> {
+export async function getNewsAlerts(unread_only = false): Promise<Alert[]> {
   const { data } = await API.get("/news/alerts/list", { params: { unread_only } });
   return data;
 }

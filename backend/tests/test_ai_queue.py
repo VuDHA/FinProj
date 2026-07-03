@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from services.ai_queue import AIQueue, AIQueueBusyError
+from services.ai.ai_queue import AIQueue, AIQueueBusyError
 
 
 def test_ai_queue_runs_task():

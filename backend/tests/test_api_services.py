@@ -1,8 +1,8 @@
 import datetime
 from unittest.mock import patch
 
-from models import Asset, PriceSnapshot
-from schemas import (
+from common.models import Asset, PriceSnapshot
+from common.schemas import (
     AnalyticsSummary,
     BenchmarkPoint,
     BacktestResult,
@@ -31,7 +31,7 @@ def test_refresh_all_prices(client, session, monkeypatch):
     def fake_fetch(self, asset):
         return {"price": 100, "change": 1, "change_percent": 1, "date": today}, []
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_price_with_warnings", fake_fetch)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_price_with_warnings", fake_fetch)
     response = client.post("/api/v1/prices/refresh-all")
     assert response.status_code == 200
     data = response.json()
@@ -50,7 +50,7 @@ def test_refresh_price(client, session, monkeypatch):
     def fake_fetch(self, asset):
         return {"price": 100, "change": 1, "change_percent": 1, "date": today}, []
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_price_with_warnings", fake_fetch)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_price_with_warnings", fake_fetch)
     response = client.post(f"/api/v1/prices/refresh/{asset.id}")
     assert response.status_code == 200
     data = response.json()
@@ -68,7 +68,7 @@ def test_refresh_price_fetch_fails(client, session, monkeypatch):
     def fake_fetch(self, asset):
         return None, ["source error"]
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_price_with_warnings", fake_fetch)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_price_with_warnings", fake_fetch)
     response = client.post(f"/api/v1/prices/refresh/{asset.id}")
     assert response.status_code == 502
 
@@ -80,7 +80,7 @@ def test_get_price_history(client, session, monkeypatch):
     def fake_history(self, symbol, asset_type, start, end):
         return {today: 100}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_history", fake_history)
     response = client.get(
         f"/api/v1/prices/history/{asset.id}",
         params={"start": today.isoformat(), "end": today.isoformat()},
@@ -100,7 +100,7 @@ def test_get_quotes(client, monkeypatch):
             for s in symbols
         ]
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_quotes", fake_quotes)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_quotes", fake_quotes)
     response = client.get("/api/v1/prices/quote", params={"symbols": "VCB,VHM", "asset_type": "STOCK"})
     assert response.status_code == 200
     data = response.json()
@@ -111,7 +111,7 @@ def test_get_symbols(client, monkeypatch):
     def fake_symbols(self):
         return [{"symbol": "VCB", "name": "Vietcombank", "exchange": "HOSE", "type": "STOCK"}]
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_all_symbols", fake_symbols)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_all_symbols", fake_symbols)
     response = client.get("/api/v1/prices/symbols")
     assert response.status_code == 200
     assert len(response.json()) == 1
@@ -121,7 +121,7 @@ def test_get_all_stocks(client, monkeypatch):
     def fake_stocks(self):
         return [{"symbol": "VCB", "name": "Vietcombank", "exchange": "HOSE", "type": "STOCK"}]
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_all_stocks", fake_stocks)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_all_stocks", fake_stocks)
     response = client.get("/api/v1/prices/stocks")
     assert response.status_code == 200
     assert len(response.json()) == 1
@@ -131,7 +131,7 @@ def test_get_all_funds(client, monkeypatch):
     def fake_funds(self):
         return [{"symbol": "E1VFVN30", "name": "VFM VF1", "exchange": "FUND", "type": "FUND"}]
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_all_funds", fake_funds)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_all_funds", fake_funds)
     response = client.get("/api/v1/prices/funds")
     assert response.status_code == 200
     assert len(response.json()) == 1
@@ -151,7 +151,7 @@ def test_get_fund_detail(client, monkeypatch):
             "vsd_fee_id": "id",
         }
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_fund_detail", fake_detail)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_fund_detail", fake_detail)
     response = client.get("/api/v1/prices/fund-detail/E1VFVN30")
     assert response.status_code == 200
     data = response.json()
@@ -160,7 +160,7 @@ def test_get_fund_detail(client, monkeypatch):
 
 
 def test_get_fund_detail_not_found(client, monkeypatch):
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_fund_detail", lambda self, symbol: None)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_fund_detail", lambda self, symbol: None)
     response = client.get("/api/v1/prices/fund-detail/UNKNOWN")
     assert response.status_code == 404
 
@@ -171,7 +171,7 @@ def test_get_market_history(client, monkeypatch):
     def fake_market_history(self, symbol, type, start, end):
         return {today: 100}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_market_history_with_backfill", fake_market_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_market_history_with_backfill", fake_market_history)
     response = client.get(
         "/api/v1/prices/market-history/VCB",
         params={"type": "STOCK", "start": today.isoformat(), "end": today.isoformat()},
@@ -187,7 +187,7 @@ def test_get_benchmark(client, monkeypatch):
     def fake_comparison(self, symbol, start, end):
         return [BenchmarkPoint(date=today, portfolio_value=100, benchmark_value=100)]
 
-    monkeypatch.setattr("services.benchmark.BenchmarkService.get_comparison", fake_comparison)
+    monkeypatch.setattr("services.portfolio.benchmark.BenchmarkService.get_comparison", fake_comparison)
     response = client.get(
         "/api/v1/prices/benchmark/VNINDEX",
         params={"start": today.isoformat(), "end": today.isoformat()},
@@ -198,7 +198,7 @@ def test_get_benchmark(client, monkeypatch):
 
 
 def test_get_benchmark_fails(client, monkeypatch):
-    monkeypatch.setattr("services.benchmark.BenchmarkService.get_comparison", lambda self, symbol, start, end: [])
+    monkeypatch.setattr("services.portfolio.benchmark.BenchmarkService.get_comparison", lambda self, symbol, start, end: [])
     today = datetime.date.today()
     response = client.get(
         "/api/v1/prices/benchmark/VNINDEX",
@@ -213,7 +213,7 @@ def test_get_benchmark_raw(client, monkeypatch):
     def fake_benchmark_history(self, symbol, start, end):
         return {today: 100}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_benchmark_history", fake_benchmark_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_benchmark_history", fake_benchmark_history)
     response = client.get(
         "/api/v1/prices/benchmark-raw/VNINDEX",
         params={"start": today.isoformat(), "end": today.isoformat()},
@@ -259,7 +259,7 @@ def test_get_portfolio(client, monkeypatch):
             ],
         )
 
-    monkeypatch.setattr("services.portfolio.PortfolioService.get_portfolio", fake_portfolio)
+    monkeypatch.setattr("services.portfolio.portfolio.PortfolioService.get_portfolio", fake_portfolio)
     response = client.get("/api/v1/portfolio/")
     assert response.status_code == 200
     data = response.json()
@@ -273,7 +273,7 @@ def test_get_portfolio_history(client, monkeypatch):
     def fake_history(self, start, end):
         return [{"date": today, "value": 1000, "cost": 900}]
 
-    monkeypatch.setattr("services.portfolio_history.PortfolioHistoryService.get_history", fake_history)
+    monkeypatch.setattr("services.portfolio.portfolio_history.PortfolioHistoryService.get_history", fake_history)
     response = client.get(
         "/api/v1/portfolio/history",
         params={"start": today.isoformat(), "end": today.isoformat()},
@@ -300,7 +300,7 @@ def test_get_analytics(client, monkeypatch):
             period_end="2023-01-31",
         )
 
-    monkeypatch.setattr("services.analytics.AnalyticsService.get_summary", fake_summary)
+    monkeypatch.setattr("services.analytics.analytics.AnalyticsService.get_summary", fake_summary)
     response = client.get("/api/v1/analytics/")
     assert response.status_code == 200
     data = response.json()
@@ -311,7 +311,7 @@ def test_get_risk_metrics(client, monkeypatch):
     def fake_metrics(self):
         return RiskMetrics(volatility=0.1, sharpe_ratio=0.2, max_drawdown_percent=0.3, beta=0.4)
 
-    monkeypatch.setattr("services.risk_metrics.RiskMetricsService.get_metrics", fake_metrics)
+    monkeypatch.setattr("services.portfolio.risk_metrics.RiskMetricsService.get_metrics", fake_metrics)
     response = client.get("/api/v1/analytics/risk")
     assert response.status_code == 200
     data = response.json()
@@ -334,7 +334,7 @@ def test_get_rebalance(client, monkeypatch):
             ],
         )
 
-    monkeypatch.setattr("services.rebalance.RebalanceService.suggest", fake_suggest)
+    monkeypatch.setattr("services.portfolio.rebalance.RebalanceService.suggest", fake_suggest)
     response = client.get("/api/v1/rebalance/")
     assert response.status_code == 200
     data = response.json()
@@ -353,7 +353,7 @@ def test_run_backtest(client, monkeypatch):
             warnings=[],
         )
 
-    monkeypatch.setattr("services.backtest.BacktestService.run", fake_run)
+    monkeypatch.setattr("services.analytics.backtest.BacktestService.run", fake_run)
     response = client.post(
         "/api/v1/backtest/",
         json={
@@ -371,7 +371,7 @@ def test_run_backtest(client, monkeypatch):
 
 
 def test_gold_fx(client, monkeypatch):
-    from schemas import GoldRate, FxRate
+    from common.schemas import GoldRate, FxRate
 
     def fake_gold():
         return [GoldRate(source="test", buy=70000, sell=71000, updated_at="2023-01-01")]
@@ -379,8 +379,8 @@ def test_gold_fx(client, monkeypatch):
     def fake_fx():
         return [FxRate(currency="USD/VND", buy=23000, transfer=23500, sell=24000)]
 
-    monkeypatch.setattr("services.gold_fx._fetch_gold_sjc", fake_gold)
-    monkeypatch.setattr("services.gold_fx._fetch_vcb_fx", fake_fx)
+    monkeypatch.setattr("services.market.gold_fx._fetch_gold_sjc", fake_gold)
+    monkeypatch.setattr("services.market.gold_fx._fetch_vcb_fx", fake_fx)
     response = client.get("/api/v1/gold-fx/")
     assert response.status_code == 200
     data = response.json()

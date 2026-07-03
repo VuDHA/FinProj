@@ -15,8 +15,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import API from "../api/client";
 import { getBacktestStress } from "../api/ai";
+import { getAssets } from "../api/assets";
+import { runBacktest, runBacktestFromPrompt, type BacktestRequest } from "../api/backtest";
+import { getBenchmarkRaw } from "../api/market";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
@@ -25,7 +27,8 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useAiQueue } from "../contexts/AiQueueContext";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
+import { chartTooltipStyle } from "../lib/utils";
+import { formatCurrency, formatPercent } from "../lib/format";
 
 const COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#FB7185", "#8B5CF6", "#3B82F6"];
 
@@ -58,7 +61,7 @@ export function Backtest() {
 
   const assets = useQuery({
     queryKey: ["assets"],
-    queryFn: async () => (await API.get("/assets/")).data,
+    queryFn: async () => getAssets(),
   });
 
   const positionSymbols = useMemo(
@@ -102,12 +105,12 @@ export function Backtest() {
 
   const run = useMutation({
     mutationFn: () =>
-      API.post("/backtest/", {
-        strategy: form.strategy,
+      runBacktest({
+        strategy: form.strategy as BacktestRequest["strategy"],
         start_date: form.start_date,
         end_date: form.end_date,
         initial_cash: Number(form.initial_cash),
-        rebalance_frequency: form.rebalance_frequency,
+        rebalance_frequency: form.rebalance_frequency as BacktestRequest["rebalance_frequency"],
         symbols: positionSymbols.length > 0 ? positionSymbols : undefined,
         positions: form.positions
           .filter((p) => p.symbol.trim() && Number(p.price) > 0 && Number(p.quantity) > 0)
@@ -118,17 +121,15 @@ export function Backtest() {
             ratio: p.ratio ? Number(p.ratio) : undefined,
           })),
       }),
-    onSuccess: (response) => {
-      setResult(response.data);
+    onSuccess: (data) => {
+      setResult(data);
       setPromptMode(false);
     },
   });
 
   const aiRun = useMutation({
     mutationFn: () =>
-      runAi("backtest_prompt", () =>
-        API.post("/backtest/ai", { prompt }).then((res) => res.data)
-      ),
+      runAi("backtest_prompt", () => runBacktestFromPrompt(prompt)),
     onSuccess: (data) => {
       setResult(data.result);
       setPromptMode(false);
@@ -155,11 +156,11 @@ export function Backtest() {
         getBacktestStress({
           prompt: stressPrompt,
           base_request: {
-            strategy: form.strategy,
+            strategy: form.strategy as BacktestRequest["strategy"],
             start_date: form.start_date,
             end_date: form.end_date,
             initial_cash: Number(form.initial_cash),
-            rebalance_frequency: form.rebalance_frequency,
+            rebalance_frequency: form.rebalance_frequency as BacktestRequest["rebalance_frequency"],
             symbols: positionSymbols.length > 0 ? positionSymbols : undefined,
             positions: form.positions
               .filter((p) => p.symbol.trim() && Number(p.price) > 0 && Number(p.quantity) > 0)
@@ -193,10 +194,7 @@ export function Backtest() {
   const benchmark = useQuery({
     queryKey: ["backtest-benchmark", form.start_date, form.end_date],
     queryFn: async () => {
-      const { data } = await API.get("/prices/benchmark-raw/VNINDEX", {
-        params: { start: form.start_date, end: form.end_date },
-      });
-      return data as Array<{ date: string; price: number }>;
+      return getBenchmarkRaw("VNINDEX", form.start_date, form.end_date);
     },
     enabled: !!result,
   });

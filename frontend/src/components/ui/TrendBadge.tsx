@@ -1,5 +1,5 @@
 import { TrendingDown, TrendingUp } from "lucide-react";
-import { formatPercent } from "../../lib/utils";
+import { formatPercent } from "../../lib/format";
 
 interface TrendBadgeProps {
   value: number;

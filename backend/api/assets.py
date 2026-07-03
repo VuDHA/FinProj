@@ -4,16 +4,16 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from database import get_session
-from models import Asset, PriceSnapshot
-from schemas import AssetCreate, AssetRead
-from services.asset_type_config import (
+from common.database import get_session
+from common.models import Asset, PriceSnapshot
+from common.schemas import AssetCreate, AssetRead
+from common.asset_type_config import (
     generate_symbol,
     get_asset_types,
     is_market_price_type,
     is_valid_asset_type,
 )
-from services.source_config import is_valid_source_for_type
+from services.market.source_config import is_valid_source_for_type
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 

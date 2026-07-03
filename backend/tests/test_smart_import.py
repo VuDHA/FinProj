@@ -1,8 +1,8 @@
 import csv
 import io
 
-from models import Asset
-from services.smart_import import SmartImportService
+from common.models import Asset
+from services.import_data.smart_import import SmartImportService
 from sqlalchemy import select
 
 
@@ -34,15 +34,18 @@ def test_suggest_mapping_fallback_without_ollama():
 
 
 def test_import_assets_with_mapping(session):
+    from common.asset_type_config import seed_asset_types
+    seed_asset_types(session)
+
     content = io.StringIO()
     writer = csv.DictWriter(
-        content, fieldnames=["mã", "tên", "loại"], lineterminator="\n"
+        content, fieldnames=["symbol", "name", "type"], lineterminator="\n"
     )
     writer.writeheader()
-    writer.writerow({"mã": "VCB", "tên": "Vietcombank", "loại": "STOCK"})
+    writer.writerow({"symbol": "VCB", "name": "Vietcombank", "type": "STOCK"})
 
     service = SmartImportService()
-    mapping = {"mã": "symbol", "tên": "name", "loại": "type"}
+    mapping = {"symbol": "symbol", "name": "name", "type": "type"}
     result = service.import_data(
         session, content.getvalue().encode("utf-8"), "assets.csv", "assets", mapping
     )
@@ -51,8 +54,8 @@ def test_import_assets_with_mapping(session):
     assert result.skipped == 0
     assert not result.errors
 
-    asset = session.exec(select(Asset).where(Asset.symbol == "VCB")).first()
-    assert asset is not None
+    asset = session.execute(select(Asset).where(Asset.symbol == "VCB")).scalars().first()
+    assert asset is not None, "asset was not created"
     assert asset.name == "Vietcombank"
 
 

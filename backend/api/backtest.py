@@ -1,8 +1,10 @@
+import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from database import get_session
-from schemas import (
+from common.database import get_session
+from common.schemas import (
     BacktestPromptRequest,
     BacktestPromptResponse,
     BacktestRequest,
@@ -11,8 +13,8 @@ from schemas import (
     BacktestStressResponse,
 )
 from .ai_utils import handle_ai_insight_error
-from services.backtest import BacktestService
-from services.prompt_parser import PromptParserError
+from services.analytics.backtest import BacktestService
+from services.ai.prompt_parser import PromptParserError
 
 router = APIRouter(prefix="/backtest", tags=["backtest"])
 
@@ -39,9 +41,16 @@ def run_backtest_stress_from_prompt(
     payload: BacktestStressRequest, session: Session = Depends(get_session)
 ):
     try:
+        base_request = payload.base_request
+        if base_request is None:
+            today = datetime.date.today()
+            base_request = BacktestRequest(
+                start_date=today - datetime.timedelta(days=365),
+                end_date=today,
+            )
         return BacktestService(session).run_stress_from_prompt(
             payload.prompt,
-            payload.base_request if payload.base_request else BacktestRequest(),
+            base_request,
         )
     except PromptParserError as e:
         raise HTTPException(status_code=400, detail=str(e))

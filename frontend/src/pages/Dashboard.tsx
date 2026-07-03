@@ -28,16 +28,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import API from "../api/client";
 import { getPortfolioInsight } from "../api/ai";
-import { getAlerts, getDailyBrief, getTrending } from "../api/news";
+import { getDailyBrief, getNewsAlerts, getTrending } from "../api/news";
+import { getAnalytics, getRiskMetrics } from "../api/analytics";
+import { getGoldFx, getMarketQuotes, getBenchmark, refreshAllPrices } from "../api/market";
+import { getPortfolio, getPortfolioHistory } from "../api/portfolio";
+import { getRebalance } from "../api/rebalance";
 import { AiGenerateButton } from "../components/AiGenerateButton";
 import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { InfoTooltip } from "../components/InfoTooltip";
-import { PriceAlertsSection } from "../components/PriceAlertsSection";
-import { SummaryCards } from "../components/SummaryCards";
+import { PriceAlertsSection } from "../features/dashboard/components/PriceAlertsSection";
+import { SummaryCards } from "../features/dashboard/components/SummaryCards";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -46,7 +49,8 @@ import { TrendBadge } from "../components/ui/TrendBadge";
 import { useToast } from "../contexts/ToastContext";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency } from "../lib/utils";
+import { chartTooltipStyle } from "../lib/utils";
+import { formatCurrency } from "../lib/format";
 
 const COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#FB7185", "#8B5CF6", "#3B82F6"];
 const WATCHLIST_SYMBOLS =
@@ -98,7 +102,7 @@ export function Dashboard() {
 
   const portfolio = useQuery({
     queryKey: ["portfolio"],
-    queryFn: async () => (await API.get("/portfolio/")).data,
+    queryFn: async () => getPortfolio(),
   });
 
   const history = useQuery({
@@ -106,8 +110,7 @@ export function Dashboard() {
     queryFn: async () => {
       const end = new Date().toISOString().split("T")[0];
       const start = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      const { data } = await API.get("/portfolio/history", { params: { start, end } });
-      return data as Array<{ date: string; value: number; cost: number }>;
+      return getPortfolioHistory(start, end);
     },
   });
 
@@ -116,43 +119,41 @@ export function Dashboard() {
     queryFn: async () => {
       const end = new Date().toISOString().split("T")[0];
       const start = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      const { data } = await API.get("/prices/benchmark/VNINDEX", { params: { start, end } });
-      return data as Array<{ date: string; portfolio_value: number; benchmark_value: number }>;
+      return getBenchmark("VNINDEX", start, end);
     },
     enabled: history.data && history.data.length > 1,
   });
 
   const analytics = useQuery({
     queryKey: ["analytics"],
-    queryFn: async () => (await API.get("/analytics/")).data,
+    queryFn: async () => getAnalytics(),
   });
 
   const risk = useQuery({
     queryKey: ["analytics-risk"],
-    queryFn: async () => (await API.get("/analytics/risk")).data,
+    queryFn: async () => getRiskMetrics(),
   });
 
   const rebalance = useQuery({
     queryKey: ["rebalance"],
-    queryFn: async () => (await API.get("/rebalance/")).data,
+    queryFn: async () => getRebalance(),
   });
 
   const marketWatchlist = useQuery({
     queryKey: ["market-watchlist"],
     queryFn: async () => {
-      const { data } = await API.get("/prices/quote", { params: { symbols: WATCHLIST_SYMBOLS } });
-      return data as Array<{ symbol: string; price: number; change: number; change_percent: number; date: string }>;
+      return getMarketQuotes(WATCHLIST_SYMBOLS);
     },
   });
 
   const goldFx = useQuery({
     queryKey: ["gold-fx"],
-    queryFn: async () => (await API.get("/gold-fx/")).data,
+    queryFn: async () => getGoldFx(),
   });
 
   const alerts = useQuery({
     queryKey: ["news-alerts-unread"],
-    queryFn: async () => getAlerts(true),
+    queryFn: async () => getNewsAlerts(true),
   });
 
   const dailyBrief = useQuery({
@@ -166,7 +167,7 @@ export function Dashboard() {
   });
 
   const refresh = useMutation({
-    mutationFn: () => API.post("/prices/refresh-all"),
+    mutationFn: () => refreshAllPrices(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["portfolio"] });
       qc.invalidateQueries({ queryKey: ["portfolio-history"] });

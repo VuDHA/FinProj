@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from services.ai_queue import AIQueue
+from services.ai.ai_queue import AIQueue
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 

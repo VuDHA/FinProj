@@ -11,13 +11,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import API from "../api/client";
 import { getMarketInsight } from "../api/ai";
+import { getAssets } from "../api/assets";
+import { getAllFunds, getAllStocks, getGoldFx, getMarketQuotes, getPriceHistory } from "../api/market";
+import { getPortfolio } from "../api/portfolio";
 import { AiGenerateButton } from "../components/AiGenerateButton";
 import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { InfoTooltip } from "../components/InfoTooltip";
-import SymbolDetailModal from "../components/SymbolDetailModal";
+import SymbolDetailModal from "../features/market/components/SymbolDetailModal";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { MiniSparkline } from "../components/ui/MiniSparkline";
@@ -25,7 +27,8 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
+import { chartTooltipStyle } from "../lib/utils";
+import { formatCurrency, formatNumber } from "../lib/format";
 
 
 export function Market() {
@@ -53,54 +56,34 @@ export function Market() {
 
   const assets = useQuery({
     queryKey: ["assets"],
-    queryFn: async () => {
-      const { data } = await API.get("/assets/");
-      return data;
-    },
+    queryFn: async () => getAssets(),
   });
 
   const history = useQuery({
     queryKey: ["price-history", assetId, start, end],
     queryFn: async () => {
       if (!assetId) return [];
-      const { data } = await API.get(`/prices/history/${assetId}`, {
-        params: { start, end },
-      });
-      return data as Array<{ date: string; price: number }>;
+      return getPriceHistory(Number(assetId), start, end);
     },
     enabled: !!assetId,
   });
 
   const goldFx = useQuery({
     queryKey: ["gold-fx"],
-    queryFn: async () => {
-      const { data } = await API.get("/gold-fx/");
-      return data;
-    },
+    queryFn: async () => getGoldFx(),
   });
 
   const marketWatchlist = useQuery({
     queryKey: ["market-watchlist"],
     queryFn: async () => {
-      const { data } = await API.get("/prices/quote", {
-        params: { symbols: WATCHLIST_SYMBOLS },
-      });
-      return data as Array<{
-        symbol: string;
-        price: number;
-        change: number;
-        change_percent: number;
-        date: string;
-      }>;
+      return getMarketQuotes(WATCHLIST_SYMBOLS);
     },
   });
 
   const allSymbols = useQuery({
     queryKey: ["market-symbols", activeTab],
     queryFn: async () => {
-      const endpoint = activeTab === "STOCK" ? "/prices/stocks" : "/prices/funds";
-      const { data } = await API.get(endpoint);
-      return data as Array<{ symbol: string; name: string; exchange: string; type: string; fund_type?: string }>;
+      return activeTab === "STOCK" ? getAllStocks() : getAllFunds();
     },
   });
 
@@ -132,16 +115,7 @@ export function Market() {
   const pageQuotes = useQuery({
     queryKey: ["market-quotes", pageSymbolsStr, activeTab],
     queryFn: async () => {
-      const { data } = await API.get("/prices/quote", {
-        params: { symbols: pageSymbolsStr, asset_type: activeTab },
-      });
-      return data as Array<{
-        symbol: string;
-        price: number;
-        change: number;
-        change_percent: number;
-        date: string;
-      }>;
+      return getMarketQuotes(pageSymbolsStr, activeTab);
     },
     enabled: !!pageSymbolsStr,
   });
@@ -150,7 +124,7 @@ export function Market() {
 
   const portfolio = useQuery({
     queryKey: ["portfolio"],
-    queryFn: async () => (await API.get("/portfolio/")).data,
+    queryFn: async () => getPortfolio(),
   });
 
   const selectedAsset = assets.data?.find((a: any) => a.id === Number(assetId));

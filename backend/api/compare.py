@@ -4,11 +4,11 @@ from typing import List, Tuple
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from database import get_session
-from schemas import CompareAIInsightRequest, CompareAIInsightResponse, CompareCorrelation, CompareMetrics
+from common.database import get_session
+from common.schemas import CompareAIInsightRequest, CompareAIInsightResponse, CompareCorrelation, CompareMetrics
 from .ai_utils import handle_ai_insight_error
-from services.ai_insights import CompareInsightService
-from services.compare import CompareService
+from services.ai.ai_insights import CompareInsightService
+from services.analytics.compare import CompareService
 
 router = APIRouter(prefix="/compare", tags=["compare"])
 

@@ -5,15 +5,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from database import get_session
-from models import Asset, PriceSnapshot
-from schemas import BenchmarkPoint, FundDetail, MarketAIInsightResponse, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
+from common.database import get_session
+from common.models import Asset, PriceSnapshot
+from common.schemas import BenchmarkPoint, FundDetail, MarketAIInsightResponse, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
 from .ai_utils import handle_ai_insight_error
-from services.ai_insights import MarketInsightService
-from services.asset_type_config import is_market_price_type
-from services.gold_fx import get_gold_fx
-from services.market_data import MarketDataService
-from services.portfolio import PortfolioService
+from services.ai.ai_insights import MarketInsightService
+from common.asset_type_config import is_market_price_type
+from services.market.gold_fx import get_gold_fx
+from services.market.market_data import MarketDataService
+from services.portfolio.portfolio import PortfolioService
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
@@ -244,7 +244,7 @@ def get_benchmark(
     end: datetime.date,
     session: Session = Depends(get_session),
 ):
-    from services.benchmark import BenchmarkService
+    from services.portfolio.benchmark import BenchmarkService
 
     data = BenchmarkService(session).get_comparison(symbol, start, end)
     if not data:

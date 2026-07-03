@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
-from models import NewsArticle, NewsSource, NewsSymbol
-from services.embedding_store import EmbeddingStore
+from common.models import NewsArticle, NewsSource, NewsSymbol
+from services.ai.embedding_store import EmbeddingStore
 from services.news.dictionaries import get_known_symbols
 from services.news.processor import NewsProcessor
 from services.news.sources import registry

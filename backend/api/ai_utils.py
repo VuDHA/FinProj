@@ -2,8 +2,8 @@
 
 from fastapi import HTTPException
 
-from services.ai_insights.prompts import InsightGenerationError
-from services.ai_queue import AIQueueBusyError
+from services.ai.ai_insights.prompts import InsightGenerationError
+from services.ai.ai_queue import AIQueueBusyError
 
 
 def handle_ai_insight_error(fn):

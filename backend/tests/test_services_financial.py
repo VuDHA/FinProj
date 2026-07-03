@@ -3,15 +3,15 @@ import datetime
 import io
 from unittest.mock import patch
 
-from models import AllocationTarget, Asset, Income, PriceSnapshot, Transaction
-from schemas import BacktestRequest, PortfolioItem, PortfolioSummary
-from services.backtest import BacktestService
-from services.csv_io import export_assets, export_transactions, import_assets, import_transactions
-from services.portfolio import PortfolioService
-from services.portfolio_history import PortfolioHistoryService
-from services.risk_metrics import RiskMetricsService
-from services.analytics import AnalyticsService
-from services.rebalance import RebalanceService
+from common.models import AllocationTarget, Asset, Income, PriceSnapshot, Transaction
+from common.schemas import BacktestRequest, PortfolioItem, PortfolioSummary
+from services.analytics.backtest import BacktestService
+from services.import_data.csv_io import export_assets, export_transactions, import_assets, import_transactions
+from services.portfolio.portfolio import PortfolioService
+from services.portfolio.portfolio_history import PortfolioHistoryService
+from services.portfolio.risk_metrics import RiskMetricsService
+from services.analytics.analytics import AnalyticsService
+from services.portfolio.rebalance import RebalanceService
 from sqlmodel import select
 
 
@@ -116,7 +116,7 @@ def test_portfolio_service_with_stock(session, monkeypatch):
             for a in assets
         ]
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_quotes_for_assets", fake_quotes)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_quotes_for_assets", fake_quotes)
     summary = PortfolioService(session).get_portfolio()
     assert summary.total_value == 1000
     assert summary.total_cost == 900
@@ -132,7 +132,7 @@ def test_portfolio_service_with_gold(session, monkeypatch):
     def fake_price(self, asset):
         return {"price": 75000, "change": 1, "change_percent": 1, "date": today}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_price", fake_price)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_price", fake_price)
     summary = PortfolioService(session).get_portfolio()
     assert summary.total_value == 75000
 
@@ -186,7 +186,7 @@ def test_risk_metrics_service(session, monkeypatch):
     d3 = datetime.date(2023, 3, 1)
 
     def fake_history(self, start, end):
-        from schemas import PortfolioHistoryPoint
+        from common.schemas import PortfolioHistoryPoint
         return [
             PortfolioHistoryPoint(date=d1, value=1000, cost=900),
             PortfolioHistoryPoint(date=d2, value=1100, cost=900),
@@ -194,23 +194,23 @@ def test_risk_metrics_service(session, monkeypatch):
         ]
 
     def fake_monthly_pnl(self, start, end):
-        from schemas import MonthlyPnL
+        from common.schemas import MonthlyPnL
         return [
             MonthlyPnL(month="2023-01", start_value=1000, end_value=1100, pnl=100, pnl_percent=10.0),
             MonthlyPnL(month="2023-02", start_value=1100, end_value=1200, pnl=100, pnl_percent=9.09),
         ]
 
     def fake_benchmark(self, symbol, start, end):
-        from schemas import BenchmarkPoint
+        from common.schemas import BenchmarkPoint
         return [
             BenchmarkPoint(date=d1, portfolio_value=1000, benchmark_value=1000),
             BenchmarkPoint(date=d2, portfolio_value=1100, benchmark_value=1050),
             BenchmarkPoint(date=d3, portfolio_value=1200, benchmark_value=1100),
         ]
 
-    monkeypatch.setattr("services.portfolio_history.PortfolioHistoryService.get_history", fake_history)
-    monkeypatch.setattr("services.analytics.AnalyticsService._monthly_pnl", fake_monthly_pnl)
-    monkeypatch.setattr("services.benchmark.BenchmarkService.get_comparison", fake_benchmark)
+    monkeypatch.setattr("services.portfolio.portfolio_history.PortfolioHistoryService.get_history", fake_history)
+    monkeypatch.setattr("services.analytics.analytics.AnalyticsService._monthly_pnl", fake_monthly_pnl)
+    monkeypatch.setattr("services.portfolio.benchmark.BenchmarkService.get_comparison", fake_benchmark)
 
     metrics = RiskMetricsService(session).get_metrics()
     assert metrics.volatility is not None
@@ -224,7 +224,7 @@ def test_risk_metrics_service_uses_pnl_returns_not_raw_values(session, monkeypat
     a fake ~1000% monthly return and explode volatility/beta. Corrected returns
     from AnalyticsService should keep the metrics in a sensible range.
     """
-    from schemas import PortfolioHistoryPoint, BenchmarkPoint, MonthlyPnL
+    from common.schemas import PortfolioHistoryPoint, BenchmarkPoint, MonthlyPnL
 
     d1 = datetime.date(2023, 1, 1)
     d2 = datetime.date(2023, 2, 1)
@@ -251,9 +251,9 @@ def test_risk_metrics_service_uses_pnl_returns_not_raw_values(session, monkeypat
             BenchmarkPoint(date=d3, portfolio_value=12000, benchmark_value=1100),
         ]
 
-    monkeypatch.setattr("services.portfolio_history.PortfolioHistoryService.get_history", fake_history)
-    monkeypatch.setattr("services.analytics.AnalyticsService._monthly_pnl", fake_monthly_pnl)
-    monkeypatch.setattr("services.benchmark.BenchmarkService.get_comparison", fake_benchmark)
+    monkeypatch.setattr("services.portfolio.portfolio_history.PortfolioHistoryService.get_history", fake_history)
+    monkeypatch.setattr("services.analytics.analytics.AnalyticsService._monthly_pnl", fake_monthly_pnl)
+    monkeypatch.setattr("services.portfolio.benchmark.BenchmarkService.get_comparison", fake_benchmark)
 
     metrics = RiskMetricsService(session).get_metrics()
     assert metrics.volatility is not None
@@ -275,7 +275,7 @@ def test_monthly_pnl_excludes_new_purchases(session, monkeypatch):
     def fake_history(self, symbol, asset_type, start, end):
         return {d1: 100, d3: 110}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_history", fake_history)
 
     monthly_pnl = AnalyticsService(session)._monthly_pnl(d1, d3)
     assert len(monthly_pnl) == 1
@@ -299,7 +299,7 @@ def test_monthly_pnl_excludes_start_of_month_purchase(session, monkeypatch):
     def fake_history(self, symbol, asset_type, start, end):
         return {d1: 100, d3: 110}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_history", fake_history)
 
     monthly_pnl = AnalyticsService(session)._monthly_pnl(d1, d3)
     assert len(monthly_pnl) == 1
@@ -312,7 +312,7 @@ def test_monthly_pnl_excludes_start_of_month_purchase(session, monkeypatch):
 
 
 def test_analytics_service(session, monkeypatch):
-    from schemas import IncomeSummary
+    from common.schemas import IncomeSummary
 
     def fake_portfolio(self):
         return PortfolioSummary(
@@ -337,12 +337,12 @@ def test_analytics_service(session, monkeypatch):
             ],
         )
 
-    monkeypatch.setattr("services.portfolio.PortfolioService.get_portfolio", fake_portfolio)
+    monkeypatch.setattr("services.portfolio.portfolio.PortfolioService.get_portfolio", fake_portfolio)
 
     def fake_fetch_history(self, symbol, asset_type, start, end):
         return {}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_fetch_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_history", fake_fetch_history)
 
     asset = _create_asset(session, "VCB")
     session.add(Income(asset_id=asset.id, type="DIVIDEND", amount=50, date=datetime.date.today()))
@@ -378,7 +378,7 @@ def test_rebalance_service(session, monkeypatch):
             ],
         )
 
-    monkeypatch.setattr("services.portfolio.PortfolioService.get_portfolio", fake_portfolio)
+    monkeypatch.setattr("services.portfolio.portfolio.PortfolioService.get_portfolio", fake_portfolio)
     session.add(AllocationTarget(type="STOCK", target_percent=50))
     session.commit()
 
@@ -398,7 +398,7 @@ def test_backtest_service_buy_and_hold(session, monkeypatch):
     def fake_history(self, symbol, asset_type, start, end):
         return {d1: 100, d2: 110, d3: 120}
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_history", fake_history)
     request = BacktestRequest(
         symbols=["VCB"],
         start_date=d1,
@@ -423,7 +423,7 @@ def test_backtest_service_rebalancing(session, monkeypatch):
         prices = {"VCB": {d1: 100, d2: 110, d3: 120}, "VHM": {d1: 100, d2: 100, d3: 100}}
         return prices.get(symbol, {})
 
-    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_history)
+    monkeypatch.setattr("services.market.market_data.MarketDataService.fetch_history", fake_history)
     request = BacktestRequest(
         symbols=["VCB", "VHM"],
         start_date=d1,

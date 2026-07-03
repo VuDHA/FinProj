@@ -2,9 +2,9 @@ import re
 import unicodedata
 from typing import Dict, List, Optional
 
-from config import settings
-from services.ai_insights.base_prompt import master_prompt
-from services.ollama_client import OllamaClient, OllamaClientError
+from common.config import settings
+from services.ai.ai_insights.base_prompt import master_prompt
+from services.ai.ollama_client import OllamaClient, OllamaClientError
 
 
 class LocalTagger:
@@ -163,7 +163,7 @@ class TaggingService:
 
         if settings.AI_PROVIDER == "gemini":
             try:
-                from services.batch_ai import BatchAIService
+                from services.ai.batch_ai import BatchAIService
 
                 service = BatchAIService(batch_size=self._batch_size)
                 return service.generate_tags(

@@ -2,9 +2,9 @@ import json
 import re
 from typing import Dict, List, Optional
 
-from config import settings
-from services.ai_insights.base_prompt import master_prompt
-from services.ollama_client import OllamaClient
+from common.config import settings
+from services.ai.ai_insights.base_prompt import master_prompt
+from services.ai.ollama_client import OllamaClient
 
 
 class RelevanceScorer:
@@ -49,7 +49,7 @@ class RelevanceScorer:
 
         if settings.AI_PROVIDER == "gemini":
             try:
-                from services.batch_ai import BatchAIService
+                from services.ai.batch_ai import BatchAIService
 
                 service = BatchAIService(batch_size=self._infer_batch_size())
                 language = articles[0].get("language", "vi")

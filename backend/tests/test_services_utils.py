@@ -4,22 +4,22 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
-from models import Asset, Income, NewsArticle, NewsSource, NewsSymbol, Transaction, Watchlist
-from services.embedding_store import EmbeddingStore
-from services.env_config import get_env_config, update_env_config
-from services.gold_fx import get_gold_fx
-from services.market_data import MarketDataService
-from services.ollama_client import OllamaClient, OllamaClientError
-from services.rag_context import RagContextService
-from services.source_config import (
+from common.models import Asset, Income, NewsArticle, NewsSource, NewsSymbol, Transaction, Watchlist
+from services.ai.embedding_store import EmbeddingStore
+from common.env_config import get_env_config, update_env_config
+from services.market.gold_fx import get_gold_fx
+from services.market.market_data import MarketDataService
+from services.ai.ollama_client import OllamaClient, OllamaClientError
+from services.ai.rag_context import RagContextService
+from services.market.source_config import (
     get_asset_source_params,
     get_default_sources,
     is_valid_source_for_type,
     seed_default_sources,
     set_default_sources,
 )
-from services.source_selector import SourceSelector
-from services.sources.base import Source, SourceRegistry
+from services.market.source_selector import SourceSelector
+from services.market.sources.base import Source, SourceRegistry
 from sqlmodel import select
 
 
@@ -75,7 +75,7 @@ def _fake_registry(sources):
 
 
 def test_source_selector_fetch_price(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     selector = SourceSelector(session)
     asset = Asset(symbol="VCB", type="STOCK", name="VCB")
     data, warnings = selector.fetch_price(asset)
@@ -84,7 +84,7 @@ def test_source_selector_fetch_price(session, monkeypatch):
 
 
 def test_source_selector_fetch_history(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     selector = SourceSelector(session)
     asset = Asset(symbol="VCB", type="STOCK", name="VCB")
     hist = selector.fetch_history(asset, datetime.date.today(), datetime.date.today())
@@ -92,16 +92,16 @@ def test_source_selector_fetch_history(session, monkeypatch):
 
 
 def test_source_selector_fetch_listing(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     selector = SourceSelector(session)
     listings = selector.fetch_listing("STOCK")
     assert len(listings) == 1
 
 
 def test_source_selector_fallback_to_default(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
+        "services.market.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
     )
     selector = SourceSelector(session)
     asset = Asset(symbol="VCB", type="STOCK", name="VCB")
@@ -141,7 +141,7 @@ def test_env_config_get(client):
 def test_env_config_update(tmp_path, monkeypatch):
     env_file = tmp_path / ".env"
     env_file.write_text("OLLAMA_ENABLED=true\n")
-    monkeypatch.setattr("services.env_config._ENV_PATH", env_file)
+    monkeypatch.setattr("common.env_config._ENV_PATH", env_file)
     result = update_env_config({"OLLAMA_ENABLED": "false"})
     assert result["requires_restart"] is False
     assert env_file.read_text().strip().endswith("OLLAMA_ENABLED=false")
@@ -171,12 +171,12 @@ def test_gold_fx_with_mocked_requests(monkeypatch):
 
 
 def test_market_data_fetch_price(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
+        "services.market.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
     )
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
+        "services.market.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
     )
     service = MarketDataService(session)
     asset = Asset(symbol="VCB", type="STOCK", name="VCB")
@@ -185,12 +185,12 @@ def test_market_data_fetch_price(session, monkeypatch):
 
 
 def test_market_data_fetch_quote(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
+        "services.market.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
     )
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
+        "services.market.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
     )
     service = MarketDataService(session)
     quote = service.fetch_quote("VCB", "STOCK")
@@ -198,12 +198,12 @@ def test_market_data_fetch_quote(session, monkeypatch):
 
 
 def test_market_data_fetch_quotes_for_assets(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
+        "services.market.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
     )
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
+        "services.market.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
     )
     service = MarketDataService(session)
     asset = Asset(symbol="VCB", type="STOCK", name="VCB")
@@ -213,12 +213,12 @@ def test_market_data_fetch_quotes_for_assets(session, monkeypatch):
 
 
 def test_market_data_fetch_history(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
+        "services.market.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
     )
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
+        "services.market.source_selector.SourceSelector._resolve_asset_source", lambda self, asset: "fake"
     )
     service = MarketDataService(session)
     today = datetime.date.today()
@@ -227,9 +227,9 @@ def test_market_data_fetch_history(session, monkeypatch):
 
 
 def test_market_data_fetch_all_symbols(session, monkeypatch):
-    monkeypatch.setattr("services.source_selector.registry", _fake_registry([FakeSource()]))
+    monkeypatch.setattr("services.market.source_selector.registry", _fake_registry([FakeSource()]))
     monkeypatch.setattr(
-        "services.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
+        "services.market.source_selector.SourceSelector._get_defaults", lambda self: {"STOCK": "fake"}
     )
     service = MarketDataService(session)
     symbols = service.fetch_all_symbols()
@@ -238,7 +238,7 @@ def test_market_data_fetch_all_symbols(session, monkeypatch):
 
 def test_market_data_fetch_fund_detail(monkeypatch):
     monkeypatch.setattr(
-        "services.market_data.registry", _fake_registry([FakeFundSource()])
+        "services.market.market_data.registry", _fake_registry([FakeFundSource()])
     )
     service = MarketDataService.__new__(MarketDataService)
     detail = service.fetch_fund_detail("E1VFVN30")
@@ -310,12 +310,12 @@ def test_ollama_client_embed_success(monkeypatch):
 
 
 def test_ollama_client_generate_error(monkeypatch):
-    from services.ai_queue import AIQueueBusyError
+    from services.ai.ai_queue import AIQueueBusyError
 
     def fake_run(self, name, task):
         raise AIQueueBusyError("busy")
 
-    monkeypatch.setattr("services.ai_queue.AIQueue.run", fake_run)
+    monkeypatch.setattr("services.ai.ai_queue.AIQueue.run", fake_run)
     client = OllamaClient(base_url="http://localhost", timeout=1)
     try:
         client.generate("hi")

@@ -51,3 +51,35 @@ export async function runSmartImport(
   });
   return data;
 }
+
+export interface CsvImportResult {
+  created: number;
+  skipped: number;
+  errors: string[];
+}
+
+export async function importAssets(file: File): Promise<CsvImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await API.post("/import-export/import/assets", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function importTransactions(file: File): Promise<CsvImportResult> {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await API.post("/import-export/import/transactions", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export function exportAssetsUrl(): string {
+  return "/api/v1/import-export/export/assets";
+}
+
+export function exportTransactionsUrl(): string {
+  return "/api/v1/import-export/export/transactions";
+}

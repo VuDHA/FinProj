@@ -7,7 +7,7 @@ from sqlmodel import Session
 from services.news.dictionaries import analyze_impact, analyze_sentiment, get_known_symbols
 from services.news.relevance import RelevanceScorer
 from services.news.tagging import TaggingService
-from services.rag_context import RagContextService
+from services.ai.rag_context import RagContextService
 
 
 class NewsProcessor:

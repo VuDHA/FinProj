@@ -4,10 +4,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from database import get_session
-from models import Alert, Asset, PriceSnapshot
-from schemas import AlertCreate, AlertRead, NotificationRead
-from services.market_data import MarketDataService
+from common.database import get_session
+from common.models import Alert, Asset, PriceSnapshot
+from common.schemas import AlertCreate, AlertRead, NotificationRead
+from services.market.market_data import MarketDataService
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 

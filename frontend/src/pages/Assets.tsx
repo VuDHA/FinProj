@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Trash2 } from "lucide-react";
-import API from "../api/client";
+import { createAsset, deleteAsset, getAssets } from "../api/assets";
+import { getAssetTypes } from "../api/settings";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
-import { SourceSelect } from "../components/SourceSelect";
+import { SourceSelect } from "../features/assets/components/SourceSelect";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { useToast } from "../contexts/ToastContext";
 import { usePersistentState } from "../hooks/usePersistentState";
@@ -66,7 +67,7 @@ export function Assets() {
 
   const assetTypes = useQuery<AssetTypeMap>({
     queryKey: ["asset-types"],
-    queryFn: async () => (await API.get("/settings/asset-types")).data.types,
+    queryFn: async () => getAssetTypes(),
   });
 
   const typeConfig = useMemo(() => assetTypes.data || {}, [assetTypes.data]);
@@ -90,7 +91,7 @@ export function Assets() {
 
   const assets = useQuery({
     queryKey: ["assets"],
-    queryFn: async () => (await API.get("/assets/")).data,
+    queryFn: async () => getAssets(),
   });
 
   const typeLabel = (code: string) =>
@@ -109,7 +110,7 @@ export function Assets() {
       } else {
         delete payload.manual_value;
       }
-      return API.post("/assets/", payload);
+      return createAsset(payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["assets"] });
@@ -123,7 +124,7 @@ export function Assets() {
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => API.delete(`/assets/${id}`),
+    mutationFn: (id: number) => deleteAsset(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["assets"] });
       showToast("Đã xóa tài sản", "success");

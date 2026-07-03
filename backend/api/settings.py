@@ -3,9 +3,9 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from database import get_session
-from models import AllocationTarget, Setting
-from schemas import (
+from common.database import get_session
+from common.models import AllocationTarget, Setting
+from common.schemas import (
     AllocationTargetCreate,
     AllocationTargetRead,
     AssetSourceInfo,
@@ -14,10 +14,10 @@ from schemas import (
     SettingCreate,
     SettingRead,
 )
-from services.asset_type_config import get_asset_types, save_asset_types
-from services.env_config import get_env_config, update_env_config
-from services.source_config import get_default_sources, is_valid_source_for_type, set_default_sources
-from services.sources import registry
+from common.asset_type_config import get_asset_types, save_asset_types
+from common.env_config import get_env_config, update_env_config
+from services.market.source_config import get_default_sources, is_valid_source_for_type, set_default_sources
+from services.market.sources import registry
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 

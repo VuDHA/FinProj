@@ -1,7 +1,7 @@
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
-from models import NewsArticle, NewsSource
+from common.models import NewsArticle, NewsSource
 from services.news.feed import NewsFeedService
 from services.news.relevance import RelevanceScorer
 from services.news.sources.base import NewsSourceAdapter

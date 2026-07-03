@@ -28,7 +28,7 @@ import {
   aiSummary,
   type AiSummaryResponse,
   getAiStatus,
-  getAlerts,
+  getNewsAlerts,
   getDailyBrief,
   getFeed,
   getNews,
@@ -429,7 +429,7 @@ export function News() {
 
   const alerts = useQuery({
     queryKey: ["news-alerts"],
-    queryFn: () => getAlerts(),
+    queryFn: () => getNewsAlerts(),
     enabled: activeTab === "alerts" && region === "vn",
   });
 

@@ -9,10 +9,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from config import Settings
-from database import get_session
-from models import NewsAlert, NewsArticle, NewsSource, NewsSymbol, Watchlist
-from schemas import (
+from common.config import Settings
+from common.database import get_session
+from common.models import NewsAlert, NewsArticle, NewsSource, NewsSymbol, Watchlist
+from common.schemas import (
     AiSummaryRequest,
     AiSummaryResponse,
     AlertRead,
@@ -31,7 +31,7 @@ from services.news.crawler import NewsCrawlerService
 from services.news.refresh_tracker import RefreshTracker
 from services.news.dictionaries import impact_label, sentiment_label
 from services.news.feed import NewsFeedService
-from services.rag_context import RagContextService
+from services.ai.rag_context import RagContextService
 
 router = APIRouter(prefix="/news", tags=["news"])
 

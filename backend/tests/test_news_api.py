@@ -1,6 +1,6 @@
 import datetime
 
-from models import Asset, NewsArticle, NewsSource, NewsSymbol, Watchlist
+from common.models import Asset, NewsArticle, NewsSource, NewsSymbol, Watchlist
 from services.news.alerts import AlertService
 
 

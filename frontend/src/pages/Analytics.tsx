@@ -20,8 +20,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import API from "../api/client";
 import { getAnalyticsInsight } from "../api/ai";
+import { getAnalytics, getRiskMetrics } from "../api/analytics";
+import { refreshAllPrices } from "../api/market";
+import { getPortfolio, getPortfolioHistory } from "../api/portfolio";
 import { AiGenerateButton } from "../components/AiGenerateButton";
 import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -36,7 +38,8 @@ import { TrendBadge } from "../components/ui/TrendBadge";
 import { useToast } from "../contexts/ToastContext";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
+import { chartTooltipStyle } from "../lib/utils";
+import { formatCurrency, formatNumber } from "../lib/format";
 
 const PIE_COLORS = ["#34D399", "#60A5FA", "#FBBF24", "#A78BFA", "#FB7185", "#22D3EE", "#F472B6"];
 
@@ -80,43 +83,17 @@ export function Analytics() {
 
   const analytics = useQuery({
     queryKey: ["analytics", filterType, customStart, customEnd],
-    queryFn: async () => {
-      const params: Record<string, string> = { filter_type: filterType };
-      if (filterType === "custom" && customStart && customEnd) {
-        params.start_date = customStart;
-        params.end_date = customEnd;
-      }
-      return (await API.get("/analytics/", { params })).data;
-    },
+    queryFn: async () => getAnalytics(filterType, customStart || undefined, customEnd || undefined),
   });
 
   const risk = useQuery({
     queryKey: ["analytics-risk"],
-    queryFn: async () => (await API.get("/analytics/risk")).data,
+    queryFn: async () => getRiskMetrics(),
   });
 
   const portfolio = useQuery({
     queryKey: ["portfolio"],
-    queryFn: async () =>
-      (await API.get("/portfolio/")).data as {
-        total_value: number;
-        total_cost: number;
-        total_pnl: number;
-        total_pnl_percent: number;
-        items: Array<{
-          asset_id: number;
-          symbol: string;
-          name: string;
-          type: string;
-          quantity: number;
-          avg_cost: number;
-          latest_price: number;
-          current_value: number;
-          cost: number;
-          pnl: number;
-          pnl_percent: number;
-        }>;
-      },
+    queryFn: async () => getPortfolio(),
   });
 
   const data = analytics.data;
@@ -124,17 +101,14 @@ export function Analytics() {
   const history = useQuery({
     queryKey: ["portfolio-history", data?.period_start, data?.period_end],
     queryFn: async () => {
-      const { data: hist } = await API.get("/portfolio/history", {
-        params: { start: data?.period_start, end: data?.period_end },
-      });
-      return hist as Array<{ date: string; value: number; cost: number; by_type: Record<string, number> }>;
+      return getPortfolioHistory(data?.period_start, data?.period_end);
     },
     enabled: !!data?.period_start && !!data?.period_end,
   });
 
   const refresh = useMutation({
     mutationFn: async () => {
-      await API.post("/prices/refresh-all");
+      await refreshAllPrices();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["analytics", filterType, customStart, customEnd] });

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Check, RefreshCw, Save, Server } from "lucide-react";
-import API from "../api/client";
+import { getEnvConfig, saveEnvConfig } from "../api/settings";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -16,7 +16,7 @@ interface EnvItem {
   key: string;
   value: string;
   type: EnvType;
-  requires_restart: boolean;
+  requires_restart?: boolean;
   description: string;
 }
 
@@ -44,13 +44,13 @@ export function EnvConfig() {
 
   const query = useQuery<EnvItem[]>({
     queryKey: ["env-config"],
-    queryFn: async () => (await API.get("/settings/env-config")).data,
+    queryFn: async () => (await getEnvConfig()) as EnvItem[],
   });
 
   const save = useMutation({
     mutationFn: async (payload: Record<string, string>) => {
-      const response = await API.post("/settings/env-config", payload);
-      return response.data as { changed: EnvItem[]; requires_restart: boolean };
+      const data = await saveEnvConfig(payload);
+      return { changed: data, requires_restart: data.some((i) => i.requires_restart) };
     },
     onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: ["env-config"] });

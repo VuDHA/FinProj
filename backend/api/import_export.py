@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse
 from sqlmodel import Session
 
-from database import get_session
-from schemas import (
+from common.database import get_session
+from common.schemas import (
     CsvImportResult,
     SmartImportPreviewResponse,
     SmartImportRequest,
 )
-from services import csv_io, file_utils
-from services.smart_import import SmartImportService
+from services.import_data import csv_io, file_utils
+from services.import_data.smart_import import SmartImportService
 
 router = APIRouter(prefix="/import-export", tags=["import-export"])
 
