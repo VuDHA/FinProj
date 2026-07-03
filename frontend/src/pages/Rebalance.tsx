@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Save, Scale } from "lucide-react";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -11,10 +11,27 @@ import { TrendBadge } from "../components/ui/TrendBadge";
 import { labels } from "../i18n/vi";
 import { formatCurrency, formatPercent } from "../lib/utils";
 
-const TYPES = ["STOCK", "FUND", "ETF", "GOLD", "CRYPTO"];
+type AssetTypeConfig = {
+  label: string;
+  fields: string[];
+  marketPrice: boolean;
+};
+
+type AssetTypeMap = Record<string, AssetTypeConfig>;
 
 export function Rebalance() {
   const qc = useQueryClient();
+
+  const assetTypes = useQuery<AssetTypeMap>({
+    queryKey: ["asset-types"],
+    queryFn: async () => (await API.get("/settings/asset-types")).data.types,
+  });
+
+  const typeConfig = useMemo(() => assetTypes.data || {}, [assetTypes.data]);
+  const allTypeCodes = useMemo(() => Object.keys(typeConfig), [typeConfig]);
+
+  const typeLabel = (code: string) =>
+    typeConfig[code]?.label || labels.assetTypes[code as keyof typeof labels.assetTypes] || code;
 
   const rebalance = useQuery({
     queryKey: ["rebalance"],
@@ -43,13 +60,13 @@ export function Rebalance() {
     return found ? String(found.target_percent) : "0";
   };
 
-  const totalTarget = TYPES.reduce(
+  const totalTarget = allTypeCodes.reduce(
     (sum, t) => sum + (Number(getTarget(t)) || 0),
     0
   );
 
   const handleSave = () => {
-    const payload = TYPES.map((t) => ({
+    const payload = allTypeCodes.map((t) => ({
       type: t,
       target_percent: Number(getTarget(t)) || 0,
     }));
@@ -60,6 +77,7 @@ export function Rebalance() {
 
   return (
     <div className="space-y-6">
+      {assetTypes.isError && <ErrorMessage error={assetTypes.error} retry={() => assetTypes.refetch()} />}
       {rebalance.isError && <ErrorMessage error={rebalance.error} retry={() => rebalance.refetch()} />}
       {targets.isError && <ErrorMessage error={targets.error} retry={() => targets.refetch()} />}
       {save.isError && <ErrorMessage error={save.error} retry={() => save.reset()} />}
@@ -103,7 +121,7 @@ export function Rebalance() {
               </tr>
             </thead>
             <tbody>
-              {TYPES.map((type) => {
+              {allTypeCodes.map((type) => {
                 const suggestion = data?.suggestions?.find((s: any) => s.type === type);
                 const currentValue = suggestion?.current_value || 0;
                 const currentPercent = suggestion?.current_percent || 0;
@@ -112,7 +130,7 @@ export function Rebalance() {
                 return (
                   <tr key={type}>
                     <td className="font-display font-semibold text-slate-900">
-                      {labels.assetTypes[type as keyof typeof labels.assetTypes] ?? type}
+                      {typeLabel(type)}
                     </td>
                     <td className="text-right">
                       <div className="font-mono text-slate-700">{formatCurrency(currentValue)}</div>

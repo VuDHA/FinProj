@@ -18,6 +18,19 @@ class NewsCrawlerService:
         self.session = session
         self.processor = NewsProcessor(known_symbols=get_known_symbols(), session=session)
         self.embedding_store = EmbeddingStore()
+        self._disable_orphan_sources()
+
+    def _disable_orphan_sources(self):
+        """Mark sources that are no longer registered as inactive."""
+        registered = registry.codes()
+        orphans = self.session.exec(
+            select(NewsSource).where(NewsSource.is_active == True).where(NewsSource.code.notin_(registered))
+        ).all()
+        for source in orphans:
+            source.is_active = False
+            self.session.add(source)
+        if orphans:
+            self.session.commit()
 
     def _get_or_create_source(self, adapter) -> NewsSource:
         source = self.session.exec(
@@ -31,7 +44,13 @@ class NewsCrawlerService:
                 source_type=adapter.source_type,
                 feed_url=getattr(adapter, "feed_url", None),
                 language=adapter.language,
+                region=adapter.region,
             )
+            self.session.add(source)
+            self.session.commit()
+            self.session.refresh(source)
+        else:
+            source.region = adapter.region
             self.session.add(source)
             self.session.commit()
             self.session.refresh(source)
@@ -58,6 +77,9 @@ class NewsCrawlerService:
         if not url or not title:
             return None
 
+        if not data.get("is_standout"):
+            return None
+
         if self._exists(url, title):
             return None
 
@@ -75,7 +97,10 @@ class NewsCrawlerService:
             fetched_at=data.get("fetched_at", datetime.datetime.utcnow()),
             sentiment_score=data.get("sentiment_score"),
             impact_score=data.get("impact_score"),
+            relevance_score=data.get("relevance_score"),
+            is_standout=data.get("is_standout", False),
             language=data.get("language"),
+            region=data.get("region", source.region),
         )
         self.session.add(article)
         self.session.flush()
@@ -118,13 +143,23 @@ class NewsCrawlerService:
                 progress.add_error(f"{code}: {e}")
             return 0
 
+        # Skip articles that are already stored so we don't re-score/analyze them.
+        new_articles = [
+            a
+            for a in raw_articles
+            if a.get("url") and a.get("title") and not self._exists(a["url"], a["title"])
+        ]
+        skipped = len(raw_articles) - len(new_articles)
+        if skipped:
+            print(f"[news:crawler] {code}: skipped {skipped} already-stored articles")
+
         if progress is not None:
             progress.update(
                 processed=progress.processed + len(raw_articles),
-                message=f"Processing {len(raw_articles)} articles from {code}...",
+                message=f"Processing {len(new_articles)} new articles from {code}...",
             )
 
-        processed = self.processor.process_many(raw_articles)
+        processed = self.processor.process_many(new_articles)
         new_count = 0
         for article in processed:
             saved = self._save_article(source, article)
@@ -146,6 +181,18 @@ class NewsCrawlerService:
     def crawl_all(self, progress: Optional[Any] = None) -> Dict[str, int]:
         """Crawl all active sources. Returns mapping source_code -> new_count."""
         adapters = registry.all()
+        if progress is not None:
+            progress.update(total_sources=len(adapters), current_source_index=0)
+        results = {}
+        for index, adapter in enumerate(adapters, start=1):
+            if progress is not None:
+                progress.update(current_source_index=index, current_source=adapter.code)
+            results[adapter.code] = self.crawl_source(adapter.code, progress=progress)
+        return results
+
+    def crawl_region(self, region: str, progress: Optional[Any] = None) -> Dict[str, int]:
+        """Crawl all active sources for a specific region."""
+        adapters = registry.for_region(region)
         if progress is not None:
             progress.update(total_sources=len(adapters), current_source_index=0)
         results = {}

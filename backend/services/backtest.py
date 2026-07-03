@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 
 from config import settings
 from models import Asset, PriceSnapshot, Transaction
-from schemas import BacktestRequest, BacktestPoint, BacktestResult, BacktestTrade
+from schemas import BacktestPosition, BacktestRequest, BacktestPoint, BacktestResult, BacktestTrade
 from services.market_data import MarketDataService
 from services.prompt_parser import PromptParser, PromptParserError
 
@@ -76,6 +76,32 @@ class BacktestService:
                 filled[d] = last_price
         return filled
 
+    def _allocation_fractions(
+        self,
+        symbols: List[str],
+        allocations: Optional[Dict[str, float]],
+        positions: Optional[List[BacktestPosition]] = None,
+    ) -> Dict[str, float]:
+        if positions:
+            ratios = {
+                pos.symbol.upper(): (pos.ratio or 0) / 100.0
+                for pos in positions
+                if pos.symbol.upper() in symbols and pos.ratio is not None
+            }
+            if ratios:
+                return {s: ratios.get(s, 0.0) for s in symbols}
+        if allocations:
+            total = sum(
+                v for k, v in allocations.items() if k.strip().upper() in symbols
+            )
+            if total > 0:
+                return {
+                    s: allocations.get(s, allocations.get(s.upper(), 0)) / 100.0
+                    for s in symbols
+                }
+        n = len(symbols)
+        return {s: 1.0 / n for s in symbols}
+
     def run(self, request: BacktestRequest) -> BacktestResult:
         start = request.start_date
         end = request.end_date
@@ -83,12 +109,16 @@ class BacktestService:
         if start > end:
             raise ValueError("start_date must be before or equal to end_date")
 
-        if request.symbols:
+        requested_symbols = list(request.symbols or [])
+        if request.positions:
+            requested_symbols.extend(p.symbol for p in request.positions)
+
+        if requested_symbols:
             assets = self.session.exec(
-                select(Asset).where(Asset.symbol.in_(request.symbols), Asset.is_active == True)
+                select(Asset).where(Asset.symbol.in_(requested_symbols), Asset.is_active == True)
             ).all()
             existing_symbols = {a.symbol.upper() for a in assets}
-            for symbol in request.symbols:
+            for symbol in requested_symbols:
                 if symbol.upper() not in existing_symbols:
                     asset = Asset(
                         symbol=symbol.upper(),
@@ -120,6 +150,12 @@ class BacktestService:
 
         # Build trading days: union of all dates with price data, sorted
         all_dates = sorted(set().union(*[set(h.keys()) for h in histories_raw.values() if h]))
+        if not all_dates and request.positions:
+            # Manual positions with no market data: simulate over the full date range.
+            all_dates = [
+                start + datetime.timedelta(days=i)
+                for i in range((end - start).days + 1)
+            ]
         if not all_dates:
             return BacktestResult(
                 final_value=request.initial_cash,
@@ -130,6 +166,16 @@ class BacktestService:
                 trades=[],
                 warnings=warnings,
             )
+
+        # For custom positions with no market history, use the entered price on every trading day.
+        if request.positions:
+            symbol_to_asset = {asset_by_id[aid].symbol.upper(): aid for aid in histories_raw.keys()}
+            for pos in request.positions:
+                symbol = pos.symbol.upper()
+                asset_id = symbol_to_asset.get(symbol)
+                if asset_id is not None and not histories_raw[asset_id]:
+                    histories_raw[asset_id] = {d: float(pos.price) for d in all_dates}
+                    warnings.append(f"Sử dụng giá nhập tay {pos.price} cho {symbol} vì không có dữ liệu thị trường")
 
         # Forward-fill missing prices for each asset and record warnings
         histories: Dict[int, Dict[datetime.date, float]] = {}
@@ -167,9 +213,43 @@ class BacktestService:
 
         last_rebalance_date: Optional[datetime.date] = None
 
+        allocation_fractions = self._allocation_fractions(symbols, request.allocations, request.positions)
+
+        manual_symbols: set = set()
+        if request.positions:
+            first_date = all_dates[0]
+            for pos in request.positions:
+                symbol = pos.symbol.upper()
+                if symbol not in id_by_symbol:
+                    continue
+                asset_id = id_by_symbol[symbol]
+                if asset_id not in histories or not histories[asset_id]:
+                    continue
+                price = float(pos.price)
+                qty = float(pos.quantity)
+                cost = price * qty
+                if cost > cash + 1:
+                    warnings.append(f"Không đủ tiền mặt để mua {symbol} theo vị thế đã nhập")
+                    continue
+                cash -= cost
+                holdings[symbol] = qty
+                trades.append(
+                    BacktestTrade(
+                        date=first_date,
+                        symbol=symbol,
+                        action="BUY",
+                        quantity=round(qty, 6),
+                        price=round(price, 2),
+                    )
+                )
+                manual_symbols.add(symbol)
+
         # Buy-and-hold: invest each symbol on the first date it has a price
-        first_date_by_symbol = {symbol: min(histories[id_by_symbol[symbol]].keys()) for symbol in symbols}
-        symbol_allocation = request.initial_cash / len(symbols)
+        first_date_by_symbol = {
+            symbol: min(histories[id_by_symbol[symbol]].keys())
+            for symbol in symbols
+            if symbol not in manual_symbols
+        }
 
         for date in all_dates:
             if request.strategy == "rebalancing":
@@ -191,11 +271,10 @@ class BacktestService:
                             holdings[sym] * histories[id_by_symbol[sym]][date]
                             for sym in available_symbols
                         )
-                        target_value_per_symbol = current_value / len(available_symbols)
                         for symbol in available_symbols:
                             asset_id = id_by_symbol[symbol]
                             price = histories[asset_id][date]
-                            target_value = target_value_per_symbol
+                            target_value = current_value * allocation_fractions[symbol]
                             current_position_value = holdings[symbol] * price
                             diff_value = target_value - current_position_value
                             if abs(diff_value) > 1:
@@ -234,6 +313,7 @@ class BacktestService:
                     if date == first_date_by_symbol[symbol]:
                         asset_id = id_by_symbol[symbol]
                         price = histories[asset_id][date]
+                        symbol_allocation = request.initial_cash * allocation_fractions[symbol]
                         if price and price > 0 and cash >= symbol_allocation:
                             qty = symbol_allocation / price
                             cash -= qty * price

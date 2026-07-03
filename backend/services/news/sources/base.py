@@ -13,6 +13,7 @@ class NewsSourceAdapter(ABC):
     feed_url: Optional[str] = None
     base_url: Optional[str] = None
     is_active: bool = True
+    region: str = "vn"  # vn, global
 
     @abstractmethod
     def fetch(self) -> List[Dict]:
@@ -46,6 +47,7 @@ class NewsSourceAdapter(ABC):
             "tags": raw.get("tags"),
             "published_at": raw.get("published_at"),
             "language": self.language,
+            "region": self.region,
         }
 
 
@@ -63,6 +65,9 @@ class NewsSourceRegistry:
 
     def all(self) -> List[NewsSourceAdapter]:
         return [s for s in self._sources.values() if s.is_active]
+
+    def for_region(self, region: str) -> List[NewsSourceAdapter]:
+        return [s for s in self._sources.values() if s.is_active and s.region == region]
 
     def codes(self) -> List[str]:
         return [s.code for s in self.all()]

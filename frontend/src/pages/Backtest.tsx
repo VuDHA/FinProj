@@ -1,11 +1,15 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, Play, Sparkles } from "lucide-react";
+import { usePersistentState } from "../hooks/usePersistentState";
 import {
   Area,
   AreaChart,
   CartesianGrid,
+  Cell,
   Line,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,28 +26,76 @@ import { useAiQueue } from "../contexts/AiQueueContext";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
 
+const COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#FB7185", "#8B5CF6", "#3B82F6"];
 
 export function Backtest() {
   const today = new Date().toISOString().split("T")[0];
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const { isBusy, runAi } = useAiQueue();
 
-  const [form, setForm] = useState({
+  type Position = { symbol: string; price: string; quantity: string; ratio: string };
+  const [form, setForm] = usePersistentState<{
+    strategy: string;
+    start_date: string;
+    end_date: string;
+    initial_cash: string;
+    rebalance_frequency: string;
+    positions: Position[];
+  }>("backtest.form", {
     strategy: "buy_and_hold",
     start_date: oneYearAgo,
     end_date: today,
     initial_cash: "100000000",
     rebalance_frequency: "monthly",
-    symbols: "",
+    positions: [],
   });
-  const [prompt, setPrompt] = useState("");
-  const [promptMode, setPromptMode] = useState(false);
+  const [prompt, setPrompt] = usePersistentState("backtest.prompt", "");
+  const [promptMode, setPromptMode] = usePersistentState("backtest.promptMode", false);
   const [result, setResult] = useState<any>(null);
 
   const assets = useQuery({
     queryKey: ["assets"],
     queryFn: async () => (await API.get("/assets/")).data,
   });
+
+  const positionSymbols = useMemo(
+    () =>
+      form.positions
+        .map((p) => p.symbol.trim().toUpperCase())
+        .filter(Boolean),
+    [form.positions]
+  );
+
+  const totalRatio = useMemo(
+    () => form.positions.reduce((sum, p) => sum + (Number(p.ratio) || 0), 0),
+    [form.positions]
+  );
+
+  const totalValue = useMemo(
+    () =>
+      form.positions.reduce(
+        (sum, p) => sum + (Number(p.price) || 0) * (Number(p.quantity) || 0),
+        0
+      ),
+    [form.positions]
+  );
+
+  const hasRatios = useMemo(
+    () => form.positions.some((p) => Number(p.ratio) > 0),
+    [form.positions]
+  );
+
+  const allocationPieData = useMemo(
+    () =>
+      form.positions.map((p) => {
+        const name = p.symbol.trim().toUpperCase() || labels.backtest.asset;
+        const value = hasRatios
+          ? Number(p.ratio) || 0
+          : (Number(p.price) || 0) * (Number(p.quantity) || 0);
+        return { name, value };
+      }),
+    [form.positions, hasRatios]
+  );
 
   const run = useMutation({
     mutationFn: () =>
@@ -53,9 +105,15 @@ export function Backtest() {
         end_date: form.end_date,
         initial_cash: Number(form.initial_cash),
         rebalance_frequency: form.rebalance_frequency,
-        symbols: form.symbols
-          ? form.symbols.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
-          : undefined,
+        symbols: positionSymbols.length > 0 ? positionSymbols : undefined,
+        positions: form.positions
+          .filter((p) => p.symbol.trim() && Number(p.price) > 0 && Number(p.quantity) > 0)
+          .map((p) => ({
+            symbol: p.symbol.trim().toUpperCase(),
+            price: Number(p.price),
+            quantity: Number(p.quantity),
+            ratio: p.ratio ? Number(p.ratio) : undefined,
+          })),
       }),
     onSuccess: (response) => {
       setResult(response.data);
@@ -78,7 +136,12 @@ export function Backtest() {
         end_date: data.request.end_date,
         initial_cash: String(data.request.initial_cash),
         rebalance_frequency: data.request.rebalance_frequency,
-        symbols: data.request.symbols?.join(", ") ?? "",
+        positions: (data.request.positions || []).map((p: any) => ({
+          symbol: p.symbol || "",
+          price: String(p.price ?? ""),
+          quantity: String(p.quantity ?? ""),
+          ratio: p.ratio != null ? String(p.ratio) : "",
+        })),
       });
     },
   });
@@ -185,24 +248,201 @@ export function Backtest() {
               <option value="quarterly">{labels.backtest.quarterly}</option>
             </select>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
-              {labels.backtest.symbols}
-              <InfoTooltip content={labels.tooltips.backtestSymbols} />
-            </label>
-            <input
-              type="text"
-              className="input-fintech"
-              value={form.symbols}
-              placeholder={assets.data?.map((a: any) => a.symbol).join(", ") ?? ""}
-              onChange={(e) => setForm({ ...form, symbols: e.target.value })}
-            />
+          <div className="md:col-span-3">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider">
+                {labels.backtest.manualPositions}
+                <InfoTooltip content={labels.tooltips.backtestAllocation} />
+              </label>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500">
+                  {labels.backtest.totalValue}: {formatCurrency(totalValue)}
+                </span>
+                {hasRatios && (
+                  <span
+                    className={`text-xs ${totalRatio > 100 ? "text-accent-rose" : "text-slate-500"}`}
+                  >
+                    {labels.backtest.totalRatio}: {totalRatio}%
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = Math.floor(100 / form.positions.length);
+                    const remainder = 100 - base * form.positions.length;
+                    setForm((prev) => ({
+                      ...prev,
+                      positions: prev.positions.map((p, i) => ({
+                        ...p,
+                        ratio: String(base + (i === 0 ? remainder : 0)),
+                      })),
+                    }));
+                  }}
+                  disabled={form.positions.length === 0}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 disabled:text-slate-400"
+                >
+                  {labels.backtest.equalize}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {form.positions.map((position, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-3">
+                    <label className="block text-xs text-slate-400 mb-1">{labels.backtest.symbol}</label>
+                    <input
+                      type="text"
+                      className="input-fintech"
+                      value={position.symbol}
+                      placeholder="VCB"
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          positions: prev.positions.map((p, i) =>
+                            i === idx ? { ...p, symbol: e.target.value } : p
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="block text-xs text-slate-400 mb-1">{labels.backtest.price}</label>
+                    <input
+                      type="number"
+                      className="input-fintech"
+                      value={position.price}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          positions: prev.positions.map((p, i) =>
+                            i === idx ? { ...p, price: e.target.value } : p
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="block text-xs text-slate-400 mb-1">{labels.backtest.quantity}</label>
+                    <input
+                      type="number"
+                      className="input-fintech"
+                      value={position.quantity}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          positions: prev.positions.map((p, i) =>
+                            i === idx ? { ...p, quantity: e.target.value } : p
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-400 mb-1">{labels.backtest.ratio}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="input-fintech"
+                      value={position.ratio}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          positions: prev.positions.map((p, i) =>
+                            i === idx ? { ...p, ratio: e.target.value } : p
+                          ),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          positions: prev.positions.filter((_, i) => i !== idx),
+                        }))
+                      }
+                      className="text-xs text-accent-rose hover:text-rose-600"
+                    >
+                      {labels.backtest.remove}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  positions: [...prev.positions, { symbol: "", price: "", quantity: "", ratio: "" }],
+                }))
+              }
+              className="mt-3 text-sm text-indigo-600 hover:text-indigo-700"
+            >
+              + {labels.backtest.addAsset}
+            </button>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div className="h-48">
+                {allocationPieData.length > 0 && (hasRatios || totalValue > 0) ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={allocationPieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={2}
+                        stroke="none"
+                      >
+                        {allocationPieData.map((_, i) => (
+                          <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={chartTooltipStyle}
+                        formatter={(v: number, n: string) =>
+                          hasRatios ? [`${v}%`, n] : [formatCurrency(v), n]
+                        }
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-xs text-slate-500">
+                    {labels.backtest.noAllocation}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap content-start gap-2">
+                {allocationPieData.map((entry, i) => (
+                  <div key={entry.name} className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                    />
+                    {entry.name} {hasRatios ? `${entry.value}%` : formatCurrency(entry.value)}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3">
           <button
             onClick={() => run.mutate()}
-            disabled={run.isPending || !form.start_date || !form.end_date || isBusy}
+            disabled={
+              run.isPending ||
+              !form.start_date ||
+              !form.end_date ||
+              isBusy ||
+              (hasRatios && totalRatio > 100)
+            }
             className="btn-primary"
           >
             <Play className="w-4 h-4" />

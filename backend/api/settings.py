@@ -5,7 +5,16 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import AllocationTarget, Setting
-from schemas import AllocationTargetCreate, AllocationTargetRead, AssetSourceInfo, SettingCreate, SettingRead
+from schemas import (
+    AllocationTargetCreate,
+    AllocationTargetRead,
+    AssetSourceInfo,
+    AssetTypeConfig,
+    AssetTypeConfigMap,
+    SettingCreate,
+    SettingRead,
+)
+from services.asset_type_config import get_asset_types, save_asset_types
 from services.env_config import get_env_config, update_env_config
 from services.source_config import get_default_sources, is_valid_source_for_type, set_default_sources
 from services.sources import registry
@@ -52,6 +61,19 @@ def save_default_source_settings(
             )
         sources[asset_type] = source
     return set_default_sources(session, sources)
+
+
+@router.get("/asset-types", response_model=AssetTypeConfigMap)
+def get_asset_type_settings(session: Session = Depends(get_session)):
+    return {"types": get_asset_types(session)}
+
+
+@router.post("/asset-types", response_model=AssetTypeConfigMap)
+def save_asset_type_settings(
+    payload: AssetTypeConfigMap,
+    session: Session = Depends(get_session),
+):
+    return {"types": save_asset_types(session, {k: v.model_dump() for k, v in payload.types.items()})}
 
 
 @router.post("/", response_model=SettingRead)

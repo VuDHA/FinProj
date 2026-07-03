@@ -204,6 +204,7 @@ class VcbfFundSource(Source):
                     "name": info["name"],
                     "exchange": "VCBF",
                     "type": "FUND",
+                    "fund_type": "FUND",
                     "metadata": {"slug": info["slug"]},
                 }
             )

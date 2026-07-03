@@ -71,6 +71,10 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-accent-rose px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/25 transition-all hover:shadow-rose-500/40 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:brightness-100;
   }
 
+  .btn-xs {
+    @apply px-2 py-1 text-xs rounded-lg;
+  }
+
   .table-fintech {
     @apply w-full text-sm;
   }

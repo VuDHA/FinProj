@@ -112,7 +112,7 @@ export function SmartImportDialog({ importType, onClose, onSuccess }: SmartImpor
             <input
               id="smart-import-file"
               type="file"
-              accept=".csv,.xlsx,.xls"
+              accept=".csv,.xlsx,.zip"
               className="hidden"
               onChange={handleFileChange}
             />
@@ -125,7 +125,7 @@ export function SmartImportDialog({ importType, onClose, onSuccess }: SmartImpor
                 {file ? file.name : labels.importExport.chooseFile}
               </span>
               <span className="text-xs text-slate-400">
-                CSV, .xlsx (tối đa 10MB)
+                .csv, .xlsx, .zip (tối đa 10MB)
               </span>
             </label>
           </div>

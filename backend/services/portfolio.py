@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 
 from models import Asset, PriceSnapshot, Transaction
 from schemas import PortfolioItem, PortfolioSummary
+from services.asset_type_config import is_market_price_type
 from services.market_data import MarketDataService
 
 
@@ -73,6 +74,8 @@ class PortfolioService:
 
         for asset in held_assets:
             if asset.type in ("STOCK", "FUND", "ETF"):
+                continue
+            if not is_market_price_type(self.session, asset.type):
                 continue
             data = self.market.fetch_price(asset)
             if data:

@@ -5,12 +5,13 @@ from typing import Dict, List, Optional, Set
 from sqlmodel import Session
 
 from services.news.dictionaries import analyze_impact, analyze_sentiment, get_known_symbols
+from services.news.relevance import RelevanceScorer
 from services.news.tagging import TaggingService
 from services.rag_context import RagContextService
 
 
 class NewsProcessor:
-    """Rule-based processor that enriches raw articles with symbols, tags, sentiment, and impact."""
+    """Rule-based processor that enriches raw articles with symbols, tags, sentiment, impact, and relevance."""
 
     def __init__(
         self,
@@ -30,6 +31,7 @@ class NewsProcessor:
             except Exception as e:
                 print(f"[news:processor] failed to build RAG context: {e}")
         self._tagger = TaggingService(context=rag_context)
+        self._relevance = RelevanceScorer()
 
     # Vietnamese/English terms that are not stock symbols but match ticker patterns
     _STOP_WORDS: Set[str] = {
@@ -126,6 +128,13 @@ class NewsProcessor:
         sentiment = analyze_sentiment(text, language)
         impact = analyze_impact(text, language)
 
+        # Relevance / standout scoring
+        scoring_input = dict(article)
+        scoring_input["symbols"] = symbols
+        scoring_input["sentiment_score"] = round(sentiment, 2)
+        scoring_input["impact_score"] = round(impact, 2)
+        relevance = self._relevance.score(scoring_input)
+
         # Generate a simple extractive summary if none provided
         summary = article.get("summary")
         if not summary and article.get("content_text"):
@@ -140,10 +149,74 @@ class NewsProcessor:
         processed["tags"] = article.get("tags") or self._tagger.join(tags)
         processed["sentiment_score"] = round(sentiment, 2)
         processed["impact_score"] = round(impact, 2)
+        processed["relevance_score"] = relevance["relevance_score"]
+        processed["is_standout"] = relevance["is_standout"]
         processed["summary"] = summary
         processed["fetched_at"] = datetime.datetime.utcnow()
         return processed
 
     def process_many(self, articles: List[Dict]) -> List[Dict]:
-        """Process a list of articles."""
-        return [self.process(a) for a in articles]
+        """Process a list of articles, using batch AI for tagging and relevance."""
+        if not articles:
+            return []
+
+        # First pass: rule-based enrichment (symbols, sentiment, impact)
+        enriched = []
+        for article in articles:
+            text = " ".join(
+                filter(
+                    None,
+                    [
+                        article.get("title", ""),
+                        article.get("summary", ""),
+                        article.get("content_text", ""),
+                    ],
+                )
+            )
+            language = article.get("language", "vi")
+            symbols = self.extract_symbols(text)
+            sentiment = analyze_sentiment(text, language)
+            impact = analyze_impact(text, language)
+            scoring_input = dict(article)
+            scoring_input["symbols"] = symbols
+            scoring_input["sentiment_score"] = round(sentiment, 2)
+            scoring_input["impact_score"] = round(impact, 2)
+            enriched.append(scoring_input)
+
+        # Batch AI for tagging and relevance
+        try:
+            tags_list = self._tagger.generate_batch(enriched)
+            relevance_list = self._relevance.score_batch(enriched)
+        except Exception as e:
+            print(f"[processor] batch ai failed: {e}")
+            # Fall back to one-by-one processing
+            return [self.process(a) for a in articles]
+
+        # Build final results
+        results = []
+        for article_input, tags, relevance in zip(enriched, tags_list, relevance_list):
+            processed = self._finalize_article(article_input, tags, relevance)
+            results.append(processed)
+        return results
+
+    def _finalize_article(
+        self,
+        enriched: Dict,
+        tags: List[str],
+        relevance: Dict[str, Any],
+    ) -> Dict:
+        """Build a processed article from rule-based fields and AI outputs."""
+        summary = enriched.get("summary")
+        if not summary and enriched.get("content_text"):
+            sentences = re.split(r"(?<=[.!?])\s+", enriched["content_text"])
+            summary = " ".join(sentences[:2]).strip()
+            if len(summary) > 500:
+                summary = summary[:500] + "..."
+
+        processed = dict(enriched)
+        processed["tags"] = enriched.get("tags") or self._tagger.join(tags)
+        processed["relevance_score"] = relevance["relevance_score"]
+        processed["is_standout"] = relevance["is_standout"]
+        processed["summary"] = summary
+        processed["fetched_at"] = datetime.datetime.utcnow()
+        return processed

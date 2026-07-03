@@ -54,6 +54,18 @@ class Income(SQLModel, table=True):
     notes: Optional[str] = None
 
 
+class Alert(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    asset_id: int = Field(foreign_key="asset.id")
+    type: str  # STOP_LOSS, TAKE_PROFIT
+    value_type: str  # VALUE, PERCENT
+    value: float
+    reference_price: Optional[float] = None
+    is_active: bool = True
+    created_at: Optional[datetime.datetime] = Field(default_factory=datetime.datetime.utcnow)
+    resolved_at: Optional[datetime.datetime] = None
+
+
 class AllocationTarget(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     type: str = Field(index=True, unique=True)  # STOCK, FUND, ETF, GOLD, CRYPTO
@@ -75,6 +87,7 @@ class NewsSource(SQLModel, table=True):
     feed_url: Optional[str] = None
     config: Optional[str] = None  # JSON string for source-specific params
     is_active: bool = Field(default=True)
+    region: str = Field(default="vn")  # vn, global
     last_crawled_at: Optional[datetime.datetime] = None
     fetch_interval_minutes: int = Field(default=30)
     priority: int = Field(default=0)
@@ -96,11 +109,15 @@ class NewsArticle(SQLModel, table=True):
     fetched_at: datetime.datetime = Field(default_factory=datetime.datetime.utcnow)
     sentiment_score: Optional[float] = None  # -1.0 to +1.0
     impact_score: Optional[float] = None  # 0.0 to 1.0
+    relevance_score: Optional[float] = None  # 0.0 to 1.0
+    is_standout: bool = Field(default=False)
     is_active: bool = Field(default=True)
     language: Optional[str] = None  # vi, en, etc.
+    region: str = Field(default="vn")
 
     __table_args__ = (
         Index("idx_articles_published_source", "published_at", "source_id"),
+        Index("idx_articles_region_standout_published", "region", "is_standout", "published_at"),
     )
 
 

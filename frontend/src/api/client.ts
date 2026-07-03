@@ -4,9 +4,6 @@ import { labels } from "../i18n/vi";
 const API = axios.create({
   baseURL: "/api/v1",
   timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 API.interceptors.response.use(

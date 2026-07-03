@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 
 from database import engine
 from models import Asset, PriceSnapshot
+from services.asset_type_config import is_market_price_type
 from services.market_data import MarketDataService
 
 
@@ -37,14 +38,25 @@ except ImportError:
 
 
 def update_all_prices():
+    from api.alerts import evaluate_notifications
+
     with Session(engine) as session:
         service = MarketDataService(session)
         assets = session.exec(select(Asset).where(Asset.is_active == True)).all()
         for asset in assets:
+            if not is_market_price_type(session, asset.type):
+                continue
             data, _ = service.fetch_price_with_warnings(asset)
             if _get_or_create_snapshot(session, asset, data):
                 print(f"[scheduler] updated {asset.symbol}: {data['price']}")
         session.commit()
+
+        try:
+            triggered = evaluate_notifications(session)
+            if triggered:
+                print(f"[scheduler] {len(triggered)} price alerts triggered")
+        except Exception as e:
+            print(f"[scheduler] alert evaluation error: {e}")
 
 
 def start_scheduler(hour: int = 15, minute: int = 35):

@@ -1,5 +1,5 @@
 import json
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse
@@ -11,7 +11,7 @@ from schemas import (
     SmartImportPreviewResponse,
     SmartImportRequest,
 )
-from services import csv_io
+from services import csv_io, file_utils
 from services.smart_import import SmartImportService
 
 router = APIRouter(prefix="/import-export", tags=["import-export"])
@@ -37,15 +37,25 @@ def export_transactions(session: Session = Depends(get_session)):
     )
 
 
+def _read_simple_import_file(file: UploadFile) -> List[Dict[str, Any]]:
+    try:
+        file_utils.validate_extension(file.filename, allow_zip=True)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    content = file.file.read()
+    try:
+        return file_utils.read_rows(content, file.filename or "")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/import/assets", response_model=CsvImportResult)
 def import_assets(
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must be a CSV")
-    content = file.file.read().decode("utf-8")
-    return csv_io.import_assets(session, content)
+    rows = _read_simple_import_file(file)
+    return csv_io.import_assets_from_rows(session, rows)
 
 
 @router.post("/import/transactions", response_model=CsvImportResult)
@@ -53,10 +63,8 @@ def import_transactions(
     file: UploadFile = File(...),
     session: Session = Depends(get_session),
 ):
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="File must be a CSV")
-    content = file.file.read().decode("utf-8")
-    return csv_io.import_transactions(session, content)
+    rows = _read_simple_import_file(file)
+    return csv_io.import_transactions_from_rows(session, rows)
 
 
 @router.post("/smart-preview", response_model=SmartImportPreviewResponse)
@@ -68,6 +76,10 @@ def smart_import_preview(
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="File is required")
+    try:
+        file_utils.validate_extension(file.filename, allow_zip=True)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     content = file.file.read()
     service = SmartImportService()
     try:
@@ -88,6 +100,10 @@ def smart_import(
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="File is required")
+    try:
+        file_utils.validate_extension(file.filename, allow_zip=True)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     try:
         payload = SmartImportRequest.model_validate_json(payload_json)
     except ValueError as e:

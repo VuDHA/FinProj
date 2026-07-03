@@ -7,6 +7,7 @@ import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../contexts/ToastContext";
+import { usePersistentState } from "../hooks/usePersistentState";
 import { labels } from "../i18n/vi";
 
 type EnvType = "str" | "int" | "bool" | "list";
@@ -27,16 +28,18 @@ interface EnvGroup {
 const GROUPS: EnvGroup[] = [
   { title: labels.envConfig.groupCore, keys: ["DATABASE_URL", "API_PREFIX", "CORS_ORIGINS"] },
   { title: labels.envConfig.groupScheduler, keys: ["SCHEDULER_HOUR", "SCHEDULER_MINUTE"] },
-  { title: labels.envConfig.groupOllama, keys: [
+  {
+    title: labels.envConfig.groupOllama, keys: [
       "OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "OLLAMA_TIMEOUT", "OLLAMA_MAX_TAGS",
       "OLLAMA_AI_QUEUE_TIMEOUT_SECONDS", "OLLAMA_EMBEDDING_ENABLED", "OLLAMA_EMBEDDING_MODEL", "OLLAMA_EMBEDDING_DIMENSION",
-    ] },
+    ]
+  },
 ];
 
 export function EnvConfig() {
   const qc = useQueryClient();
   const { showToast } = useToast();
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = usePersistentState<Record<string, string>>("envConfig.values", {});
   const [savedKey, setSavedKey] = useState<string | null>(null);
 
   const query = useQuery<EnvItem[]>({

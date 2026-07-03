@@ -14,7 +14,10 @@ export interface Article {
   fetched_at: string;
   sentiment_score: number | null;
   impact_score: number | null;
+  relevance_score: number | null;
+  is_standout: boolean;
   language: string | null;
+  region: string;
   symbols: string[];
   sentiment_label: string | null;
   impact_label: string | null;
@@ -55,6 +58,7 @@ export interface NewsSource {
   id: number;
   name: string;
   code: string;
+  region: string;
 }
 
 export interface AiSummaryRequest {
@@ -66,6 +70,7 @@ export interface AiSummaryRequest {
   date_to?: string;
   source_id?: number;
   tag?: string;
+  region?: "vn" | "global";
   limit?: number;
 }
 
@@ -100,6 +105,11 @@ export async function getFeed(params?: Record<string, any>): Promise<ArticleList
   return data;
 }
 
+export async function getTrending(hours = 24, region: "vn" | "global" = "vn"): Promise<Trending> {
+  const { data } = await API.get("/news/trending/now", { params: { hours, region } });
+  return data;
+}
+
 export async function getSources(): Promise<NewsSource[]> {
   const { data } = await API.get("/news/sources");
   return data;
@@ -112,11 +122,6 @@ export async function aiSummary(payload: AiSummaryRequest): Promise<AiSummaryRes
 
 export async function getAiStatus(): Promise<AiStatus> {
   const { data } = await API.get("/ai/status");
-  return data;
-}
-
-export async function getTrending(hours = 24): Promise<Trending> {
-  const { data } = await API.get("/news/trending/now", { params: { hours } });
   return data;
 }
 
@@ -166,9 +171,13 @@ export interface RefreshProgress {
 
 export async function* refreshNewsStream(
   source?: string,
+  region?: "vn" | "global",
   signal?: AbortSignal
 ): AsyncGenerator<RefreshProgress, RefreshProgress, unknown> {
-  const { data } = await API.post("/news/refresh", undefined, { params: source ? { source } : undefined });
+  const params: Record<string, string> = {};
+  if (source) params.source = source;
+  if (region) params.region = region;
+  const { data } = await API.post("/news/refresh", undefined, { params: Object.keys(params).length ? params : undefined });
   const jobId = data.job_id as string;
 
   const res = await fetch(`/api/v1/news/refresh/${jobId}/stream`, { signal });

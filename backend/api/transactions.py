@@ -6,9 +6,32 @@ from sqlmodel import Session, select
 from database import get_session
 from models import Asset, Transaction
 from schemas import TransactionCreate, TransactionRead
+from services.asset_type_config import is_market_price_type
+from services.market_data import MarketDataService
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
+
+def repair_zero_price_transactions(session: Session) -> int:
+    """Backfill missing/zero BUY prices for market-priced assets. Returns count repaired."""
+    repaired = 0
+    txs = session.exec(
+        select(Transaction).where(Transaction.type == "BUY", Transaction.price <= 0)
+    ).all()
+    for tx in txs:
+        asset = session.get(Asset, tx.asset_id)
+        if not asset or not asset.is_active:
+            continue
+        if not is_market_price_type(session, asset.type):
+            continue
+        resolved = MarketDataService(session).resolve_historical_price(asset, tx.date)
+        if resolved and resolved > 0:
+            tx.price = resolved
+            session.add(tx)
+            repaired += 1
+    if repaired:
+        session.commit()
+    return repaired
 
 @router.get("/", response_model=List[TransactionRead])
 def list_transactions(session: Session = Depends(get_session)):
@@ -26,8 +49,20 @@ def create_transaction(
     if transaction.type not in ("BUY", "SELL"):
         raise HTTPException(status_code=400, detail="Transaction type must be BUY or SELL")
 
-    if transaction.quantity <= 0 or transaction.price < 0:
-        raise HTTPException(status_code=400, detail="Quantity and price must be positive")
+    if transaction.price is None or transaction.price <= 0:
+        if is_market_price_type(session, asset.type):
+            resolved = MarketDataService(session).resolve_historical_price(asset, transaction.date)
+            if resolved is not None:
+                transaction.price = resolved
+
+    if transaction.price is None or transaction.price <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Giá giao dịch không hợp lệ. Vui lòng cung cấp giá hoặc đảm bảo tài sản có dữ liệu thị trường.",
+        )
+
+    if transaction.quantity <= 0:
+        raise HTTPException(status_code=400, detail="Quantity must be positive")
 
     if transaction.type == "SELL":
         existing = session.exec(

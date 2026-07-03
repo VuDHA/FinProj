@@ -4,10 +4,11 @@ from typing import Dict, List, Optional, Tuple
 
 import requests
 
-from models import Asset
+from models import Asset, PriceSnapshot
+from services.asset_type_config import is_market_price_type
 from services.source_selector import SourceSelector
 from services.sources import registry
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 
 def _today() -> datetime.date:
@@ -30,16 +31,95 @@ class MarketDataService:
         self.session = session
         self.selector = SourceSelector(session)
 
+    def _ensure_asset(self, symbol: str, asset_type: str) -> Asset:
+        symbol = symbol.upper()
+        asset = self.session.exec(
+            select(Asset).where(Asset.symbol == symbol, Asset.type == asset_type)
+        ).first()
+        if asset:
+            return asset
+        asset = Asset(symbol=symbol, type=asset_type, name=symbol, is_active=True)
+        self.session.add(asset)
+        self.session.commit()
+        self.session.refresh(asset)
+        return asset
+
+    def _save_history(
+        self,
+        asset_id: int,
+        history: Dict[datetime.date, float],
+        existing: Optional[Dict[datetime.date, "PriceSnapshot"]] = None,
+    ) -> None:
+        if not history:
+            return
+        existing = existing or {}
+        for d, price in sorted(history.items()):
+            if price <= 0:
+                continue
+            snapshot = existing.get(d)
+            if snapshot:
+                snapshot.price = price
+            else:
+                self.session.add(
+                    PriceSnapshot(asset_id=asset_id, date=d, price=price)
+                )
+        self.session.commit()
+
     # ------------------------------------------------------------------
     # Price API
     # ------------------------------------------------------------------
 
     def fetch_price(self, asset: Asset) -> Optional[dict]:
+        if not is_market_price_type(self.session, asset.type):
+            return None
         data, _ = self.selector.fetch_price(asset)
         return data
 
     def fetch_price_with_warnings(self, asset: Asset) -> Tuple[Optional[dict], List[str]]:
+        if not is_market_price_type(self.session, asset.type):
+            return None, [f"Asset type {asset.type} does not support automatic price fetch"]
         return self.selector.fetch_price(asset)
+
+    def resolve_historical_price(
+        self, asset: Asset, date: datetime.date
+    ) -> Optional[float]:
+        """Return the best market price for `asset` on `date`.
+
+        For historical dates the current live price is intentionally avoided,
+        because using today's price as a past cost basis makes PnL look like 0%.
+        """
+        # Latest stored snapshot on or before the date.
+        snapshot = self.session.exec(
+            select(PriceSnapshot)
+            .where(PriceSnapshot.asset_id == asset.id, PriceSnapshot.date <= date)
+            .order_by(PriceSnapshot.date.desc())
+        ).first()
+        if snapshot and snapshot.price > 0:
+            return snapshot.price
+
+        # Historical price for the exact date from a market source.
+        if is_market_price_type(self.session, asset.type):
+            history = self.selector.fetch_history(asset, date, date)
+            price = history.get(date)
+            if price and price > 0:
+                return price
+
+        # Earliest stored snapshot on or after the date (closest available).
+        snapshot = self.session.exec(
+            select(PriceSnapshot)
+            .where(PriceSnapshot.asset_id == asset.id, PriceSnapshot.date >= date)
+            .order_by(PriceSnapshot.date.asc())
+        ).first()
+        if snapshot and snapshot.price > 0:
+            return snapshot.price
+
+        # Current live price is only acceptable as a fallback for today.
+        if date >= _today():
+            data = self.fetch_price(asset)
+            if data and data.get("price", 0) > 0:
+                return data["price"]
+
+        return None
 
     def fetch_quote(self, symbol: str, asset_type: str = "STOCK") -> dict:
         asset = Asset(symbol=symbol, type=asset_type, name=symbol, is_active=True)
@@ -188,7 +268,38 @@ class MarketDataService:
         start: datetime.date,
         end: datetime.date,
     ) -> Dict[datetime.date, float]:
-        return self.fetch_history(symbol, asset_type, start, end)
+        asset = Asset(symbol=symbol, type=asset_type, name=symbol, is_active=True)
+        return self.selector.fetch_history(asset, start, end)
+
+    def fetch_market_history_with_backfill(
+        self,
+        symbol: str,
+        asset_type: str,
+        start: datetime.date,
+        end: datetime.date,
+    ) -> Dict[datetime.date, float]:
+        """Fetch market history, backfilling into PriceSnapshot when local data is missing."""
+        asset = self._ensure_asset(symbol, asset_type)
+        snapshots = self.session.exec(
+            select(PriceSnapshot).where(
+                PriceSnapshot.asset_id == asset.id,
+                PriceSnapshot.date >= start,
+                PriceSnapshot.date <= end,
+            ).order_by(PriceSnapshot.date.asc())
+        ).all()
+        existing_map = {s.date: s for s in snapshots}
+
+        # If we already have enough data for the requested range, return it.
+        if snapshots:
+            span = (end - start).days + 1
+            if len(snapshots) >= span * 0.5:
+                return {s.date: s.price for s in snapshots}
+
+        # Otherwise fetch live data and backfill into the database.
+        live = self.fetch_market_history(symbol, asset_type, start, end)
+        if live:
+            self._save_history(asset.id, live, existing_map)
+        return live
 
     def fetch_all_stocks(self) -> List[dict]:
         return self.selector.fetch_listing("STOCK")

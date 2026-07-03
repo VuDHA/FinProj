@@ -47,17 +47,24 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useAiQueue } from "../contexts/AiQueueContext";
 import { useToast } from "../contexts/ToastContext";
+import { usePersistentState } from "../hooks/usePersistentState";
 import { labels } from "../i18n/vi";
 
 type Tab = "feed" | "all" | "trending" | "watchlist" | "alerts";
+type Region = "vn" | "global";
 type ImpactOption = "" | "high" | "medium";
 
-const tabs: { key: Tab; label: string; icon: typeof Newspaper }[] = [
+const vnTabs: { key: Tab; label: string; icon: typeof Newspaper }[] = [
   { key: "feed", label: labels.news.feed, icon: UserCircle },
   { key: "all", label: labels.news.all, icon: Newspaper },
   { key: "trending", label: labels.news.trending, icon: TrendingUp },
   { key: "watchlist", label: labels.news.watchlist, icon: Star },
   { key: "alerts", label: labels.news.alerts, icon: Bell },
+];
+
+const globalTabs: { key: Tab; label: string; icon: typeof Newspaper }[] = [
+  { key: "all", label: labels.news.all, icon: Newspaper },
+  { key: "trending", label: labels.news.trending, icon: TrendingUp },
 ];
 
 function sentimentClass(label: string | null) {
@@ -264,22 +271,24 @@ export function News() {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const { isBusy, runAi } = useAiQueue();
-  const [activeTab, setActiveTab] = useState<Tab>("feed");
-  const [search, setSearch] = useState("");
+  const [region, setRegion] = usePersistentState<Region>("news.region", "vn");
+  const [activeTab, setActiveTab] = usePersistentState<Tab>("news.activeTab", "feed");
+  const tabs = region === "vn" ? vnTabs : globalTabs;
+  const [search, setSearch] = usePersistentState("news.search", "");
   const debouncedSearch = useDebounce(search, 300);
-  const [symbolFilter, setSymbolFilter] = useState("");
-  const [sentimentFilter, setSentimentFilter] = useState("");
-  const [impactFilter, setImpactFilter] = useState<ImpactOption>("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [page, setPage] = useState(0);
-  const [feedPage, setFeedPage] = useState(0);
-  const [briefScope, setBriefScope] = useState<"vn" | "global">("vn");
+  const [symbolFilter, setSymbolFilter] = usePersistentState("news.symbolFilter", "");
+  const [sentimentFilter, setSentimentFilter] = usePersistentState("news.sentimentFilter", "");
+  const [impactFilter, setImpactFilter] = usePersistentState<ImpactOption>("news.impactFilter", "");
+  const [tagFilter, setTagFilter] = usePersistentState("news.tagFilter", "");
+  const [sourceFilter, setSourceFilter] = usePersistentState("news.sourceFilter", "");
+  const [dateFrom, setDateFrom] = usePersistentState("news.dateFrom", "");
+  const [dateTo, setDateTo] = usePersistentState("news.dateTo", "");
+  const [page, setPage] = usePersistentState("news.page", 0);
+  const [feedPage, setFeedPage] = usePersistentState("news.feedPage", 0);
+  const briefScope = region;
   const pageSize = 10;
-  const [newSymbol, setNewSymbol] = useState("");
-  const [newName, setNewName] = useState("");
+  const [newSymbol, setNewSymbol] = usePersistentState("news.watchlistSymbol", "");
+  const [newName, setNewName] = usePersistentState("news.watchlistName", "");
   const [aiSummaryOpen, setAiSummaryOpen] = useState(false);
   const [aiSummaryData, setAiSummaryData] = useState<AiSummaryResponse | null>(null);
 
@@ -311,6 +320,13 @@ export function News() {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    setActiveTab("all");
+    resetFilters();
+    setFeedPage(0);
+    setAiSummaryOpen(false);
+  }, [region]);
+
   const [refreshProgress, setRefreshProgress] = useState<RefreshProgress | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<Error | null>(null);
@@ -326,7 +342,7 @@ export function News() {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      for await (const progress of refreshNewsStream(undefined, controller.signal)) {
+      for await (const progress of refreshNewsStream(undefined, region, controller.signal)) {
         setRefreshProgress(progress);
         if (progress.status === "completed" || progress.status === "error" || progress.status === "timeout") {
           break;
@@ -356,6 +372,7 @@ export function News() {
   const allNews = useQuery({
     queryKey: [
       "news",
+      region,
       debouncedSearch,
       symbolFilter,
       sentimentFilter,
@@ -369,6 +386,7 @@ export function News() {
     ],
     queryFn: () =>
       getNews({
+        region,
         search: debouncedSearch || undefined,
         symbol: symbolFilter || undefined,
         sentiment: sentimentFilter || undefined,
@@ -385,19 +403,20 @@ export function News() {
   });
 
   const feed = useQuery({
-    queryKey: ["news-feed", feedPage, pageSize],
+    queryKey: ["news-feed", region, feedPage, pageSize],
     queryFn: () =>
       getFeed({
+        region,
         limit: pageSize,
         offset: feedPage * pageSize,
       }),
-    enabled: activeTab === "feed",
+    enabled: activeTab === "feed" && region === "vn",
     placeholderData: keepPreviousData,
   });
 
   const trending = useQuery({
-    queryKey: ["news-trending"],
-    queryFn: () => getTrending(),
+    queryKey: ["news-trending", region],
+    queryFn: () => getTrending(24, region),
     enabled: activeTab === "trending",
   });
 
@@ -410,7 +429,7 @@ export function News() {
   const alerts = useQuery({
     queryKey: ["news-alerts"],
     queryFn: () => getAlerts(),
-    enabled: activeTab === "alerts",
+    enabled: activeTab === "alerts" && region === "vn",
   });
 
   const sources = useQuery({
@@ -429,7 +448,7 @@ export function News() {
   const watchlist = useQuery({
     queryKey: ["news-watchlist"],
     queryFn: () => getWatchlist(),
-    enabled: activeTab === "watchlist" || activeTab === "feed",
+    enabled: region === "vn" && (activeTab === "watchlist" || activeTab === "feed"),
   });
 
   const addWatchlistMutation = useMutation({
@@ -474,6 +493,7 @@ export function News() {
           source_id: sourceFilter ? Number(sourceFilter) : undefined,
           date_from: dateFrom || undefined,
           date_to: dateTo || undefined,
+          region,
           limit: 5,
         })
       ),
@@ -565,30 +585,36 @@ export function News() {
         </div>
       )}
 
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100">
+          {([
+            { key: "vn", label: labels.news.vnNews ?? "Tin Việt Nam" },
+            { key: "global", label: labels.news.globalNews ?? "Tin Quốc tế" },
+          ] as { key: Region; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setRegion(key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${region === key
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+                }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {brief.data && (
         <FintechCard delay={0.05}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <h3 className="card-title inline-flex items-center">
               <Flame className="w-4 h-4 mr-2 text-amber-500" />
               {labels.news.dailyBrief}
+              <span className="ml-2 text-xs font-normal text-slate-500">
+                {region === "vn" ? labels.news.vnBrief ?? "Việt Nam" : labels.news.globalBrief ?? "Toàn cầu"}
+              </span>
             </h3>
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100">
-              {([
-                { key: "vn", label: labels.news.vnBrief ?? "Việt Nam" },
-                { key: "global", label: labels.news.globalBrief ?? "Toàn cầu" },
-              ] as { key: "vn" | "global"; label: string }[]).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setBriefScope(key)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${briefScope === key
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
-                    }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
           </div>
           {brief.data.top_articles.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -693,11 +719,13 @@ export function News() {
                 disabled={sources.isLoading}
               >
                 <option value="">{labels.news.allSources}</option>
-                {sources.data?.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
+                {sources.data
+                  ?.filter((s) => s.region === region)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
               </select>
               <div className="relative min-w-[150px] flex-1">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -813,7 +841,10 @@ export function News() {
               />
             </div>
           ) : (
-            <EmptyState title={labels.news.noNews} description="Nhấn Làm mới tin để thu thập tin tức từ các nguồn." />
+            <EmptyState
+              title={region === "global" ? labels.news.noGlobalNews : labels.news.noNews}
+              description="Nhấn Làm mới tin để thu thập tin tức từ các nguồn."
+            />
           )
         ) : activeTab === "trending" ? (
           trending.data ? (

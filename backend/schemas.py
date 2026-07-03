@@ -16,14 +16,25 @@ class DefaultSourceRequest(BaseModel):
     sources: dict
 
 
+class AssetTypeConfig(BaseModel):
+    label: str
+    fields: List[str]
+    marketPrice: bool = True
+
+
+class AssetTypeConfigMap(BaseModel):
+    types: Dict[str, AssetTypeConfig]
+
+
 class AssetCreate(BaseModel):
-    symbol: str
+    symbol: Optional[str] = None
     name: str
     type: str
     exchange: Optional[str] = None
     currency: str = "VND"
     source: Optional[str] = None
     source_params: Optional[str] = None
+    manual_value: Optional[float] = None
 
 
 class AssetRead(AssetCreate):
@@ -35,7 +46,7 @@ class TransactionCreate(BaseModel):
     asset_id: int
     type: str
     quantity: float
-    price: float
+    price: Optional[float] = None
     fee: float = 0.0
     date: datetime.date
     notes: Optional[str] = None
@@ -43,6 +54,40 @@ class TransactionCreate(BaseModel):
 
 class TransactionRead(TransactionCreate):
     id: int
+
+
+class AlertCreate(BaseModel):
+    asset_id: int
+    type: str  # STOP_LOSS, TAKE_PROFIT
+    value_type: str  # VALUE, PERCENT
+    value: float
+
+
+class AlertRead(BaseModel):
+    id: int
+    asset_id: int
+    symbol: Optional[str] = None
+    name: Optional[str] = None
+    type: str
+    value_type: str
+    value: float
+    reference_price: Optional[float] = None
+    is_active: bool
+    created_at: Optional[datetime.datetime] = None
+    resolved_at: Optional[datetime.datetime] = None
+
+
+class NotificationRead(BaseModel):
+    id: int
+    asset_id: int
+    symbol: str
+    name: str
+    type: str
+    value_type: str
+    value: float
+    reference_price: Optional[float] = None
+    current_price: float
+    message: str
 
 
 class PriceSnapshotRead(BaseModel):
@@ -73,6 +118,7 @@ class MarketSymbol(BaseModel):
     name: str
     exchange: str
     type: str
+    fund_type: Optional[str] = None
 
 
 class FundDetail(BaseModel):
@@ -116,12 +162,29 @@ class BacktestRequest(BaseModel):
     initial_cash: float = 100_000_000
     rebalance_frequency: str = "monthly"  # monthly | quarterly
     symbols: Optional[List[str]] = None
+    allocations: Optional[Dict[str, float]] = None
+    positions: Optional[List["BacktestPosition"]] = None
 
     @model_validator(mode="after")
     def check_dates(self):
         if self.start_date > self.end_date:
             raise ValueError("start_date must be before or equal to end_date")
         return self
+
+    @model_validator(mode="after")
+    def check_allocations(self):
+        if self.allocations:
+            total = sum(self.allocations.values())
+            if total > 100:
+                raise ValueError("allocations must sum to <= 100")
+        return self
+
+
+class BacktestPosition(BaseModel):
+    symbol: str
+    price: float
+    quantity: float
+    ratio: Optional[float] = None  # target allocation in percent
 
 
 class BacktestPoint(BaseModel):
@@ -186,6 +249,11 @@ class IncomeSummary(BaseModel):
     total: float
 
 
+class PortfolioValueByType(BaseModel):
+    type: str
+    value: float
+
+
 class AnalyticsSummary(BaseModel):
     top_performers: List[Performer]
     bottom_performers: List[Performer]
@@ -193,6 +261,12 @@ class AnalyticsSummary(BaseModel):
     monthly_pnl: List[MonthlyPnL]
     income: List[IncomeSummary]
     total_income: float
+    total_value: float
+    total_cost: float
+    portfolio_value_by_type: List[PortfolioValueByType]
+    filter_type: str
+    period_start: str
+    period_end: str
 
 
 class GoldRate(BaseModel):
@@ -250,6 +324,7 @@ class PortfolioHistoryPoint(BaseModel):
     date: datetime.date
     value: float
     cost: float
+    by_type: Dict[str, float] = {}
 
 
 class BenchmarkPoint(BaseModel):
@@ -326,7 +401,10 @@ class ArticleRead(BaseModel):
     fetched_at: datetime.datetime
     sentiment_score: Optional[float] = None
     impact_score: Optional[float] = None
+    relevance_score: Optional[float] = None
+    is_standout: bool = False
     language: Optional[str] = None
+    region: str = "vn"
     symbols: List[str] = []
     sentiment_label: Optional[str] = None
     impact_label: Optional[str] = None
@@ -391,6 +469,7 @@ class NewsSourceRead(BaseModel):
     id: int
     name: str
     code: str
+    region: str = "vn"
 
 
 class AiSummaryRequest(BaseModel):
@@ -402,6 +481,7 @@ class AiSummaryRequest(BaseModel):
     date_to: Optional[datetime.date] = None
     source_id: Optional[int] = None
     tag: Optional[str] = None
+    region: Optional[str] = Field("vn", pattern="^(vn|global)$")
     limit: int = Field(5, ge=1, le=10)
 
 
@@ -410,3 +490,17 @@ class AiSummaryResponse(BaseModel):
     article_count: int
     used_ollama: bool
     personalized: bool = False
+
+
+class CompareMetrics(BaseModel):
+    symbol: str
+    total_return: Optional[float] = None
+    annualized_return: Optional[float] = None
+    volatility: Optional[float] = None
+    max_drawdown_percent: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
+
+
+class CompareCorrelation(BaseModel):
+    labels: List[str]
+    matrix: List[List[float]]

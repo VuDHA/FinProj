@@ -1,0 +1,5 @@
+symbol,type,quantity,price,fee,date,notes
+VCB,BUY,100,89000,100,2026-06-15,Mua VCB
+VNM,BUY,50,65000,80,2026-06-20,Mua VNM
+VCB,SELL,30,95000,50,2026-07-01,Bán một phần VCB
+SJC,BUY,1,86000000,50000,2026-07-01,Mua vàng SJC

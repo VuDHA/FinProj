@@ -1,0 +1,25 @@
+[run]
+source = .
+branch = True
+omit =
+    */tests/*
+    */venv/*
+    */.venv/*
+    */scripts/*
+    */migrations/*
+
+[report]
+precision = 2
+show_missing = True
+skip_covered = True
+fail_under = 70
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.:
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml

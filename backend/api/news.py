@@ -50,7 +50,10 @@ def _article_to_schema(article: NewsArticle, symbols: Optional[List[str]] = None
         fetched_at=article.fetched_at,
         sentiment_score=article.sentiment_score,
         impact_score=article.impact_score,
+        relevance_score=article.relevance_score,
+        is_standout=article.is_standout,
         language=article.language,
+        region=article.region,
         symbols=symbols or [],
         sentiment_label=sentiment_label(article.sentiment_score),
         impact_label=impact_label(article.impact_score),
@@ -79,6 +82,7 @@ def list_news(
     tag: Optional[str] = Query(None),
     date_from: Optional[datetime.date] = Query(None),
     date_to: Optional[datetime.date] = Query(None),
+    region: Optional[str] = Query("vn", pattern="^(vn|global)$"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
@@ -93,6 +97,7 @@ def list_news(
         tag=tag,
         date_from=date_from,
         date_to=date_to,
+        region=region,
         limit=limit,
         offset=offset,
     )
@@ -108,6 +113,7 @@ def list_news(
         tag=tag,
         date_from=date_from,
         date_to=date_to,
+        region=region,
     )
 
     return ArticleListResponse(
@@ -122,6 +128,7 @@ def list_news(
 def personalized_feed(
     portfolio: bool = Query(True),
     watchlist: bool = Query(True),
+    region: Optional[str] = Query("vn", pattern="^(vn|global)$"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
@@ -130,6 +137,7 @@ def personalized_feed(
     articles = service.personalized_feed(
         include_portfolio=portfolio,
         include_watchlist=watchlist,
+        region=region,
         limit=limit,
         offset=offset,
     )
@@ -138,6 +146,7 @@ def personalized_feed(
     total = service.count_personalized_feed(
         include_portfolio=portfolio,
         include_watchlist=watchlist,
+        region=region,
     )
 
     return ArticleListResponse(
@@ -156,7 +165,7 @@ def list_sources(session: Session = Depends(get_session)):
         .order_by(NewsSource.name)
     ).all()
     return [
-        NewsSourceRead(id=s.id, name=s.name, code=s.code)
+        NewsSourceRead(id=s.id, name=s.name, code=s.code, region=s.region)
         for s in rows
     ]
 
@@ -176,6 +185,7 @@ def ai_summary(
         tag=payload.tag,
         date_from=payload.date_from,
         date_to=payload.date_to,
+        region=payload.region,
         limit=payload.limit,
     )
 
@@ -216,10 +226,11 @@ def ai_summary(
 def trending(
     hours: int = Query(24, ge=1, le=168),
     limit: int = Query(10, ge=1, le=50),
+    region: Optional[str] = Query("vn", pattern="^(vn|global)$"),
     session: Session = Depends(get_session),
 ):
     service = NewsFeedService(session)
-    data = service.trending(hours=hours, limit=limit)
+    data = service.trending(hours=hours, limit=limit, region=region)
     return TrendingResponse(
         symbols=[TrendingSymbol(symbol=item["symbol"], mentions=item["mentions"]) for item in data["symbols"]],
         sentiment=data["sentiment"],
@@ -229,7 +240,7 @@ def trending(
 @router.get("/brief/daily", response_model=DailyBriefResponse)
 def daily_brief(
     hours: int = Query(24, ge=1, le=168),
-    scope: Optional[str] = Query(None, regex="^(vn|global)$"),
+    scope: Optional[str] = Query(None, pattern="^(vn|global)$"),
     session: Session = Depends(get_session),
 ):
     service = NewsFeedService(session)
@@ -341,7 +352,7 @@ def remove_watchlist(symbol: str, session: Session = Depends(get_session)):
     return {"ok": True}
 
 
-def _run_refresh_job(job_id: str, source: Optional[str]) -> None:
+def _run_refresh_job(job_id: str, source: Optional[str], region: Optional[str] = None) -> None:
     """Background worker that crawls sources and updates the job state."""
     from database import engine
 
@@ -352,9 +363,12 @@ def _run_refresh_job(job_id: str, source: Optional[str]) -> None:
     try:
         with Session(engine) as session:
             crawler = NewsCrawlerService(session)
-            results = crawler.refresh(source_code=source, progress=job)
+            if region:
+                results = crawler.crawl_region(region, progress=job)
+            else:
+                results = crawler.refresh(source_code=source, progress=job)
             alerts_service = AlertService(session)
-            alerts_count = alerts_service.generate_alerts(hours=1)
+            alerts_count = alerts_service.generate_alerts(hours=1) if region != "global" else 0
             job.update(
                 status="completed",
                 results=results,
@@ -387,11 +401,14 @@ async def _refresh_stream(job_id: str) -> AsyncGenerator[str, None]:
 
 
 @router.post("/refresh")
-def refresh_news_start(source: Optional[str] = Query(None)):
+def refresh_news_start(
+    source: Optional[str] = Query(None),
+    region: Optional[str] = Query(None, pattern="^(vn|global)$"),
+):
     """Start a refresh job in the background and return its id."""
-    job = RefreshTracker.create(source_code=source)
+    job = RefreshTracker.create(source_code=source or region)
     thread = threading.Thread(
-        target=_run_refresh_job, args=(job.id, source), daemon=True
+        target=_run_refresh_job, args=(job.id, source, region), daemon=True
     )
     thread.start()
     return {"job_id": job.id}

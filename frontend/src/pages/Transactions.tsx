@@ -11,6 +11,7 @@ import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../contexts/ToastContext";
+import { usePersistentState } from "../hooks/usePersistentState";
 import { labels } from "../i18n/vi";
 import { formatCurrency } from "../lib/utils";
 import { hasErrors, nonNegativeNumber, notFutureDate, positiveNumber, required, validateForm } from "../lib/validation";
@@ -18,18 +19,17 @@ import { hasErrors, nonNegativeNumber, notFutureDate, positiveNumber, required, 
 export function Transactions() {
   const qc = useQueryClient();
   const { showToast } = useToast();
-  const [tab, setTab] = useState<"transactions" | "income">("transactions");
-  const [form, setForm] = useState({
+  const [tab, setTab] = usePersistentState<"transactions" | "income">("transactions.tab", "transactions");
+  const [form, setForm] = usePersistentState("transactions.form", {
     asset_id: "",
     type: "BUY",
     quantity: "",
-    price: "",
     fee: "0",
     date: new Date().toISOString().split("T")[0],
     notes: "",
   });
 
-  const [incomeForm, setIncomeForm] = useState({
+  const [incomeForm, setIncomeForm] = usePersistentState("transactions.incomeForm", {
     asset_id: "",
     type: "DIVIDEND",
     amount: "",
@@ -40,10 +40,10 @@ export function Transactions() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [incomeErrors, setIncomeErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; label: string; type: "transaction" | "income" } | null>(null);
-  const [transactionSearch, setTransactionSearch] = useState("");
-  const [incomeSearch, setIncomeSearch] = useState("");
-  const [transactionSortDesc, setTransactionSortDesc] = useState(true);
-  const [incomeSortDesc, setIncomeSortDesc] = useState(true);
+  const [transactionSearch, setTransactionSearch] = usePersistentState("transactions.search", "");
+  const [incomeSearch, setIncomeSearch] = usePersistentState("transactions.incomeSearch", "");
+  const [transactionSortDesc, setTransactionSortDesc] = usePersistentState("transactions.sortDesc", true);
+  const [incomeSortDesc, setIncomeSortDesc] = usePersistentState("transactions.incomeSortDesc", true);
 
   const transactions = useQuery({
     queryKey: ["transactions"],
@@ -66,7 +66,6 @@ export function Transactions() {
         ...form,
         asset_id: Number(form.asset_id),
         quantity: Number(form.quantity),
-        price: Number(form.price),
         fee: Number(form.fee),
       }),
     onSuccess: () => {
@@ -76,7 +75,6 @@ export function Transactions() {
         asset_id: "",
         type: "BUY",
         quantity: "",
-        price: "",
         fee: "0",
         date: new Date().toISOString().split("T")[0],
         notes: "",
@@ -146,7 +144,6 @@ export function Transactions() {
     const validationErrors = validateForm({
       asset_id: { value: form.asset_id, validators: [required("Vui lòng chọn tài sản")] },
       quantity: { value: form.quantity, validators: [positiveNumber("Số lượng phải lớn hơn 0")] },
-      price: { value: form.price, validators: [nonNegativeNumber("Giá không được âm")] },
       fee: { value: form.fee, validators: [nonNegativeNumber("Phí không được âm")] },
       date: { value: form.date, validators: [notFutureDate("Ngày không được trong tương lai")] },
     });
@@ -252,7 +249,7 @@ export function Transactions() {
         <>
           <FintechCard delay={0.1}>
             <h3 className="card-title mb-4">{labels.transactions.addTransaction}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <div className="relative">
                 <select
                   className={`input-fintech pr-10 ${errors.asset_id ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
@@ -302,20 +299,6 @@ export function Transactions() {
               <div className="relative">
                 <input
                   type="number"
-                  placeholder={labels.transactions.price}
-                  className={`input-fintech pr-10 ${errors.price ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
-                  value={form.price}
-                  onChange={(e) => handleChange("price", e.target.value)}
-                  aria-invalid={!!errors.price}
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <InfoTooltip content={labels.tooltips.transactionPrice} position="right" />
-                </span>
-                {errors.price && <p className="text-xs text-rose-500 mt-1">{errors.price}</p>}
-              </div>
-              <div className="relative">
-                <input
-                  type="number"
                   placeholder={labels.transactions.fee}
                   className={`input-fintech pr-10 ${errors.fee ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                   value={form.fee}
@@ -343,7 +326,7 @@ export function Transactions() {
               <input
                 type="text"
                 placeholder={labels.transactions.notes}
-                className="input-fintech md:col-span-6"
+                className="input-fintech md:col-span-5"
                 value={form.notes}
                 onChange={(e) => handleChange("notes", e.target.value)}
               />

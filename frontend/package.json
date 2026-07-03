@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/query-sync-storage-persister": "^5.48.0",
     "@tanstack/react-query": "^5.48.0",
+    "@tanstack/react-query-persist-client": "^5.48.0",
     "axios": "^1.7.2",
     "framer-motion": "^11.2.12",
     "lucide-react": "^0.399.0",

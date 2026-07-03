@@ -1,14 +1,14 @@
-import csv
-import io
+import json
 from typing import Any, Dict, List, Optional
 
-from openpyxl import load_workbook
+from sqlalchemy import select
 from sqlmodel import Session
 
 from config import settings
 from models import Asset, Transaction
 from schemas import CsvImportResult
-from services.csv_io import VALID_ASSET_TYPES
+from services.asset_type_config import get_asset_type_codes
+from services.file_utils import read_excel_sheet_names, read_rows
 from services.ollama_client import OllamaClient, OllamaClientError
 
 
@@ -31,42 +31,21 @@ class SmartImportService:
 
     @staticmethod
     def _is_excel(filename: str) -> bool:
-        return filename.lower().endswith((".xlsx", ".xls"))
+        return filename.lower().endswith(".xlsx")
 
-    def _read_csv(self, content: bytes) -> List[Dict[str, Any]]:
-        text = content.decode("utf-8-sig")
-        reader = csv.DictReader(io.StringIO(text))
-        return [dict(row) for row in reader]
-
-    def _read_excel(
-        self, content: bytes, sheet_name: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
-        wb = load_workbook(filename=io.BytesIO(content), read_only=True, data_only=True)
-        if sheet_name is None:
-            sheet = wb.active
-        else:
-            sheet = wb[sheet_name]
-        rows = list(sheet.iter_rows(values_only=True))
-        if not rows:
-            return []
-        headers = [str(c or "").strip() for c in rows[0]]
-        return [
-            {
-                headers[i]: (str(c) if c is not None else "")
-                for i, c in enumerate(row)
-                if i < len(headers) and headers[i]
-            }
-            for row in rows[1:]
-        ]
+    @staticmethod
+    def _is_zip(filename: str) -> bool:
+        return filename.lower().endswith(".zip")
 
     def _read_rows(
         self, content: bytes, filename: str, sheet_name: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        if self._is_csv(filename):
-            return self._read_csv(content)
-        if self._is_excel(filename):
-            return self._read_excel(content, sheet_name=sheet_name)
-        raise ValueError("Unsupported file format. Only .csv and .xlsx are supported.")
+        try:
+            return read_rows(content, filename, sheet_name=sheet_name)
+        except ValueError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Cannot read file: {e}") from e
 
     def preview(
         self, content: bytes, filename: str, sheet_name: Optional[str] = None
@@ -79,10 +58,12 @@ class SmartImportService:
         sheet_names = None
         actual_sheet = sheet_name
         if self._is_excel(filename):
-            wb = load_workbook(filename=io.BytesIO(content), read_only=True)
-            sheet_names = wb.sheetnames
-            if actual_sheet is None:
-                actual_sheet = wb.active.title if wb.active else None
+            try:
+                sheet_names = read_excel_sheet_names(content)
+            except ValueError:
+                sheet_names = None
+            if actual_sheet is None and sheet_names:
+                actual_sheet = sheet_names[0]
 
         return {
             "filename": filename,
@@ -123,43 +104,21 @@ class SmartImportService:
     def suggest_mapping(
         self, headers: List[str], import_type: str, language: str = "vi"
     ) -> Dict[str, Optional[str]]:
-        """Use the local LLM to suggest a header-to-target mapping."""
-        if not settings.OLLAMA_ENABLED:
+        """Use the AI provider to suggest a header-to-target mapping."""
+        if not self._is_ai_enabled():
             return {h: self._fallback_mapping(h, import_type) for h in headers}
 
-        target_fields = (
-            ASSET_TARGET_FIELDS if import_type == "assets" else TRANSACTION_TARGET_FIELDS
-        )
         try:
-            raw = self._client.generate(
-                prompt=self._build_mapping_prompt(headers, import_type, language),
-                model=self.model,
-                options={
-                    "temperature": 0.1,
-                    "num_predict": 256,
-                },
-                task_name="smart_import_mapping",
-            )
-        except OllamaClientError as e:
+            from services.batch_ai import BatchAIService
+
+            service = BatchAIService(batch_size=1)
+            return service.suggest_mappings([headers], import_type, language=language)[0]
+        except Exception as e:
             print(f"[smart_import] mapping failed: {e}")
             return {h: self._fallback_mapping(h, import_type) for h in headers}
 
-        try:
-            import json
-
-            mapping = json.loads(raw.strip())
-        except json.JSONDecodeError as e:
-            print(f"[smart_import] mapping JSON parse failed: {e}")
-            return {h: self._fallback_mapping(h, import_type) for h in headers}
-
-        # Validate values against target fields.
-        cleaned = {}
-        for header in headers:
-            value = mapping.get(header)
-            if value not in target_fields:
-                value = None
-            cleaned[header] = value
-        return cleaned
+    def _is_ai_enabled(self) -> bool:
+        return settings.AI_PROVIDER == "gemini" or settings.OLLAMA_ENABLED
 
     @staticmethod
     def _fallback_mapping(header: str, import_type: str) -> Optional[str]:
@@ -238,7 +197,7 @@ class SmartImportService:
                 errors.append(f"Row {i}: missing symbol/name/type")
                 skipped += 1
                 continue
-            if type_ not in VALID_ASSET_TYPES:
+            if type_ not in get_asset_type_codes(session):
                 errors.append(f"Row {i}: invalid asset type {type_}")
                 skipped += 1
                 continue

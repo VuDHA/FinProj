@@ -28,8 +28,12 @@ class NewsFeedService:
         date_from: Optional[datetime.date] = None,
         date_to: Optional[datetime.date] = None,
         tag: Optional[str] = None,
+        region: Optional[str] = None,
     ):
         """Apply shared filtering logic to a news query (list or count)."""
+        if region:
+            query = query.where(NewsArticle.region == region)
+
         if symbol:
             query = query.join(NewsSymbol).where(NewsSymbol.symbol == symbol.upper())
 
@@ -80,6 +84,7 @@ class NewsFeedService:
         date_from: Optional[datetime.date] = None,
         date_to: Optional[datetime.date] = None,
         tag: Optional[str] = None,
+        region: Optional[str] = "vn",
         limit: int = 20,
         offset: int = 0,
     ) -> List[NewsArticle]:
@@ -93,6 +98,7 @@ class NewsFeedService:
             date_from=date_from,
             date_to=date_to,
             tag=tag,
+            region=region,
         )
         query = query.order_by(NewsArticle.published_at.desc()).offset(offset).limit(limit)
         return list(self.session.exec(query).all())
@@ -107,6 +113,7 @@ class NewsFeedService:
         date_from: Optional[datetime.date] = None,
         date_to: Optional[datetime.date] = None,
         tag: Optional[str] = None,
+        region: Optional[str] = "vn",
     ) -> int:
         query = self._apply_article_filters(
             select(func.count(func.distinct(NewsArticle.id))).where(NewsArticle.is_active == True),
@@ -118,6 +125,7 @@ class NewsFeedService:
             date_from=date_from,
             date_to=date_to,
             tag=tag,
+            region=region,
         )
         return self.session.exec(query).one()
 
@@ -151,6 +159,7 @@ class NewsFeedService:
         include_watchlist: bool = True,
         limit: int = 20,
         offset: int = 0,
+        region: Optional[str] = "vn",
     ) -> List[NewsArticle]:
         symbols = self._personalized_symbols(include_portfolio, include_watchlist)
 
@@ -162,16 +171,17 @@ class NewsFeedService:
             .join(NewsSymbol)
             .where(NewsSymbol.symbol.in_(list(symbols)))
             .where(NewsArticle.is_active == True)
-            .order_by(NewsArticle.published_at.desc())
-            .offset(offset)
-            .limit(limit)
         )
+        if region:
+            query = query.where(NewsArticle.region == region)
+        query = query.order_by(NewsArticle.published_at.desc()).offset(offset).limit(limit)
         return list(self.session.exec(query).all())
 
     def count_personalized_feed(
         self,
         include_portfolio: bool = True,
         include_watchlist: bool = True,
+        region: Optional[str] = "vn",
     ) -> int:
         symbols = self._personalized_symbols(include_portfolio, include_watchlist)
 
@@ -184,12 +194,15 @@ class NewsFeedService:
             .where(NewsSymbol.symbol.in_(list(symbols)))
             .where(NewsArticle.is_active == True)
         )
+        if region:
+            query = query.where(NewsArticle.region == region)
         return self.session.exec(query).one()
 
     def trending(
         self,
         hours: int = 24,
         limit: int = 10,
+        region: Optional[str] = "vn",
     ) -> Dict[str, List[Dict]]:
         since = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
 
@@ -199,6 +212,7 @@ class NewsFeedService:
             .join(NewsArticle)
             .where(NewsArticle.published_at >= since)
             .where(NewsArticle.is_active == True)
+            .where(NewsArticle.region == region)
             .group_by(NewsSymbol.symbol)
             .order_by(func.count(NewsSymbol.id).desc())
             .limit(limit)
@@ -209,6 +223,7 @@ class NewsFeedService:
             select(NewsArticle)
             .where(NewsArticle.published_at >= since)
             .where(NewsArticle.is_active == True)
+            .where(NewsArticle.region == region)
             .order_by(NewsArticle.impact_score.desc(), NewsArticle.published_at.desc())
             .limit(limit)
         ).all()
@@ -219,6 +234,7 @@ class NewsFeedService:
             select(NewsArticle)
             .where(NewsArticle.published_at >= since)
             .where(NewsArticle.is_active == True)
+            .where(NewsArticle.region == region)
         ).all()
         for article in all_recent:
             sentiment_counts[sentiment_label(article.sentiment_score)] += 1
@@ -231,15 +247,13 @@ class NewsFeedService:
 
     def daily_brief(self, hours: int = 24, scope: Optional[str] = None) -> Dict[str, any]:
         since = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
+        region = scope if scope in ("vn", "global") else "vn"
         query = (
             select(NewsArticle)
             .where(NewsArticle.published_at >= since)
             .where(NewsArticle.is_active == True)
+            .where(NewsArticle.region == region)
         )
-        if scope == "vn":
-            query = query.where(NewsArticle.language == "vi")
-        elif scope == "global":
-            query = query.where(NewsArticle.language != "vi")
         articles = self.session.exec(
             query.order_by(NewsArticle.impact_score.desc(), NewsArticle.published_at.desc()).limit(10)
         ).all()

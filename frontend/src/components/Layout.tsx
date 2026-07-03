@@ -6,6 +6,7 @@ import {
   Cog,
   Coins,
   FlaskConical,
+  GitCompare,
   HelpCircle,
   LineChart,
   Newspaper,
@@ -20,6 +21,7 @@ import { labels } from "../i18n/vi";
 import { HelpModal } from "./HelpModal";
 import { InfoTooltip } from "./InfoTooltip";
 import { OnboardingTour, TourStep } from "./OnboardingTour";
+import { PriceAlertsBell } from "./PriceAlertsBell";
 
 const nav = [
   { path: "/", label: labels.nav.dashboard, icon: BarChart3, tour: "dashboard" },
@@ -29,6 +31,7 @@ const nav = [
   { path: "/backtest", label: labels.nav.backtest, icon: FlaskConical },
   { path: "/rebalance", label: labels.nav.rebalance, icon: Scale },
   { path: "/market", label: labels.nav.market, icon: LineChart },
+  { path: "/compare", label: labels.nav.compare, icon: GitCompare },
   { path: "/news", label: labels.nav.news, icon: Newspaper },
   { path: "/settings", label: labels.nav.settings, icon: Settings, tour: "settings" },
   { path: "/env-config", label: labels.nav.envConfig, icon: Cog },
@@ -139,6 +142,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </aside>
+
+      <PriceAlertsBell />
 
       {showTour && (
         <OnboardingTour

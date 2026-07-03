@@ -1,17 +1,18 @@
 import csv
 import datetime
 import io
-from typing import List
+from typing import Any, Dict, List
 
 from sqlmodel import Session, select
 
 from models import Asset, Transaction
 from schemas import CsvImportResult
+from services.asset_type_config import get_asset_type_codes, is_market_price_type
+from services.market_data import MarketDataService
 
 
 ASSET_HEADERS = ["symbol", "name", "type", "exchange", "currency"]
 TRANSACTION_HEADERS = ["symbol", "type", "quantity", "price", "fee", "date", "notes"]
-VALID_ASSET_TYPES = {"STOCK", "FUND", "ETF", "GOLD", "CRYPTO"}
 
 
 def export_assets(session: Session) -> str:
@@ -52,11 +53,16 @@ def export_transactions(session: Session) -> str:
 
 
 def import_assets(session: Session, content: str) -> CsvImportResult:
+    reader = csv.DictReader(io.StringIO(content))
+    rows = [dict(row) for row in reader]
+    return import_assets_from_rows(session, rows)
+
+
+def import_assets_from_rows(session: Session, rows: List[Dict[str, Any]]) -> CsvImportResult:
     created = 0
     skipped = 0
     errors: List[str] = []
-    reader = csv.DictReader(io.StringIO(content))
-    for i, row in enumerate(reader, start=2):
+    for i, row in enumerate(rows, start=2):
         symbol = (row.get("symbol") or "").strip().upper()
         name = (row.get("name") or "").strip()
         type_ = (row.get("type") or "").strip().upper()
@@ -64,7 +70,7 @@ def import_assets(session: Session, content: str) -> CsvImportResult:
             errors.append(f"Row {i}: missing symbol/name/type")
             skipped += 1
             continue
-        if type_ not in VALID_ASSET_TYPES:
+        if type_ not in get_asset_type_codes(session):
             errors.append(f"Row {i}: invalid asset type {type_}")
             skipped += 1
             continue
@@ -88,11 +94,16 @@ def import_assets(session: Session, content: str) -> CsvImportResult:
 
 
 def import_transactions(session: Session, content: str) -> CsvImportResult:
+    reader = csv.DictReader(io.StringIO(content))
+    rows = [dict(row) for row in reader]
+    return import_transactions_from_rows(session, rows)
+
+
+def import_transactions_from_rows(session: Session, rows: List[Dict[str, Any]]) -> CsvImportResult:
     created = 0
     skipped = 0
     errors: List[str] = []
-    reader = csv.DictReader(io.StringIO(content))
-    for i, row in enumerate(reader, start=2):
+    for i, row in enumerate(rows, start=2):
         symbol = (row.get("symbol") or "").strip().upper()
         type_ = (row.get("type") or "").strip().upper()
         if not symbol or type_ not in ("BUY", "SELL"):
@@ -109,8 +120,8 @@ def import_transactions(session: Session, content: str) -> CsvImportResult:
             skipped += 1
             continue
 
-        if quantity <= 0 or price < 0 or fee < 0:
-            errors.append(f"Row {i}: quantity/price/fee must be positive")
+        if quantity <= 0 or fee < 0:
+            errors.append(f"Row {i}: quantity/fee must be positive")
             skipped += 1
             continue
 
@@ -123,6 +134,16 @@ def import_transactions(session: Session, content: str) -> CsvImportResult:
             session.add(asset)
             session.commit()
             session.refresh(asset)
+
+        if price <= 0 and is_market_price_type(session, asset.type):
+            resolved = MarketDataService(session).resolve_historical_price(asset, date)
+            if resolved is not None:
+                price = resolved
+
+        if price <= 0:
+            errors.append(f"Row {i}: price must be positive or resolvable from market data")
+            skipped += 1
+            continue
 
         if type_ == "SELL":
             existing = session.exec(

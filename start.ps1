@@ -252,6 +252,10 @@ $ollamaModel = "qwen2.5:1.5b"
 $ollamaBaseUrl = "http://localhost:11434"
 $ollamaEmbeddingEnabled = $false
 $ollamaEmbeddingModel = "nomic-embed-text"
+$ollamaNumThreads = "0"
+$ollamaKeepAlive = "15m"
+$ollamaNumParallel = "1"
+$ollamaMaxLoadedModels = "1"
 if (Test-Path $envFile) {
     $envContent = Get-Content $envFile -Raw
     if ($envContent -match "OLLAMA_ENABLED\s*=\s*true") { $ollamaEnabled = $true }
@@ -259,6 +263,10 @@ if (Test-Path $envFile) {
     if ($envContent -match "OLLAMA_BASE_URL\s*=\s*([^\s#]+)") { $ollamaBaseUrl = $Matches[1].Trim() }
     if ($envContent -match "OLLAMA_EMBEDDING_ENABLED\s*=\s*true") { $ollamaEmbeddingEnabled = $true }
     if ($envContent -match "OLLAMA_EMBEDDING_MODEL\s*=\s*([^\s#]+)") { $ollamaEmbeddingModel = $Matches[1].Trim() }
+    if ($envContent -match "OLLAMA_NUM_THREADS\s*=\s*([^\s#]+)") { $ollamaNumThreads = $Matches[1].Trim() }
+    if ($envContent -match "OLLAMA_KEEP_ALIVE\s*=\s*([^\s#]+)") { $ollamaKeepAlive = $Matches[1].Trim() }
+    if ($envContent -match "OLLAMA_NUM_PARALLEL\s*=\s*([^\s#]+)") { $ollamaNumParallel = $Matches[1].Trim() }
+    if ($envContent -match "OLLAMA_MAX_LOADED_MODELS\s*=\s*([^\s#]+)") { $ollamaMaxLoadedModels = $Matches[1].Trim() }
 }
 
 if ($ollamaEnabled) {
@@ -283,6 +291,11 @@ if ($ollamaEnabled) {
         $ollamaRunning = Test-OllamaHealth $ollamaBaseUrl
         if (-not $ollamaRunning) {
             Write-Info "Đang khởi động Ollama server..."
+            $env:OLLAMA_NUM_THREADS = $ollamaNumThreads
+            $env:OLLAMA_KEEP_ALIVE = $ollamaKeepAlive
+            $env:OLLAMA_NUM_PARALLEL = $ollamaNumParallel
+            $env:OLLAMA_MAX_LOADED_MODELS = $ollamaMaxLoadedModels
+            Write-Info "Tuning Ollama: threads=$ollamaNumThreads keep_alive=$ollamaKeepAlive parallel=$ollamaNumParallel max_loaded=$ollamaMaxLoadedModels"
             $ollamaProc = Start-Process ollama -ArgumentList "serve" -WindowStyle Hidden -PassThru
             for ($i = 0; $i -lt 30; $i++) {
                 if (Test-OllamaHealth $ollamaBaseUrl) {
@@ -326,7 +339,14 @@ if ($ollamaEnabled) {
         }
     }
 } else {
-    Write-Info "Ollama chưa được bật (OLLAMA_ENABLED=false). Hệ thống sẽ dùng tagger từ khóa."
+    $aiProvider = "ollama"
+    if ($envContent -match "AI_PROVIDER\s*=\s*([^
+#]+)") { $aiProvider = $Matches[1].Trim() }
+    if ($aiProvider -eq "gemini") {
+        Write-Info "Ollama chưa được bật. AI_PROVIDER=gemini; hệ thống sẽ dùng Google Gemini API với tagger từ khóa làm dự phòng."
+    } else {
+        Write-Info "Ollama chưa được bật (OLLAMA_ENABLED=false). Hệ thống sẽ dùng tagger từ khóa."
+    }
 }
 
 # --- Dependencies ---

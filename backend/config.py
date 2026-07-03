@@ -14,12 +14,35 @@ class Settings(BaseSettings):
     SCHEDULER_HOUR: int = 15
     SCHEDULER_MINUTE: int = 35
 
+    # AI provider: "gemini" | "ollama". Gemini is the primary provider;
+    # Ollama is used as fallback when Gemini is unavailable or disabled.
+    AI_PROVIDER: str = "ollama"
+    AI_BATCH_SIZE: int = 5
+    AI_TIMEOUT_SECONDS: int = 30
+
+    # Google Gemini API (primary AI provider).
+    GEMINI_API_KEY: str = ""
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com"
+    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
+    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"
+    GEMINI_EMBEDDING_DIMENSION: int = 768
+
     # Local LLM for tag generation (Ollama). Lightweight: runs on CPU/RAM.
     OLLAMA_ENABLED: bool = False
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen2.5:1.5b"
     OLLAMA_TIMEOUT: int = 30
     OLLAMA_MAX_TAGS: int = 5
+
+    # News relevance scoring
+    NEWS_RELEVANCE_THRESHOLD: float = 0.6
+    NEWS_LLM_BATCH_SIZE: int = 1
+
+    # CPU tuning for the Ollama server. 0 means let Ollama auto-detect threads.
+    OLLAMA_NUM_THREADS: int = 0
+    OLLAMA_KEEP_ALIVE: str = "15m"
+    OLLAMA_NUM_PARALLEL: int = 1
+    OLLAMA_MAX_LOADED_MODELS: int = 1
 
     # Global AI queue: only one Ollama call (generate or embedding) at a time.
     OLLAMA_AI_QUEUE_TIMEOUT_SECONDS: int = 60

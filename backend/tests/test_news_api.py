@@ -1,6 +1,7 @@
 import datetime
 
 from models import Asset, NewsArticle, NewsSource, NewsSymbol, Watchlist
+from services.news.alerts import AlertService
 
 
 def _create_source(session, code="cafef", name="CafeF"):
@@ -94,8 +95,10 @@ def test_alerts(client, session):
     session.add(Asset(symbol="HPG", name="Hoa Phat", type="STOCK", currency="VND"))
     session.commit()
     _create_article(session, source, "Tin HPG quan trọng", symbols=["HPG"], impact=0.9, hours_ago=0)
-    response = client.post("/api/v1/news/refresh")
-    assert response.status_code == 200
+
+    # Exercise the alert generation logic directly; the list endpoint covers serialization.
+    AlertService(session).generate_alerts(hours=1)
+
     alert_response = client.get("/api/v1/news/alerts/list")
     assert alert_response.status_code == 200
     alerts = alert_response.json()

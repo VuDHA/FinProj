@@ -1,6 +1,7 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { LineChart as LineChartIcon, RefreshCw } from "lucide-react";
+import { usePersistentState } from "../hooks/usePersistentState";
 import {
   Area,
   AreaChart,
@@ -30,19 +31,20 @@ export function Market() {
   const WATCHLIST_SYMBOLS =
     "VCB,VHM,VIC,FPT,GAS,HPG,MBB,MSN,MWG,PLX,SSI,TCB,VIB,VPB,E1VFVN30,FUEVFVND,FUESSVFL";
 
-  const [assetId, setAssetId] = useState("");
-  const [start, setStart] = useState(oneMonthAgo);
-  const [end, setEnd] = useState(today);
+  const [assetId, setAssetId] = usePersistentState("market.assetId", "");
+  const [start, setStart] = usePersistentState("market.start", oneMonthAgo);
+  const [end, setEnd] = usePersistentState("market.end", today);
 
-  const [activeTab, setActiveTab] = useState<"STOCK" | "FUND">("STOCK");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [selectedSymbol, setSelectedSymbol] = useState<{
+  const [activeTab, setActiveTab] = usePersistentState<"STOCK" | "FUND">("market.activeTab", "STOCK");
+  const [search, setSearch] = usePersistentState("market.search", "");
+  const [fundType, setFundType] = usePersistentState("market.fundType", "all");
+  const [page, setPage] = usePersistentState("market.page", 1);
+  const [selectedSymbol, setSelectedSymbol] = usePersistentState<{
     symbol: string;
     name: string;
     type: string;
     exchange: string;
-  } | null>(null);
+  } | null>("market.selectedSymbol", null);
   const PAGE_SIZE = 20;
 
   const assets = useQuery({
@@ -94,13 +96,26 @@ export function Market() {
     queryFn: async () => {
       const endpoint = activeTab === "STOCK" ? "/prices/stocks" : "/prices/funds";
       const { data } = await API.get(endpoint);
-      return data as Array<{ symbol: string; name: string; exchange: string; type: string }>;
+      return data as Array<{ symbol: string; name: string; exchange: string; type: string; fund_type?: string }>;
     },
   });
+
+  const fundTypes = useMemo(() => {
+    const types = new Set<string>();
+    allSymbols.data?.forEach((item) => {
+      if (item.type === "FUND" && item.fund_type) {
+        types.add(item.fund_type);
+      }
+    });
+    return Array.from(types).sort();
+  }, [allSymbols.data]);
 
   const filteredSymbols =
     allSymbols.data?.filter((item) => {
       if (item.type !== activeTab) return false;
+      if (activeTab === "FUND" && fundType && fundType !== "all" && item.fund_type !== fundType) {
+        return false;
+      }
       const q = search.trim().toLowerCase();
       if (!q) return true;
       return item.symbol.toLowerCase().includes(q) || item.name.toLowerCase().includes(q);
@@ -432,6 +447,7 @@ export function Market() {
                   key={tab}
                   onClick={() => {
                     setActiveTab(tab);
+                    setFundType("all");
                     setPage(1);
                   }}
                   className={`flex-1 md:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === tab
@@ -453,6 +469,23 @@ export function Market() {
                 setPage(1);
               }}
             />
+            {activeTab === "FUND" && fundTypes.length > 0 && (
+              <select
+                className="input-fintech md:w-56"
+                value={fundType}
+                onChange={(e) => {
+                  setFundType(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">{labels.market.allFundTypes}</option>
+                {fundTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="flex items-center gap-2">
               <InfoTooltip content={labels.tooltips.refreshPrices} />
               <button

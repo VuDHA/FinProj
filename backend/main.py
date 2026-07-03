@@ -1,19 +1,30 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlmodel import Session
 
-from api import ai, analytics, assets, backtest, gold_fx, import_export, income, news, portfolio, prices, rebalance, transactions
+from api import ai, alerts, analytics, assets, backtest, compare, gold_fx, import_export, income, news, portfolio, prices, rebalance, transactions
 from api.settings import router as settings_router
-from config import settings
-from database import init_db
+from api.transactions import repair_zero_price_transactions
+from config import settings, PROJECT_ROOT
+from database import engine, init_db
 from jobs.news_updater import add_news_jobs
 from jobs.price_updater import start_scheduler
+from services.logging_config import setup_logging
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    setup_logging(PROJECT_ROOT)
+    logger = logging.getLogger(__name__)
+    logger.info("Application startup")
     init_db()
+    with Session(engine) as session:
+        repaired = repair_zero_price_transactions(session)
+        if repaired:
+            logger.info("Repaired %d zero-price BUY transactions", repaired)
     scheduler = start_scheduler(settings.SCHEDULER_HOUR, settings.SCHEDULER_MINUTE)
     if scheduler:
         add_news_jobs(scheduler)
@@ -37,6 +48,7 @@ app.add_middleware(
 )
 
 app.include_router(ai.router, prefix=settings.API_PREFIX)
+app.include_router(alerts.router, prefix=settings.API_PREFIX)
 app.include_router(assets.router, prefix=settings.API_PREFIX)
 app.include_router(prices.router, prefix=settings.API_PREFIX)
 app.include_router(transactions.router, prefix=settings.API_PREFIX)
@@ -44,6 +56,7 @@ app.include_router(income.router, prefix=settings.API_PREFIX)
 app.include_router(portfolio.router, prefix=settings.API_PREFIX)
 app.include_router(rebalance.router, prefix=settings.API_PREFIX)
 app.include_router(backtest.router, prefix=settings.API_PREFIX)
+app.include_router(compare.router, prefix=settings.API_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_PREFIX)
 app.include_router(gold_fx.router, prefix=settings.API_PREFIX)
 app.include_router(import_export.router, prefix=settings.API_PREFIX)

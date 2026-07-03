@@ -143,26 +143,52 @@ class KeywordTagger:
 
 
 class TaggingService:
-    """Unified entry point. Uses the local LLM when enabled, otherwise keywords."""
+    """Unified entry point. Uses Gemini batch when configured, otherwise Ollama/keywords."""
 
-    def __init__(self, context: Optional[str] = None):
+    def __init__(self, context: Optional[str] = None, batch_size: int = settings.AI_BATCH_SIZE):
         self._llm = LocalTagger() if settings.OLLAMA_ENABLED else None
         self._fallback = KeywordTagger()
         self._context = context
+        self._batch_size = batch_size
 
     def generate(self, article: Dict) -> List[str]:
-        language = article.get("language", "vi")
-        title = (article.get("title") or "").strip()
-        summary = (article.get("summary") or "").strip()
-        if not title and not summary:
+        return self.generate_batch([article])[0]
+
+    def generate_batch(self, articles: List[Dict]) -> List[List[str]]:
+        if not articles:
             return []
 
-        if self._llm is not None:
-            tags = self._llm.generate(title, summary, language, context=self._context)
-            if tags:
-                return tags
+        if settings.AI_PROVIDER == "gemini":
+            try:
+                from services.batch_ai import BatchAIService
 
-        return self._fallback.generate(title, summary, language)
+                service = BatchAIService(batch_size=self._batch_size)
+                return service.generate_tags(
+                    articles, language=articles[0].get("language", "vi"), context=self._context
+                )
+            except Exception as e:
+                print(f"[tagging] batch service failed: {e}")
+
+        # Fallback: process one by one
+        results = []
+        for article in articles:
+            language = article.get("language", "vi")
+            title = (article.get("title") or "").strip()
+            summary = (article.get("summary") or "").strip()
+            if not title and not summary:
+                results.append([])
+                continue
+
+            tags = []
+            if self._llm is not None:
+                try:
+                    tags = self._llm.generate(title, summary, language, context=self._context)
+                except Exception as e:
+                    print(f"[tagging] ollama failed: {e}")
+            if not tags:
+                tags = self._fallback.generate(title, summary, language)
+            results.append(tags)
+        return results
 
     def join(self, tags: List[str]) -> Optional[str]:
         """Return comma-separated tags for storage."""

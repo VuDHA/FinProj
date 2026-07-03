@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+import datetime
+from typing import Literal, Optional
+
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from database import get_session
@@ -10,8 +13,13 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
 @router.get("/", response_model=AnalyticsSummary)
-def get_analytics(session: Session = Depends(get_session)):
-    return AnalyticsService(session).get_summary()
+def get_analytics(
+    filter_type: Literal["month", "quarter", "year", "custom"] = Query("month"),
+    start_date: Optional[datetime.date] = Query(None),
+    end_date: Optional[datetime.date] = Query(None),
+    session: Session = Depends(get_session),
+):
+    return AnalyticsService(session).get_summary(filter_type, start_date, end_date)
 
 
 @router.get("/risk", response_model=RiskMetrics)

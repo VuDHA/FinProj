@@ -1,16 +1,20 @@
+import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from database import get_session
-from models import Asset
+from models import Asset, PriceSnapshot
 from schemas import AssetCreate, AssetRead
+from services.asset_type_config import (
+    generate_symbol,
+    get_asset_types,
+    is_valid_asset_type,
+)
 from services.source_config import is_valid_source_for_type
 
 router = APIRouter(prefix="/assets", tags=["assets"])
-
-VALID_ASSET_TYPES = {"STOCK", "FUND", "ETF", "GOLD", "CRYPTO"}
 
 
 @router.get("/", response_model=List[AssetRead])
@@ -20,10 +24,11 @@ def list_assets(session: Session = Depends(get_session)):
 
 @router.post("/", response_model=AssetRead)
 def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
-    if asset.type not in VALID_ASSET_TYPES:
+    if not is_valid_asset_type(session, asset.type):
+        valid_types = ", ".join(sorted(get_asset_types(session).keys()))
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported asset type: {asset.type}. Must be one of {', '.join(sorted(VALID_ASSET_TYPES))}",
+            detail=f"Unsupported asset type: {asset.type}. Must be one of {valid_types}",
         )
 
     if asset.source and not is_valid_source_for_type(asset.source, asset.type):
@@ -32,18 +37,35 @@ def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
             detail=f"Source {asset.source} is not supported for asset type {asset.type}",
         )
 
-    existing = session.exec(
-        select(Asset).where(Asset.symbol == asset.symbol, Asset.is_active == True)
-    ).first()
-    if existing:
-        raise HTTPException(status_code=409, detail="Asset symbol already exists")
     payload = asset.model_dump()
     if payload.get("source") == "":
         payload["source"] = None
+
+    if not payload.get("symbol"):
+        payload["symbol"] = generate_symbol(payload["name"], payload["type"])
+
+    existing = session.exec(
+        select(Asset).where(Asset.symbol == payload["symbol"], Asset.is_active == True)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Asset symbol already exists")
+
+    manual_value = payload.pop("manual_value", None)
     db_asset = Asset(**payload)
     session.add(db_asset)
     session.commit()
     session.refresh(db_asset)
+
+    if manual_value:
+        session.add(
+            PriceSnapshot(
+                asset_id=db_asset.id,
+                date=datetime.date.today(),
+                price=float(manual_value),
+            )
+        )
+        session.commit()
+
     return db_asset
 
 

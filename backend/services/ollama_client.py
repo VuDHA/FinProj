@@ -41,6 +41,18 @@ class OllamaClient:
         except ValueError as e:
             raise OllamaClientError(f"Ollama returned invalid JSON: {e}")
 
+    def _default_options(self, options: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Merge caller options with CPU tuning defaults from settings."""
+        merged = dict(options) if options else {}
+        if settings.OLLAMA_NUM_THREADS > 0 and "num_thread" not in merged:
+            merged["num_thread"] = settings.OLLAMA_NUM_THREADS
+        return merged if merged else None
+
+    def _apply_keep_alive(self, payload: Dict[str, Any]) -> None:
+        """Add per-request keep_alive if configured in settings."""
+        if settings.OLLAMA_KEEP_ALIVE:
+            payload["keep_alive"] = settings.OLLAMA_KEEP_ALIVE
+
     def generate(
         self,
         prompt: str,
@@ -54,8 +66,10 @@ class OllamaClient:
             "prompt": prompt,
             "stream": False,
         }
-        if options:
-            payload["options"] = options
+        merged_options = self._default_options(options)
+        if merged_options:
+            payload["options"] = merged_options
+        self._apply_keep_alive(payload)
 
         start = time.time()
 
@@ -98,10 +112,14 @@ class OllamaClient:
         task_name: str = "ollama_embedding",
     ) -> List[float]:
         """Create an embedding vector via the Ollama /api/embeddings endpoint."""
-        payload = {
+        payload: Dict[str, Any] = {
             "model": model,
             "prompt": text,
         }
+        merged_options = self._default_options(None)
+        if merged_options:
+            payload["options"] = merged_options
+        self._apply_keep_alive(payload)
 
         start = time.time()
 

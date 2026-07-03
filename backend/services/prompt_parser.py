@@ -48,40 +48,16 @@ class PromptParser:
         default_start = (today - datetime.timedelta(days=365)).isoformat()
         default_end = today.isoformat()
 
-        system_prompt = (
-            "You are a financial assistant. Extract a JSON object for a portfolio backtest "
-            "from the user's Vietnamese or English prompt. Use ISO dates (YYYY-MM-DD). "
-            "Use only 'buy_and_hold' or 'rebalancing' as strategy. "
-            "Use only 'monthly' or 'quarterly' as rebalance_frequency. "
-            "initial_cash is a number in the prompt's currency (e.g., 100000000). "
-            "Return only the JSON object, no commentary.\n\n"
-            "JSON schema:\n"
-            "{\n"
-            '  "symbols": ["VCB", "VNM"],\n'
-            '  "start_date": "2023-01-01",\n'
-            '  "end_date": "2023-12-31",\n'
-            '  "strategy": "rebalancing",\n'
-            '  "rebalance_frequency": "monthly",\n'
-            '  "initial_cash": 100000000\n'
-            "}\n\n"
-            f"User prompt: {prompt}\n\n"
-            "JSON:"
-        )
-
         try:
-            raw = self._client.generate(
-                prompt=system_prompt,
-                model=self.model,
-                options={
-                    "temperature": 0.1,
-                    "num_predict": 256,
-                },
-                task_name="backtest_prompt_parser",
-            )
-        except OllamaClientError as e:
+            from services.batch_ai import BatchAIService
+
+            service = BatchAIService(batch_size=1)
+            data = service.parse_backtest_prompts([prompt], language="vi")[0]
+        except Exception as e:
             raise PromptParserError(f"AI service failed: {e}")
 
-        data = self._parse_json(raw)
+        if data is None:
+            raise PromptParserError("AI service returned no data.")
 
         # Normalize dates if the LLM returned relative terms or non-ISO formats.
         data["start_date"] = self._normalize_date(data.get("start_date", default_start))
@@ -91,6 +67,13 @@ class PromptParser:
             raise PromptParserError("AI did not extract any symbols from the prompt.")
 
         data["symbols"] = [s.strip().upper() for s in data["symbols"] if s and s.strip()]
+
+        if data.get("allocations"):
+            data["allocations"] = {
+                k.strip().upper(): float(v)
+                for k, v in data["allocations"].items()
+                if k and str(v).strip()
+            }
 
         try:
             return BacktestRequest(**data)

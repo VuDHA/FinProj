@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from database import get_session
 from models import Asset, PriceSnapshot
 from schemas import BenchmarkPoint, FundDetail, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
+from services.asset_type_config import is_market_price_type
 from services.market_data import MarketDataService
 
 router = APIRouter(prefix="/prices", tags=["prices"])
@@ -51,10 +52,11 @@ def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> Price
 def refresh_all_prices(session: Session = Depends(get_session)):
     service = MarketDataService(session)
     assets = session.exec(select(Asset).where(Asset.is_active == True)).all()
+    market_assets = [a for a in assets if is_market_price_type(session, a.type)]
     updated = 0
     failed = 0
     warnings: List[str] = []
-    for asset in assets:
+    for asset in market_assets:
         data, asset_warnings = service.fetch_price_with_warnings(asset)
         warnings.extend(asset_warnings)
         if _get_or_create_snapshot(session, asset, data):
@@ -62,7 +64,16 @@ def refresh_all_prices(session: Session = Depends(get_session)):
         else:
             failed += 1
     session.commit()
-    return {"updated": updated, "failed": failed, "warnings": warnings, "date": datetime.date.today().isoformat()}
+    try:
+        from .alerts import evaluate_notifications
+
+        triggered = evaluate_notifications(session)
+        if triggered:
+            print(f"[refresh-all] {len(triggered)} price alerts triggered")
+    except Exception as e:
+        print(f"[refresh-all] alert evaluation error: {e}")
+
+    return {"updated": updated, "failed": failed, "warnings": warnings, "date": datetime.date.today().isoformat(), "skipped": len(assets) - len(market_assets)}
 
 
 @router.post("/refresh/{asset_id}")
@@ -70,6 +81,12 @@ def refresh_price(asset_id: int, session: Session = Depends(get_session)):
     asset = session.get(Asset, asset_id)
     if not asset or not asset.is_active:
         raise HTTPException(status_code=404, detail="Asset not found")
+
+    if not is_market_price_type(session, asset.type):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Asset type {asset.type} does not support automatic price refresh",
+        )
 
     service = MarketDataService(session)
     data, warnings = service.fetch_price_with_warnings(asset)
@@ -84,6 +101,15 @@ def refresh_price(asset_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=502, detail="Failed to fetch market data")
 
     session.commit()
+    try:
+        from .alerts import evaluate_notifications
+
+        triggered = evaluate_notifications(session)
+        if triggered:
+            print(f"[refresh] {len(triggered)} price alerts triggered")
+    except Exception as e:
+        print(f"[refresh] alert evaluation error: {e}")
+
     session.refresh(snapshot)
     return {"snapshot": snapshot, "warnings": warnings}
 
@@ -110,6 +136,7 @@ def get_price_history(
 def get_quotes(
     symbols: str = ",".join(DEFAULT_WATCHLIST),
     asset_type: Optional[str] = None,
+    types: Optional[str] = None,
     session: Session = Depends(get_session),
 ):
     service = MarketDataService(session)
@@ -118,15 +145,23 @@ def get_quotes(
     if asset_type:
         return service.fetch_quotes(symbols_list, asset_type=asset_type)
 
-    # Look up asset types from the database so each symbol is routed through
-    # the correct sources (e.g. FUND -> fmarket/vcbf, not stock sources).
+    # Build an optional per-symbol type map from the query parameter.
+    type_map: dict[str, str] = {}
+    if types:
+        type_list = [t.strip().upper() for t in types.split(",") if t.strip()]
+        if len(type_list) == len(symbols_list):
+            type_map = dict(zip(symbols_list, type_list))
+
+    # Look up asset types from the database as a fallback.
     assets = session.exec(select(Asset).where(Asset.symbol.in_(symbols_list))).all()
     by_symbol = {a.symbol.upper(): a for a in assets}
 
     by_type: dict[str, list[str]] = {}
     for symbol in symbols_list:
-        asset = by_symbol.get(symbol)
-        type_ = asset.type if asset else "STOCK"
+        type_ = type_map.get(symbol)
+        if not type_:
+            asset = by_symbol.get(symbol)
+            type_ = asset.type if asset else "STOCK"
         by_type.setdefault(type_, []).append(symbol)
 
     quote_map: dict[str, dict] = {}
@@ -174,9 +209,7 @@ def get_market_history(
     session: Session = Depends(get_session),
 ):
     service = MarketDataService(session)
-    history = service.fetch_market_history(symbol, type, start, end)
-    if not history:
-        raise HTTPException(status_code=502, detail="Failed to fetch market history")
+    history = service.fetch_market_history_with_backfill(symbol, type, start, end)
     return [{"date": d, "price": p} for d, p in sorted(history.items())]
 
 

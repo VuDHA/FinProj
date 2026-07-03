@@ -58,23 +58,29 @@ class PortfolioHistoryService:
         for d in dates:
             day_value = 0.0
             day_cost = 0.0
+            day_by_type: Dict[str, float] = {}
             for asset in assets:
                 qty = self._quantity_on_date(asset_transactions.get(asset.id, []), d)
                 if qty <= 0:
                     continue
-                price = self._latest_price(asset_snapshots.get(asset.id, {}), d)
-                if price <= 0:
-                    price = 0.0
-                day_value += qty * price
-                day_cost += qty * self._avg_cost_on_date(
+                avg_cost = self._avg_cost_on_date(
                     asset_transactions.get(asset.id, []), d
                 )
+                price = self._latest_price(asset_snapshots.get(asset.id, {}), d)
+                if price <= 0:
+                    price = avg_cost
+                asset_value = qty * price
+                asset_cost = qty * avg_cost
+                day_value += asset_value
+                day_cost += asset_cost
+                day_by_type[asset.type] = round(day_by_type.get(asset.type, 0.0) + asset_value, 2)
 
             result.append(
                 PortfolioHistoryPoint(
                     date=d,
                     value=round(day_value, 2),
                     cost=round(day_cost, 2),
+                    by_type=day_by_type,
                 )
             )
 

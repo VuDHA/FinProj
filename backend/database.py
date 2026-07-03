@@ -41,9 +41,37 @@ def _ensure_columns():
         conn.commit()
 
 
+def _ensure_news_columns():
+    """Add region/relevance/standout columns to news tables for existing DBs."""
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        return
+    inspector = inspect(engine)
+    source_cols = {c["name"] for c in inspector.get_columns("newssource")}
+    article_cols = {c["name"] for c in inspector.get_columns("newsarticle")}
+    with engine.connect() as conn:
+        if "region" not in source_cols:
+            conn.execute(text("ALTER TABLE newssource ADD COLUMN region VARCHAR NOT NULL DEFAULT 'vn'"))
+        if "region" not in article_cols:
+            conn.execute(text("ALTER TABLE newsarticle ADD COLUMN region VARCHAR NOT NULL DEFAULT 'vn'"))
+        if "relevance_score" not in article_cols:
+            conn.execute(text("ALTER TABLE newsarticle ADD COLUMN relevance_score FLOAT"))
+        if "is_standout" not in article_cols:
+            conn.execute(text("ALTER TABLE newsarticle ADD COLUMN is_standout BOOLEAN NOT NULL DEFAULT 0"))
+        if "tags" not in article_cols:
+            conn.execute(text("ALTER TABLE newsarticle ADD COLUMN tags VARCHAR"))
+        if "language" not in article_cols:
+            conn.execute(text("ALTER TABLE newsarticle ADD COLUMN language VARCHAR"))
+        conn.commit()
+
+
 def _seed_default_source_settings(session):
     from services.source_config import seed_default_sources
     seed_default_sources(session)
+
+
+def _seed_asset_type_settings(session):
+    from services.asset_type_config import seed_asset_types
+    seed_asset_types(session)
 
 
 def _create_embedding_table():
@@ -71,9 +99,11 @@ def _create_embedding_table():
 def init_db():
     SQLModel.metadata.create_all(engine)
     _ensure_columns()
+    _ensure_news_columns()
     _create_embedding_table()
     with Session(engine) as session:
         _seed_default_source_settings(session)
+        _seed_asset_type_settings(session)
 
 
 def get_session():

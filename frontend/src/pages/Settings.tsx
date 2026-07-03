@@ -1,28 +1,62 @@
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Download, RefreshCw, Save, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, Plus, Save, Trash2, Upload } from "lucide-react";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { SmartImportDialog } from "../components/SmartImportDialog";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
-import { Skeleton } from "../components/ui/Skeleton";
 import { SourceSelect } from "../components/SourceSelect";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
-import { formatCurrency } from "../lib/utils";
+import { clearAppStorage } from "../lib/storage";
 
-const ASSET_TYPES = ["STOCK", "FUND", "ETF", "GOLD", "CRYPTO"];
+type AssetTypeConfig = {
+  label: string;
+  fields: string[];
+  marketPrice: boolean;
+};
+
+type AssetTypeMap = Record<string, AssetTypeConfig>;
+
+type AssetTypeItem = {
+  code: string;
+  label: string;
+  fields: string[];
+  marketPrice: boolean;
+};
+
+const FIELD_OPTIONS = [
+  { key: "symbol", label: labels.assets.symbol },
+  { key: "name", label: labels.assets.name },
+  { key: "exchange", label: labels.assets.exchange },
+  { key: "currency", label: labels.assets.currency },
+  { key: "source", label: labels.sources.assetSource },
+  { key: "value", label: labels.assets.value },
+];
 
 export function Settings() {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [smartImportType, setSmartImportType] = useState<"assets" | "transactions" | null>(null);
 
-  const goldFx = useQuery({
-    queryKey: ["gold-fx"],
-    queryFn: async () => (await API.get("/gold-fx/")).data,
+  const assetTypes = useQuery<AssetTypeMap>({
+    queryKey: ["asset-types"],
+    queryFn: async () => (await API.get("/settings/asset-types")).data.types,
+  });
+
+  const saveAssetTypes = useMutation({
+    mutationFn: (payload: AssetTypeMap) => API.post("/settings/asset-types", { types: payload }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["asset-types"] });
+      qc.invalidateQueries({ queryKey: ["default-sources"] });
+      qc.invalidateQueries({ queryKey: ["allocation-targets"] });
+      showToast("Đã lưu loại tài sản", "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể lưu loại tài sản", "error");
+    },
   });
 
   const targets = useQuery({
@@ -89,8 +123,27 @@ export function Settings() {
     },
   });
 
+  const [typeList, setTypeList] = useState<AssetTypeItem[]>([]);
+
+  useEffect(() => {
+    if (assetTypes.data && typeList.length === 0) {
+      setTypeList(
+        Object.entries(assetTypes.data).map(([code, info]) => ({ code, ...info }))
+      );
+    }
+  }, [assetTypes.data, typeList.length]);
+
   const [targetValues, setTargetValues] = useState<Record<string, string>>({});
   const [defaultSourceValues, setDefaultSourceValues] = useState<Record<string, string | null>>({});
+
+  const allTypeCodes = useMemo(() => Object.keys(assetTypes.data || {}), [assetTypes.data]);
+  const marketTypeCodes = useMemo(
+    () => allTypeCodes.filter((code) => assetTypes.data?.[code]?.marketPrice),
+    [allTypeCodes, assetTypes.data]
+  );
+
+  const typeLabel = (code: string) =>
+    assetTypes.data?.[code]?.label || labels.assetTypes[code as keyof typeof labels.assetTypes] || code;
 
   const getDefaultSource = (type: string) => {
     if (defaultSourceValues[type] !== undefined) return defaultSourceValues[type];
@@ -99,7 +152,7 @@ export function Settings() {
 
   const handleSaveDefaultSources = () => {
     const payload: Record<string, string> = {};
-    ASSET_TYPES.forEach((type) => {
+    marketTypeCodes.forEach((type) => {
       const value = getDefaultSource(type);
       if (value) payload[type] = value;
     });
@@ -112,10 +165,10 @@ export function Settings() {
     return found ? String(found.target_percent) : "0";
   };
 
-  const totalTarget = ASSET_TYPES.reduce((sum, t) => sum + (Number(getTarget(t)) || 0), 0);
+  const totalTarget = allTypeCodes.reduce((sum, t) => sum + (Number(getTarget(t)) || 0), 0);
 
   const handleSaveTargets = () => {
-    const payload = ASSET_TYPES.map((type) => ({
+    const payload = allTypeCodes.map((type) => ({
       type,
       target_percent: Number(getTarget(type)) || 0,
     }));
@@ -136,9 +189,60 @@ export function Settings() {
     }
   };
 
+  const updateTypeItem = (index: number, patch: Partial<AssetTypeItem>) => {
+    const next = [...typeList];
+    next[index] = { ...next[index], ...patch };
+    setTypeList(next);
+  };
+
+  const toggleField = (index: number, field: string) => {
+    const item = typeList[index];
+    const fields = item.fields.includes(field)
+      ? item.fields.filter((f) => f !== field)
+      : [...item.fields, field];
+    updateTypeItem(index, { fields });
+  };
+
+  const handleAddType = () => {
+    const base = "NEW_TYPE";
+    let code = base;
+    let i = 1;
+    while (typeList.some((t) => t.code === code)) {
+      code = `${base}_${i++}`;
+    }
+    setTypeList([
+      ...typeList,
+      { code, label: "", fields: ["name", "value"], marketPrice: false },
+    ]);
+  };
+
+  const handleRemoveType = (index: number) => {
+    const next = [...typeList];
+    next.splice(index, 1);
+    setTypeList(next);
+  };
+
+  const handleSaveAssetTypes = () => {
+    const seen = new Set<string>();
+    const payload: AssetTypeMap = {};
+    for (const item of typeList) {
+      const code = item.code.trim().toUpperCase();
+      if (!code || seen.has(code)) continue;
+      seen.add(code);
+      const fields = item.fields.includes("name") ? item.fields : ["name", ...item.fields];
+      payload[code] = {
+        label: item.label.trim() || code,
+        fields,
+        marketPrice: item.marketPrice,
+      };
+    }
+    saveAssetTypes.mutate(payload);
+  };
+
   return (
     <div className="space-y-6">
-      {goldFx.isError && <ErrorMessage error={goldFx.error} retry={() => goldFx.refetch()} />}
+      {assetTypes.isError && <ErrorMessage error={assetTypes.error} retry={() => assetTypes.refetch()} />}
+      {saveAssetTypes.isError && <ErrorMessage error={saveAssetTypes.error} retry={() => saveAssetTypes.reset()} />}
       {targets.isError && <ErrorMessage error={targets.error} retry={() => targets.refetch()} />}
       {saveTargets.isError && <ErrorMessage error={saveTargets.error} retry={() => saveTargets.reset()} />}
       {defaultSources.isError && <ErrorMessage error={defaultSources.error} retry={() => defaultSources.refetch()} />}
@@ -147,113 +251,77 @@ export function Settings() {
       {importTransactions.isError && <ErrorMessage error={importTransactions.error} retry={() => importTransactions.reset()} />}
       <SectionHeader title={labels.settings.title} />
 
-      <FintechCard delay={0.1}>
+      <FintechCard delay={0.05}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="card-title inline-flex items-center">
-            {labels.settings.goldFx}
-            <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="card-title">{labels.settings.assetTypes}</h3>
+            <InfoTooltip content={labels.tooltips.assetType} />
+          </div>
           <button
-            onClick={() => qc.invalidateQueries({ queryKey: ["gold-fx"] })}
-            className="btn-secondary"
+            onClick={handleSaveAssetTypes}
+            disabled={saveAssetTypes.isPending || typeList.length === 0}
+            className="btn-primary"
           >
-            <RefreshCw className={`w-4 h-4 ${goldFx.isFetching ? "animate-spin" : ""}`} />
-            {labels.settings.refresh}
+            <Save className="w-4 h-4" />
+            {saveAssetTypes.isPending ? labels.settings.saving : labels.settings.save}
           </button>
         </div>
-
-        {goldFx.isLoading && <Skeleton className="h-48" />}
-
-        {goldFx.data && (
-          <div className="space-y-6">
-            <div>
-              <h4 className="font-display font-semibold text-slate-900 mb-3">{labels.settings.gold}</h4>
-              {goldFx.data.gold.length > 0 ? (
-                <div className="overflow-x-auto scrollbar-thin">
-                  <table className="table-fintech">
-                    <thead>
-                      <tr>
-                        <th className="text-left">
-                          {labels.settings.source}
-                          <InfoTooltip content={labels.tooltips.sourceDefault} />
-                        </th>
-                        <th className="text-right">
-                          {labels.settings.buy}
-                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                        </th>
-                        <th className="text-right">
-                          {labels.settings.sell}
-                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                        </th>
-                        <th className="text-right">
-                          {labels.settings.updated}
-                          <InfoTooltip content={labels.tooltips.backtestStartDate} />
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {goldFx.data.gold.map((rate: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="font-medium text-slate-900">{rate.source}</td>
-                          <td className="text-right font-mono">{formatCurrency(rate.buy)}</td>
-                          <td className="text-right font-mono">{formatCurrency(rate.sell)}</td>
-                          <td className="text-right font-mono text-slate-500">{rate.updated_at ?? "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-slate-500">{labels.settings.empty}</div>
-              )}
+        <div className="space-y-4">
+          {typeList.map((item, idx) => (
+            <div key={idx} className="p-3 rounded-lg border border-slate-200 bg-slate-50/50 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                <input
+                  type="text"
+                  className="input-fintech"
+                  value={item.code}
+                  onChange={(e) => updateTypeItem(idx, { code: e.target.value.toUpperCase() })}
+                  placeholder={labels.settings.assetTypeCode}
+                />
+                <input
+                  type="text"
+                  className="md:col-span-2 input-fintech"
+                  value={item.label}
+                  onChange={(e) => updateTypeItem(idx, { label: e.target.value })}
+                  placeholder={labels.settings.assetTypeName}
+                />
+                <button
+                  onClick={() => handleRemoveType(idx)}
+                  className="btn-secondary text-rose-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {labels.settings.removeAssetType}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {FIELD_OPTIONS.map((option) => (
+                  <label key={option.key} className="inline-flex items-center gap-1.5 text-sm text-slate-600 bg-white px-2 py-1 rounded border border-slate-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={item.fields.includes(option.key)}
+                      onChange={() => toggleField(idx, option.key)}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={item.marketPrice}
+                  onChange={(e) => updateTypeItem(idx, { marketPrice: e.target.checked })}
+                />
+                {labels.settings.assetTypeMarketPrice}
+              </label>
             </div>
-
-            <div>
-              <h4 className="font-display font-semibold text-slate-900 mb-3">{labels.settings.fx}</h4>
-              {goldFx.data.fx.length > 0 ? (
-                <div className="overflow-x-auto scrollbar-thin">
-                  <table className="table-fintech">
-                    <thead>
-                      <tr>
-                        <th className="text-left">
-                          {labels.settings.currency}
-                          <InfoTooltip content={labels.tooltips.assetCurrency} />
-                        </th>
-                        <th className="text-right">
-                          {labels.settings.buy}
-                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                        </th>
-                        <th className="text-right">
-                          {labels.settings.transfer}
-                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                        </th>
-                        <th className="text-right">
-                          {labels.settings.sell}
-                          <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {goldFx.data.fx.map((rate: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="font-medium text-slate-900">{rate.currency}</td>
-                          <td className="text-right font-mono">{formatCurrency(rate.buy)}</td>
-                          <td className="text-right font-mono">{formatCurrency(rate.transfer)}</td>
-                          <td className="text-right font-mono">{formatCurrency(rate.sell)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-slate-500">{labels.settings.empty}</div>
-              )}
-            </div>
-          </div>
-        )}
+          ))}
+          <button onClick={handleAddType} className="btn-secondary">
+            <Plus className="w-4 h-4" />
+            {labels.settings.addAssetType}
+          </button>
+        </div>
       </FintechCard>
 
-      <FintechCard delay={0.18}>
+      <FintechCard delay={0.1}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <h3 className="card-title">{labels.sources.defaultSources}</h3>
@@ -269,10 +337,10 @@ export function Settings() {
           </button>
         </div>
         <div className="space-y-3">
-          {ASSET_TYPES.map((type) => (
+          {marketTypeCodes.map((type) => (
             <div key={type} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
               <label className="text-sm font-medium text-slate-500 md:col-span-1">
-                {labels.assetTypes[type as keyof typeof labels.assetTypes] ?? type}
+                {typeLabel(type)}
               </label>
               <div className="md:col-span-3">
                 <SourceSelect
@@ -283,6 +351,9 @@ export function Settings() {
               </div>
             </div>
           ))}
+          {marketTypeCodes.length === 0 && (
+            <p className="text-sm text-slate-500">Chưa có loại tài sản nào cần nguồn dữ liệu thị trường.</p>
+          )}
         </div>
       </FintechCard>
 
@@ -292,10 +363,10 @@ export function Settings() {
           <InfoTooltip content={labels.tooltips.allocationTargets} />
         </div>
         <div className="space-y-3">
-          {ASSET_TYPES.map((type) => (
+          {allTypeCodes.map((type) => (
             <div key={type} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
               <label className="text-sm font-medium text-slate-500 md:col-span-1">
-                {labels.assetTypes[type as keyof typeof labels.assetTypes] ?? type}
+                {typeLabel(type)}
               </label>
               <input
                 type="number"
@@ -354,13 +425,14 @@ export function Settings() {
           </div>
           <div className="space-y-3">
             <h4 className="font-medium text-slate-700">{labels.common.add}</h4>
+            <p className="text-xs text-slate-500">{labels.importExport.sampleHint}</p>
             <div className="flex flex-wrap gap-2">
               <label className="btn-secondary cursor-pointer">
                 <Upload className="w-4 h-4" />
                 {labels.settings.importAssets}
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.zip"
                   className="hidden"
                   onChange={(e) => handleFileChange(e, "assets")}
                 />
@@ -370,7 +442,7 @@ export function Settings() {
                 {labels.settings.importTransactions}
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.zip"
                   className="hidden"
                   onChange={(e) => handleFileChange(e, "transactions")}
                 />
@@ -389,6 +461,38 @@ export function Settings() {
                 <Upload className="w-4 h-4" />
                 {labels.importExport.smartImportTransactions}
               </button>
+              <a
+                href="/sample_assets.csv"
+                download
+                className="btn-secondary"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                {labels.importExport.sampleAssets}
+              </a>
+              <a
+                href="/sample_transactions.csv"
+                download
+                className="btn-secondary"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                {labels.importExport.sampleTransactions}
+              </a>
+              <a
+                href="/sample_assets.xlsx"
+                download
+                className="btn-secondary"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                {labels.importExport.sampleAssetsExcel}
+              </a>
+              <a
+                href="/sample_transactions.xlsx"
+                download
+                className="btn-secondary"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                {labels.importExport.sampleTransactionsExcel}
+              </a>
             </div>
           </div>
         </div>
@@ -412,6 +516,28 @@ export function Settings() {
             )}
           </div>
         )}
+      </FintechCard>
+
+      <FintechCard delay={0.3}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="card-title">{labels.settings.clearCache}</h3>
+            <p className="text-sm text-slate-500 mt-1">{labels.settings.clearCacheDescription}</p>
+          </div>
+          <button
+            onClick={() => {
+              if (window.confirm(labels.settings.clearCacheConfirm)) {
+                qc.clear();
+                clearAppStorage();
+                window.location.reload();
+              }
+            }}
+            className="btn-secondary text-rose-600 hover:bg-rose-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            {labels.settings.clearCache}
+          </button>
+        </div>
       </FintechCard>
 
       {smartImportType && (

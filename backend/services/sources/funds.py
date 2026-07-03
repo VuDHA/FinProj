@@ -214,6 +214,7 @@ class FmarketFundSource(Source):
                         "name": name,
                         "exchange": "FMARKET",
                         "type": "FUND",
+                        "fund_type": row.get("dataFundAssetType", {}).get("name") or None,
                     }
                 )
         except Exception as e:

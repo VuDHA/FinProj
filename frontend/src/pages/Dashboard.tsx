@@ -32,6 +32,7 @@ import { getAlerts, getDailyBrief, getTrending } from "../api/news";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { InfoTooltip } from "../components/InfoTooltip";
+import { PriceAlertsSection } from "../components/PriceAlertsSection";
 import { SummaryCards } from "../components/SummaryCards";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
@@ -167,6 +168,8 @@ export function Dashboard() {
       qc.invalidateQueries({ queryKey: ["portfolio-benchmark"] });
       qc.invalidateQueries({ queryKey: ["prices"] });
       qc.invalidateQueries({ queryKey: ["market-watchlist"] });
+      qc.invalidateQueries({ queryKey: ["price-alerts"] });
+      qc.invalidateQueries({ queryKey: ["price-alerts-notifications"] });
       showToast("Đã cập nhật giá thành công", "success");
     },
     onError: (error: any) => {
@@ -305,6 +308,8 @@ export function Dashboard() {
           </Link>
         </div>
       </FintechCard>
+
+      <PriceAlertsSection />
 
       <div className="space-y-2">
         <div className="flex items-center gap-2 px-1">

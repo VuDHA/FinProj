@@ -4,6 +4,7 @@ from typing import Dict, Optional
 from sqlmodel import Session, select
 
 from models import Asset, Setting
+from services.asset_type_config import get_asset_types
 from services.sources import registry
 
 
@@ -22,10 +23,20 @@ def _key(asset_type: str) -> str:
     return f"{_SETTING_KEY_PREFIX}:{asset_type.upper()}"
 
 
+def _market_types(session: Session) -> set:
+    return {
+        code
+        for code, info in get_asset_types(session).items()
+        if info.get("marketPrice", True)
+    }
+
+
 def get_default_sources(session: Session) -> Dict[str, str]:
-    """Return the current default source for each asset type."""
-    result = dict(DEFAULT_SOURCES)
-    for asset_type in result.keys():
+    """Return the current default source for each market-priced asset type."""
+    result = {code: source for code, source in DEFAULT_SOURCES.items()}
+    for asset_type in _market_types(session):
+        if asset_type not in result:
+            result[asset_type] = DEFAULT_SOURCES.get(asset_type, "kbs")
         setting = session.exec(select(Setting).where(Setting.key == _key(asset_type))).first()
         if setting and setting.value:
             result[asset_type] = setting.value
@@ -33,8 +44,8 @@ def get_default_sources(session: Session) -> Dict[str, str]:
 
 
 def set_default_sources(session: Session, sources: Dict[str, str]) -> Dict[str, str]:
-    """Persist default sources per asset type. Invalid sources are ignored."""
-    valid_types = set(DEFAULT_SOURCES.keys())
+    """Persist default sources per market-priced asset type. Invalid sources are ignored."""
+    valid_types = _market_types(session)
     for asset_type, source in sources.items():
         asset_type = asset_type.upper()
         if asset_type not in valid_types:
