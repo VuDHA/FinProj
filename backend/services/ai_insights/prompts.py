@@ -102,7 +102,7 @@ def _fallback_insight(text: str) -> Dict[str, Any]:
     }
 
 
-def generate_insight(prompt: str, task_name: str = "ai_insight", max_tokens: int = 4096) -> Dict[str, Any]:
+def generate_insight(prompt: str, task_name: str = "ai_insight", max_tokens: int = 8192) -> Dict[str, Any]:
     """Generate an AI insight and return parsed fields.
 
     Raises:

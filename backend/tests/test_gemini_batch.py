@@ -156,6 +156,45 @@ def test_ai_provider_factory_gemini_primary():
                     assert provider is not None
 
 
+def test_batch_ai_clean_summary_output_strips_json_wrapper():
+    service = BatchAIService(batch_size=2)
+    assert service._clean_summary_output('{"summary": "hello world"}') == "hello world"
+
+
+def test_batch_ai_clean_summary_output_strips_code_fences():
+    service = BatchAIService(batch_size=2)
+    assert service._clean_summary_output("```markdown\nhello\n```") == "hello"
+
+
+def test_batch_ai_summarize_includes_all_articles(mock_settings_gemini):
+    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
+        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+            service = BatchAIService(batch_size=1)
+            articles = [{"title": f"T{i}", "summary": f"S{i}"} for i in range(8)]
+            with patch.object(service, "_generate_with_fallback", return_value="summary"):
+                service.summarize(articles, language="vi")
+                prompt = service._generate_with_fallback.call_args[0][0]
+                for i in range(8):
+                    assert f"T{i}" in prompt
+
+
+def test_batch_ai_summarize_token_budgets(mock_settings_gemini):
+    with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
+        with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):
+            gemini_service = BatchAIService(batch_size=1)
+            with patch.object(gemini_service, "_generate_with_fallback", return_value="x"):
+                gemini_service.summarize([{"title": "T", "summary": "S"}], language="vi")
+                assert gemini_service._generate_with_fallback.call_args[1]["max_tokens"] == 8192
+
+    with patch("services.ai_provider.settings.AI_PROVIDER", "ollama"):
+        with patch("services.ai_provider.settings.OLLAMA_ENABLED", True):
+            ollama_service = BatchAIService(batch_size=1)
+            with patch.object(ollama_service, "_is_gemini", return_value=False):
+                with patch.object(ollama_service, "_generate_with_fallback", return_value="x"):
+                    ollama_service.summarize([{"title": "T", "summary": "S"}], language="vi")
+                    assert ollama_service._generate_with_fallback.call_args[1]["max_tokens"] == 2048
+
+
 def test_batch_ai_create_embeddings_uses_gemini(mock_settings_gemini):
     with patch("services.ai_provider.settings.AI_PROVIDER", "gemini"):
         with patch("services.ai_provider.settings.OLLAMA_ENABLED", False):

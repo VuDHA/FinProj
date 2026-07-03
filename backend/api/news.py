@@ -209,7 +209,19 @@ def ai_summary(
         enabled=local_settings.OLLAMA_ENABLED,
     )
     summary = ai.summarize(
-        [{"title": a.title, "summary": a.summary} for a in articles],
+        [
+            {
+                "title": a.title,
+                "summary": a.summary,
+                "published_at": a.published_at.isoformat() if a.published_at else None,
+                "url": a.url,
+                "tags": a.tags,
+                "symbols": service.get_article_symbols(a.id),
+                "impact_score": a.impact_score,
+                "relevance_score": a.relevance_score,
+            }
+            for a in articles
+        ],
         language=language or "vi",
         rag_context=rag_context if rag_context else None,
     )
@@ -217,7 +229,7 @@ def ai_summary(
     return AiSummaryResponse(
         summary=summary,
         article_count=len(articles),
-        used_ollama=ai.enabled,
+        used_ollama=local_settings.AI_PROVIDER == "ollama",
         personalized=bool(rag_context),
     )
 

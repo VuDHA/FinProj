@@ -482,7 +482,7 @@ class AiSummaryRequest(BaseModel):
     source_id: Optional[int] = None
     tag: Optional[str] = None
     region: Optional[str] = Field("vn", pattern="^(vn|global)$")
-    limit: int = Field(5, ge=1, le=10)
+    limit: int = Field(20, ge=1, le=50)
 
 
 class AiSummaryResponse(BaseModel):

@@ -64,7 +64,7 @@ class GeminiClient:
         prompt: str,
         model: str = settings.GEMINI_MODEL,
         temperature: float = 0.2,
-        max_tokens: int = 512,
+        max_tokens: int = 1024,
         task_name: str = "gemini_generate",
     ) -> str:
         """Generate text from a single prompt."""
@@ -99,8 +99,9 @@ class GeminiClient:
         prompt: str,
         model: str = settings.GEMINI_MODEL,
         temperature: float = 0.2,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         task_name: str = "gemini_generate_batch",
+        response_mime_type: str = "application/json",
     ) -> str:
         """Generate text from a single prompt that contains multiple tasks.
 
@@ -117,7 +118,7 @@ class GeminiClient:
                 config=types.GenerateContentConfig(
                     temperature=temperature,
                     max_output_tokens=max_tokens,
-                    response_mime_type="application/json",
+                    response_mime_type=response_mime_type,
                 ),
             )
             return response.text or ""

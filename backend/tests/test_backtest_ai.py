@@ -1,9 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import pytest
 from sqlmodel import select
 
 from models import Asset
 from schemas import BacktestRequest
+from services.prompt_parser import PromptParser, PromptParserError
 
 
 def test_backtest_ai_parses_prompt_and_runs(client, session):
@@ -63,3 +65,40 @@ def test_backtest_ai_creates_unknown_symbols_on_the_fly(client, session):
     assert asset is not None
     assert asset.type == "STOCK"
     assert asset.is_active is True
+
+
+def test_backtest_ai_invalid_ai_output_returns_400(client):
+    """Regression: Pydantic ValidationError from bad AI output must not become 500."""
+    with patch(
+        "services.backtest.PromptParser.parse_backtest_prompt",
+        side_effect=PromptParserError("AI returned invalid backtest data"),
+    ):
+        response = client.post(
+            "/api/v1/backtest/ai",
+            json={"prompt": "backtest with invalid data"},
+        )
+
+    assert response.status_code == 400
+
+
+def test_backtest_prompt_parser_handles_validation_error():
+    """Invalid AI JSON fields must be converted to PromptParserError."""
+    mock_service = MagicMock()
+    mock_service.parse_backtest_prompts.return_value = [
+        {
+            "symbols": ["VCB"],
+            "start_date": "2025-01-01",
+            "end_date": "2024-01-01",
+            "strategy": "buy_and_hold",
+            "rebalance_frequency": "monthly",
+            "initial_cash": 100000000,
+        }
+    ]
+
+    parser = PromptParser()
+    with patch(
+        "services.prompt_parser.BatchAIService",
+        return_value=mock_service,
+    ):
+        with pytest.raises(PromptParserError):
+            parser.parse_backtest_prompt("invalid dates")

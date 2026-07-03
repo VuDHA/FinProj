@@ -3,6 +3,8 @@ import json
 import re
 from typing import Dict
 
+from pydantic import ValidationError
+
 from config import settings
 from schemas import BacktestRequest
 
@@ -61,21 +63,27 @@ class PromptParser:
         data["start_date"] = self._normalize_date(data.get("start_date", default_start))
         data["end_date"] = self._normalize_date(data.get("end_date", default_end))
 
-        if "symbols" not in data or not data["symbols"]:
+        raw_symbols = data.get("symbols")
+        if not isinstance(raw_symbols, list) or not raw_symbols:
             raise PromptParserError("AI did not extract any symbols from the prompt.")
 
-        data["symbols"] = [s.strip().upper() for s in data["symbols"] if s and s.strip()]
+        data["symbols"] = [
+            str(s).strip().upper() for s in raw_symbols if s and str(s).strip()
+        ]
 
-        if data.get("allocations"):
+        raw_allocations = data.get("allocations")
+        if raw_allocations:
+            if not isinstance(raw_allocations, dict):
+                raise PromptParserError("AI returned allocations in an unexpected format.")
             data["allocations"] = {
-                k.strip().upper(): float(v)
-                for k, v in data["allocations"].items()
+                str(k).strip().upper(): float(v)
+                for k, v in raw_allocations.items()
                 if k and str(v).strip()
             }
 
         try:
             return BacktestRequest(**data)
-        except ValueError as e:
+        except ValidationError as e:
             raise PromptParserError(f"AI response did not match the backtest schema: {e}")
 
     def parse_stress_prompt(self, prompt: str, base: BacktestRequest) -> BacktestRequest:
@@ -119,18 +127,26 @@ class PromptParser:
         merged["end_date"] = self._normalize_date(merged.get("end_date", default_end))
 
         if "symbols" in merged:
-            merged["symbols"] = [s.strip().upper() for s in merged["symbols"] if s and s.strip()]
+            raw_symbols = merged["symbols"]
+            if not isinstance(raw_symbols, list):
+                raise PromptParserError("AI returned symbols in an unexpected format.")
+            merged["symbols"] = [
+                str(s).strip().upper() for s in raw_symbols if s and str(s).strip()
+            ]
 
         if merged.get("allocations"):
+            raw_allocations = merged["allocations"]
+            if not isinstance(raw_allocations, dict):
+                raise PromptParserError("AI returned allocations in an unexpected format.")
             merged["allocations"] = {
-                k.strip().upper(): float(v)
-                for k, v in merged["allocations"].items()
+                str(k).strip().upper(): float(v)
+                for k, v in raw_allocations.items()
                 if k and str(v).strip()
             }
 
         try:
             return BacktestRequest(**merged)
-        except ValueError as e:
+        except ValidationError as e:
             raise PromptParserError(f"AI response did not match the backtest schema: {e}")
 
     def _normalize_date(self, value) -> str:

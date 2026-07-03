@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from typing import Dict, List, Optional
 
 from config import settings
@@ -40,8 +41,8 @@ class LocalTagger:
                 "Bạn là chuyên gia phân loại tin tức tài chính. "
                 "Hãy đọc tiêu đề và tóm tắt, rồi trả về từ 3 đến 5 tag ngắn gọn, "
                 "liên quan đến chứng khoán, tài chính hoặc kinh tế. "
-                "Mỗi tag là 1-2 từ, viết thường, không dấu câu, cách nhau bằng dấu phẩy. "
-                "Tất cả tag phải bằng tiếng Việt, tuyệt đối không dùng tiếng Anh.\n\n"
+                "Mỗi tag là 1-2 từ, viết thường, không dấu câu nhưng giữ nguyên dấu tiếng Việt, cách nhau bằng dấu phẩy. "
+                "Tất cả tag phải bằng tiếng Việt có dấu (ví dụ: cổ phiếu, chứng khoán, lãi suất, ngân hàng), tuyệt đối không dùng tiếng Việt không dấu hoặc tiếng Anh.\n\n"
                 f"{context_block}"
                 f"Tiêu đề: {title}\n"
                 f"Tóm tắt: {summary}\n\n"
@@ -52,7 +53,7 @@ class LocalTagger:
             "You are a financial news classifier. Read the title and summary, "
             "then return 3-5 short tags related to finance, stocks, or the economy. "
             "Each tag is 1-2 words, lowercase, no punctuation, separated by commas. "
-            "All tags must be in Vietnamese, never English.\n\n"
+            "All tags must be in Vietnamese with diacritics (e.g., cổ phiếu, chứng khoán, lãi suất), never English.\n\n"
             f"{context_block}"
             f"Title: {title}\n"
             f"Summary: {summary}\n\n"
@@ -68,7 +69,7 @@ class LocalTagger:
 
         tags = []
         for token in re.split(r"[,;|]", cleaned):
-            token = token.strip().lower()
+            token = unicodedata.normalize("NFC", token).strip().lower()
             token = re.sub(r"^[-\d\s]+", "", token)  # strip leading bullets/numbers
             token = re.sub(r"[-\d\s]+$", "", token)
             token = re.sub(r"[^\w\s]", "", token)
@@ -89,7 +90,7 @@ class LocalTagger:
                 model=self.model,
                 options={
                     "temperature": 0.2,
-                    "num_predict": 128,
+                    "num_predict": 256,
                 },
                 task_name="news_tagging",
             )

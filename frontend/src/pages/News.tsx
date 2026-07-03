@@ -43,6 +43,7 @@ import {
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { FintechCard } from "../components/ui/FintechCard";
+import { MarkdownRenderer } from "../components/MarkdownRenderer";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useAiQueue } from "../contexts/AiQueueContext";
@@ -494,7 +495,7 @@ export function News() {
           date_from: dateFrom || undefined,
           date_to: dateTo || undefined,
           region,
-          limit: 5,
+          limit: 30,
         })
       ),
     onSuccess: (data) => {
@@ -799,8 +800,8 @@ export function News() {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="text-sm text-indigo-900 whitespace-pre-wrap leading-relaxed">
-                  {aiSummaryData.summary}
+                <div className="text-sm text-indigo-900 leading-relaxed">
+                  <MarkdownRenderer content={aiSummaryData.summary} />
                 </div>
               </div>
             )}

@@ -11,6 +11,7 @@ def handle_ai_insight_error(fn):
 
     - AIQueueBusyError -> 429 with cooldown_seconds
     - InsightGenerationError -> 503
+    - HTTPException is re-raised as-is (e.g. 400 from prompt parsing)
     - Unknown exceptions -> 500
     """
     import functools
@@ -32,6 +33,8 @@ def handle_ai_insight_error(fn):
                 status_code=503,
                 detail={"message": str(e)},
             ) from e
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=500,

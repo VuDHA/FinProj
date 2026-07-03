@@ -109,7 +109,7 @@ class RelevanceScorer:
             model=self.model,
             options={
                 "temperature": 0.1,
-                "num_predict": 128,
+                "num_predict": 256,
             },
             task_name="news_relevance_score",
         ).strip()

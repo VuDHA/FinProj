@@ -1,6 +1,7 @@
 import datetime
 import json
 import re
+import unicodedata
 from typing import Any, Dict, List, Optional
 
 from config import settings
@@ -43,10 +44,21 @@ class BatchAIService:
     def _is_gemini(self) -> bool:
         return self._primary is not None and isinstance(self._primary, GeminiClient)
 
-    def _generate_gemini(self, prompt: str, max_tokens: int, task_name: str) -> str:
+    def _generate_gemini(
+        self,
+        prompt: str,
+        max_tokens: int,
+        task_name: str,
+        response_mime_type: str = "application/json",
+    ) -> str:
         if not self._is_gemini():
             raise BatchAIError("Gemini is not configured")
-        return self._primary.generate_batch(prompt, max_tokens=max_tokens, task_name=task_name)
+        return self._primary.generate_batch(
+            prompt,
+            max_tokens=max_tokens,
+            task_name=task_name,
+            response_mime_type=response_mime_type,
+        )
 
     def _generate_fallback(self, prompt: str, max_tokens: int, task_name: str) -> str:
         if self._fallback is None:
@@ -66,10 +78,13 @@ class BatchAIService:
         prompt: str,
         max_tokens: int,
         task_name: str,
+        response_mime_type: str = "application/json",
     ) -> str:
         if self._is_gemini():
             try:
-                return self._generate_gemini(prompt, max_tokens, task_name)
+                return self._generate_gemini(
+                    prompt, max_tokens, task_name, response_mime_type=response_mime_type
+                )
             except (GeminiClientError, BatchAIError) as e:
                 print(f"[batch_ai] gemini failed for {task_name}: {e}")
         if self._fallback is not None:
@@ -79,7 +94,7 @@ class BatchAIService:
     def generate_insight(
         self,
         prompt: str,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         task_name: str = "ai_insight",
     ) -> str:
         """Generate a single AI insight with provider fallback.
@@ -168,11 +183,11 @@ class BatchAIService:
             f"{master_prompt(language)}\n\n"
             "Bạn là chuyên gia phân loại tin tức tài chính. "
             "Với mỗi tin bên dưới, trả về 3-5 tag ngắn gọn liên quan đến tài chính/chứng khoán. "
-            "Mỗi tag 1-2 từ, viết thường, không dấu câu, cách nhau bằng dấu phẩy. "
-            "Tất cả tag bằng tiếng Việt.\n\n"
+            "Mỗi tag 1-2 từ, viết thường, không dấu câu nhưng giữ nguyên dấu tiếng Việt, cách nhau bằng dấu phẩy. "
+            "Tất cả tag bằng tiếng Việt có dấu (ví dụ: cổ phiếu, chứng khoán, lãi suất), tuyệt đối không dùng tiếng Việt không dấu hoặc tiếng Anh.\n\n"
             if language == "vi"
             else f"{master_prompt(language)}\n\n"
-            "You are a financial news classifier. For each article below, return 3-5 short tags related to finance/stocks. Each tag is 1-2 words, lowercase, no punctuation, separated by commas.\n\n"
+            "You are a financial news classifier. For each article below, return 3-5 short tags related to finance/stocks. Each tag is 1-2 words, lowercase, no punctuation, separated by commas. All tags must be in Vietnamese with diacritics (e.g., cổ phiếu, chứng khoán, lãi suất), never English.\n\n"
         )
 
         results: List[Optional[List[str]]] = [None] * len(items)
@@ -190,7 +205,7 @@ class BatchAIService:
             try:
                 raw = self._generate_with_fallback(
                     batch_prompt,
-                    max_tokens=1024,
+                    max_tokens=2048,
                     task_name=task_name,
                 )
                 parsed = self._parse_batch_response(raw)
@@ -229,8 +244,8 @@ class BatchAIService:
                 "Bạn là chuyên gia phân loại tin tức tài chính. "
                 "Hãy đọc tiêu đề và tóm tắt, rồi trả về từ 3 đến 5 tag ngắn gọn, "
                 "liên quan đến chứng khoán, tài chính hoặc kinh tế. "
-                "Mỗi tag là 1-2 từ, viết thường, không dấu câu, cách nhau bằng dấu phẩy. "
-                "Tất cả tag phải bằng tiếng Việt.\n\n"
+                "Mỗi tag là 1-2 từ, viết thường, không dấu câu nhưng giữ nguyên dấu tiếng Việt, cách nhau bằng dấu phẩy. "
+                "Tất cả tag phải bằng tiếng Việt có dấu (ví dụ: cổ phiếu, chứng khoán, lãi suất), tuyệt đối không dùng tiếng Việt không dấu hoặc tiếng Anh.\n\n"
                 f"{context_block}"
                 f"Tiêu đề: {title}\n"
                 f"Tóm tắt: {summary}\n\n"
@@ -241,7 +256,8 @@ class BatchAIService:
                 f"{master_prompt(language)}\n\n"
                 "You are a financial news classifier. Read the title and summary, "
                 "then return 3-5 short tags related to finance, stocks, or the economy. "
-                "Each tag is 1-2 words, lowercase, no punctuation, separated by commas.\n\n"
+                "Each tag is 1-2 words, lowercase, no punctuation, separated by commas. "
+                "All tags must be in Vietnamese with diacritics (e.g., cổ phiếu, chứng khoán, lãi suất), never English.\n\n"
                 f"{context_block}"
                 f"Title: {title}\n"
                 f"Summary: {summary}\n\n"
@@ -251,7 +267,7 @@ class BatchAIService:
             raw = self._fallback.generate(
                 prompt=prompt,
                 model=settings.OLLAMA_MODEL,
-                options={"temperature": 0.2, "num_predict": 128},
+                options={"temperature": 0.2, "num_predict": 256},
                 task_name="ollama_tag_fallback",
             )
             return self._clean_tags(raw, max_tags)
@@ -317,7 +333,7 @@ class BatchAIService:
             try:
                 raw = self._generate_with_fallback(
                     batch_prompt,
-                    max_tokens=2048,
+                    max_tokens=4096,
                     task_name=task_name,
                 )
                 print(f"[relevance:raw] len={len(raw)} first={raw[:200]!r} last={raw[-200:]!r}")
@@ -382,7 +398,7 @@ class BatchAIService:
             raw = self._fallback.generate(
                 prompt=prompt,
                 model=settings.OLLAMA_MODEL,
-                options={"temperature": 0.1, "num_predict": 128},
+                options={"temperature": 0.1, "num_predict": 256},
                 task_name="ollama_relevance_fallback",
             )
             entry = self._parse_single_json(raw) or {}
@@ -410,44 +426,99 @@ class BatchAIService:
         if context:
             context_block = f"Bối cảnh cá nhân:\n{context}\n\n" if language == "vi" else f"Personal context:\n{context}\n\n"
 
-        article_lines = "\n".join(
-            f"{i + 1}. Tiêu đề: {a.get('title', '')}\n   Tóm tắt: {a.get('summary', '')[:300]}"
-            for i, a in enumerate(items[:5])
+        def _article_line(i: int, a: Dict[str, Any]) -> str:
+            title = a.get("title") or ""
+            summary = a.get("summary") or ""
+            published = a.get("published_at") or ""
+            url = a.get("url") or ""
+            tags = a.get("tags") or ""
+            symbols = a.get("symbols") or []
+            impact = a.get("impact_score")
+            parts = [f"{i + 1}. Tiêu đề: {title}"]
+            if published:
+                parts.append(f"   Ngày: {published}")
+            if summary:
+                parts.append(f"   Tóm tắt: {summary[:300]}")
+            if tags:
+                parts.append(f"   Chủ đề: {tags}")
+            if symbols:
+                parts.append(f"   Mã CK: {', '.join(str(s) for s in symbols)}")
+            if impact is not None:
+                parts.append(f"   Mức độ tác động: {impact:.0%}")
+            if url:
+                parts.append(f"   Nguồn: {url}")
+            return "\n".join(parts)
+
+        article_lines = "\n\n".join(
+            _article_line(i, a)
+            for i, a in enumerate(items)
             if a.get("title") or a.get("summary")
         )
 
         if language == "vi":
             prompt = (
-                "Bạn là API tóm tắt tin tức tài chính. CHỈ trả về bài tóm tắt, không chào hỏi, "
-                "không giải thích thêm, không liệt kê gạch đầu dòng. "
-                "Viết một bài tóm tắt liền mạch, tự nhiên, dễ hiểu, gồm 3-4 đoạn văn. "
-                "Mỗi đoạn nên đề cập đến một khía cạnh chính: bối cảnh thị trường, các yếu tố then chốt, "
-                "và ý nghĩa đối với nhà đầu tư. "
-                "Nếu có bối cảnh cá nhân, hãy đề cập đến các mã người dùng đang quan tâm.\n\n"
+                f"{master_prompt(language)}\n\n"
+                "Bạn là biên tập viên tài chính cao cấp. Dựa trên toàn bộ các tin tức được cung cấp (theo thứ tự mới nhất đến cũ), "
+                "hãy viết một bài tổng hợp thị trường toàn diện, dễ đọc, bằng tiếng Việt. "
+                "Trả về nội dung định dạng Markdown với tiêu đề, đoạn văn và gạch đầu dòng. "
+                "KHÔNG trả về JSON, KHÔNG bọc trong {summary: ...}. "
+                "Nội dung cần:\n"
+                "- Một đoạn mở đầu tổng quan thị trường\n"
+                "- Các yếu tố chính đang tác động đến thị trường\n"
+                "- Tác động đến nhóm ngành/cổ phiếu quan trọng\n"
+                "- Ý nghĩa cho nhà đầu tư\n"
+                "- Nếu có bối cảnh cá nhân, hãy đề cập các mã người dùng đang quan tâm\n"
+                "- Cuối cùng liệt kê 3-5 nguồn tin chính kèm ngày và URL\n\n"
             )
         else:
             prompt = (
-                "You are a financial news summary API. ONLY return the summary, no greetings, "
-                "no extra explanations, no bullet points. "
-                "Write a coherent, natural, easy-to-read summary in 3-4 paragraphs. "
-                "Each paragraph should cover one main aspect: market context, key drivers, "
-                "and implications for investors. "
-                "If personal context is provided, mention the user's watched symbols where relevant.\n\n"
+                f"{master_prompt(language)}\n\n"
+                "You are a senior financial editor. Based on all the provided news (latest to oldest), "
+                "write a comprehensive, readable market summary. "
+                "Return Markdown with headings, paragraphs, and bullet points. "
+                "DO NOT return JSON or wrap the output in {summary: ...}. "
+                "Cover: market overview, key drivers, sector/stock impact, investment implications, personalized context, "
+                "and end with 3-5 key sources with dates and URLs.\n\n"
             )
         prompt += f"{context_block}{article_lines}\n\nTóm tắt:"
 
-        # Gemini can handle longer output; keep local models modest.
-        max_tokens = 2048 if self._is_gemini() else 384
+        # Gemini output is capped at 8192; news summary gets 4x for Ollama.
+        max_tokens = 8192 if self._is_gemini() else 2048
 
         try:
-            return self._generate_with_fallback(
+            raw = self._generate_with_fallback(
                 prompt,
                 max_tokens=max_tokens,
                 task_name="batch_summary",
+                response_mime_type="text/plain",
             ).strip()
+            return self._clean_summary_output(raw)
         except Exception as e:
             print(f"[batch_ai] summary failed: {e}")
             return "Không có tin tức để tóm tắt." if language == "vi" else "No articles to summarize."
+
+    @staticmethod
+    def _clean_summary_output(raw: str) -> str:
+        """Strip accidental JSON wrappers and code fences from the summary."""
+        text = raw.strip()
+        # Remove outer JSON object if the model wrapped the summary.
+        if text.startswith("{") and text.endswith("}"):
+            try:
+                data = json.loads(text)
+                if isinstance(data, dict) and "summary" in data:
+                    text = str(data["summary"])
+            except json.JSONDecodeError:
+                pass
+        # Remove markdown code fences if present.
+        text = text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
+        return text
 
     def suggest_mappings(
         self,
@@ -487,7 +558,7 @@ class BatchAIService:
             try:
                 raw = self._generate_with_fallback(
                     prompt,
-                    max_tokens=256,
+                    max_tokens=512,
                     task_name="batch_smart_import",
                 )
                 parsed = self._parse_batch_response(raw)
@@ -547,7 +618,7 @@ class BatchAIService:
             raw = self._fallback.generate(
                 prompt=prompt,
                 model=settings.OLLAMA_MODEL,
-                options={"temperature": 0.1, "num_predict": 256},
+                options={"temperature": 0.1, "num_predict": 512},
                 task_name="ollama_mapping_fallback",
             )
             entry = self._parse_single_json(raw) or {}
@@ -598,7 +669,7 @@ class BatchAIService:
             try:
                 raw = self._generate_with_fallback(
                     prompt,
-                    max_tokens=512,
+                    max_tokens=1024,
                     task_name="batch_backtest_parser",
                 )
                 parsed = self._parse_batch_response(raw)
@@ -652,7 +723,7 @@ class BatchAIService:
             try:
                 raw = self._generate_with_fallback(
                     prompt,
-                    max_tokens=2048,
+                    max_tokens=4096,
                     task_name="batch_stress_parser",
                 )
                 parsed = self._parse_batch_response(raw)
@@ -690,7 +761,7 @@ class BatchAIService:
             raw = self._fallback.generate(
                 prompt=system_prompt,
                 model=settings.OLLAMA_MODEL,
-                options={"temperature": 0.1, "num_predict": 256},
+                options={"temperature": 0.1, "num_predict": 512},
                 task_name="ollama_stress_fallback",
             )
             data = self._parse_single_json(raw) or {}
@@ -733,7 +804,7 @@ class BatchAIService:
             raw = self._fallback.generate(
                 prompt=system_prompt,
                 model=settings.OLLAMA_MODEL,
-                options={"temperature": 0.1, "num_predict": 256},
+                options={"temperature": 0.1, "num_predict": 512},
                 task_name="ollama_backtest_fallback",
             )
             data = self._parse_single_json(raw) or {}
@@ -886,7 +957,7 @@ class BatchAIService:
             text = str(raw or "")
         tags = []
         for token in re.split(r"[,;|]", text):
-            token = token.strip().lower()
+            token = unicodedata.normalize("NFC", token).strip().lower()
             token = re.sub(r"^[-\d\s]+", "", token)
             token = re.sub(r"[-\d\s]+$", "", token)
             token = re.sub(r"[^\w\s]", "", token)
