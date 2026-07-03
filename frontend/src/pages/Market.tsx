@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { LineChart as LineChartIcon, RefreshCw } from "lucide-react";
+import { Bot, LineChart as LineChartIcon, RefreshCw } from "lucide-react";
 import { usePersistentState } from "../hooks/usePersistentState";
 import {
   Area,
@@ -12,6 +12,9 @@ import {
   YAxis,
 } from "recharts";
 import API from "../api/client";
+import { getMarketInsight } from "../api/ai";
+import { AiGenerateButton } from "../components/AiGenerateButton";
+import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { InfoTooltip } from "../components/InfoTooltip";
 import SymbolDetailModal from "../components/SymbolDetailModal";
@@ -20,6 +23,7 @@ import { FintechCard } from "../components/ui/FintechCard";
 import { MiniSparkline } from "../components/ui/MiniSparkline";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
+import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
 
@@ -166,6 +170,11 @@ export function Market() {
     ? history.data.map((d) => d.price)
     : [];
 
+  const marketInsight = useAiInsight({
+    taskName: "market_insight",
+    fetcher: getMarketInsight,
+  });
+
   return (
     <div className="space-y-6">
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
@@ -245,6 +254,26 @@ export function Market() {
         ) : (
           <div className="text-slate-500 py-4">{labels.market.noStockFund}</div>
         )}
+      </FintechCard>
+
+      <FintechCard delay={0.08}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="card-title inline-flex items-center gap-2">
+            <Bot className="w-4 h-4 text-indigo-500" />
+            Phân tích AI thị trường
+          </h3>
+          <AiGenerateButton
+            label="Phân tích"
+            onClick={() => marketInsight.generate()}
+            loading={marketInsight.loading}
+          />
+        </div>
+        <AiInsightCard
+          data={marketInsight.data}
+          loading={marketInsight.loading}
+          error={marketInsight.error}
+          onClose={marketInsight.clear}
+        />
       </FintechCard>
 
       <FintechCard delay={0.1}>

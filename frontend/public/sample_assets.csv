@@ -1,6 +1,7 @@
-symbol,name,type,exchange,currency
-VCB,Vietcombank,STOCK,HOSE,VND
-VNM,Vinamilk,STOCK,HOSE,VND
-FUEVFVND,FTSE Vietnam ETF,ETF,HOSE,VND
-SJC,SJC Gold 1 ounce,GOLD,,VND
-BTC,Bitcoin,CRYPTO,,USD
+symbol,name,type,exchange,currency,value
+VCB,Vietcombank,STOCK,HOSE,VND,
+VNM,Vinamilk,STOCK,HOSE,VND,
+FUEVFVND,FTSE Vietnam ETF,ETF,HOSE,VND,
+SJC,SJC Gold 1 ounce,GOLD,,VND,
+BTC,Bitcoin,CRYPTO,,USD,
+APT1,Apartment,REAL_ESTATE,,VND,2500000000

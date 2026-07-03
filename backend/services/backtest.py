@@ -4,7 +4,6 @@ from collections import defaultdict
 
 from sqlmodel import Session, select
 
-from config import settings
 from models import Asset, PriceSnapshot, Transaction
 from schemas import BacktestPosition, BacktestRequest, BacktestPoint, BacktestResult, BacktestTrade
 from services.market_data import MarketDataService
@@ -355,13 +354,18 @@ class BacktestService:
 
     def run_from_prompt(self, prompt: str) -> Dict:
         """Parse a natural-language prompt and run the backtest."""
-        if not settings.OLLAMA_ENABLED:
-            raise PromptParserError(
-                "Ollama is disabled. Please enable Ollama in settings or use the manual backtest form."
-            )
-
         parser = PromptParser()
         request = parser.parse_backtest_prompt(prompt=prompt)
+        result = self.run(request)
+        return {
+            "request": request.model_dump(),
+            "result": result,
+        }
+
+    def run_stress_from_prompt(self, prompt: str, base_request: BacktestRequest) -> Dict:
+        """Apply a stress/what-if prompt to a base request and run the backtest."""
+        parser = PromptParser()
+        request = parser.parse_stress_prompt(prompt=prompt, base=base_request)
         result = self.run(request)
         return {
             "request": request.model_dump(),

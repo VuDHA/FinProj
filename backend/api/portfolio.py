@@ -5,9 +5,13 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from database import get_session
-from schemas import PortfolioHistoryPoint, PortfolioSummary
+from schemas import PortfolioAIInsightResponse, PortfolioHistoryPoint, PortfolioSummary
+from .ai_utils import handle_ai_insight_error
+from services.ai_insights import PortfolioInsightService
 from services.portfolio import PortfolioService
 from services.portfolio_history import PortfolioHistoryService
+from services.rebalance import RebalanceService
+from services.risk_metrics import RiskMetricsService
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
@@ -24,3 +28,16 @@ def get_portfolio_history(
     session: Session = Depends(get_session),
 ):
     return PortfolioHistoryService(session).get_history(start, end)
+
+
+@router.post("/ai-insight", response_model=PortfolioAIInsightResponse)
+@handle_ai_insight_error
+def get_portfolio_ai_insight(session: Session = Depends(get_session)):
+    portfolio = PortfolioService(session).get_portfolio()
+    risk = RiskMetricsService(session).get_metrics()
+    rebalance = RebalanceService(session).suggest()
+    return PortfolioInsightService().generate(
+        portfolio.model_dump(),
+        risk.model_dump(),
+        rebalance.model_dump(),
+    )

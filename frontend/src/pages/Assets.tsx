@@ -73,12 +73,20 @@ export function Assets() {
   const allTypeCodes = useMemo(() => Object.keys(typeConfig), [typeConfig]);
   const defaultType = useMemo(() => allTypeCodes[0] || "", [allTypeCodes]);
   const fields = typeConfig[form.type]?.fields || ["symbol", "name"];
+  const isMarketPrice = typeConfig[form.type]?.marketPrice !== false;
+  const needsManualValue = !isMarketPrice;
 
   useEffect(() => {
     if (defaultType && !form.type) {
       setForm((prev) => ({ ...prev, type: defaultType }));
     }
   }, [defaultType, form.type]);
+
+  useEffect(() => {
+    if (isMarketPrice && form.manual_value) {
+      setForm((prev) => ({ ...prev, manual_value: "" }));
+    }
+  }, [form.type, isMarketPrice]);
 
   const assets = useQuery({
     queryKey: ["assets"],
@@ -96,7 +104,7 @@ export function Assets() {
     mutationFn: () => {
       const payload: any = { ...form };
       if (!payload.symbol) delete payload.symbol;
-      if (payload.manual_value) {
+      if (!isMarketPrice && payload.manual_value) {
         payload.manual_value = parseFloat(payload.manual_value);
       } else {
         delete payload.manual_value;
@@ -134,7 +142,7 @@ export function Assets() {
     if (fields.includes("symbol")) {
       validators.symbol = { value: form.symbol, validators: [required("Vui lòng nhập mã tài sản")] };
     }
-    if (fields.includes("value")) {
+    if (needsManualValue || fields.includes("value")) {
       validators.manual_value = { value: form.manual_value, validators: [positiveNumber("Vui lòng nhập giá trị dương")] };
     }
     const validationErrors = validateForm(validators);
@@ -285,6 +293,7 @@ export function Assets() {
             </span>
           </div>
           {fields.map(renderField)}
+          {needsManualValue && !fields.includes("value") && renderField("value")}
         </div>
         <button
           onClick={handleSubmit}

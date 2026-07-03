@@ -50,6 +50,26 @@ def test_import_assets_csv_invalid_type(session):
     assert result.errors
 
 
+def test_import_assets_csv_non_market_requires_value(session):
+    content = "symbol,name,type,currency\nAPT1,Apartment,REAL_ESTATE,VND\n"
+    result = import_assets(session, content)
+    assert result.created == 0
+    assert result.errors
+
+
+def test_import_assets_csv_non_market_creates_snapshot(session):
+    content = "symbol,name,type,currency,value\nAPT1,Apartment,REAL_ESTATE,VND,2500000000\n"
+    result = import_assets(session, content)
+    assert result.created == 1
+    asset = session.exec(select(Asset).where(Asset.symbol == "APT1")).first()
+    assert asset is not None
+    snapshot = session.exec(
+        select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
+    ).first()
+    assert snapshot is not None
+    assert snapshot.price == 2500000000.0
+
+
 def test_export_transactions_csv(session):
     asset = _create_asset(session, "VCB")
     _add_tx(session, asset, "BUY", 10, 100, datetime.date(2023, 1, 1))
@@ -71,6 +91,18 @@ def test_import_transactions_sell_exceeds_holding(session):
     result = import_transactions(session, content)
     assert result.created == 0
     assert result.errors
+
+
+def test_import_transactions_non_market_uses_snapshot(session):
+    asset = _create_asset(session, "APT1", type="REAL_ESTATE")
+    session.add(PriceSnapshot(asset_id=asset.id, date=datetime.date.today(), price=2500000000))
+    session.commit()
+    content = "symbol,type,quantity,price,fee,date,notes\nAPT1,BUY,1,0,0,2023-01-01,note\n"
+    result = import_transactions(session, content)
+    assert result.created == 1
+    tx = session.exec(select(Transaction).where(Transaction.asset_id == asset.id)).first()
+    assert tx is not None
+    assert tx.price == 2500000000.0
 
 
 def test_portfolio_service_with_stock(session, monkeypatch):
@@ -161,6 +193,13 @@ def test_risk_metrics_service(session, monkeypatch):
             PortfolioHistoryPoint(date=d3, value=1200, cost=900),
         ]
 
+    def fake_monthly_pnl(self, start, end):
+        from schemas import MonthlyPnL
+        return [
+            MonthlyPnL(month="2023-01", start_value=1000, end_value=1100, pnl=100, pnl_percent=10.0),
+            MonthlyPnL(month="2023-02", start_value=1100, end_value=1200, pnl=100, pnl_percent=9.09),
+        ]
+
     def fake_benchmark(self, symbol, start, end):
         from schemas import BenchmarkPoint
         return [
@@ -170,6 +209,7 @@ def test_risk_metrics_service(session, monkeypatch):
         ]
 
     monkeypatch.setattr("services.portfolio_history.PortfolioHistoryService.get_history", fake_history)
+    monkeypatch.setattr("services.analytics.AnalyticsService._monthly_pnl", fake_monthly_pnl)
     monkeypatch.setattr("services.benchmark.BenchmarkService.get_comparison", fake_benchmark)
 
     metrics = RiskMetricsService(session).get_metrics()
@@ -177,6 +217,98 @@ def test_risk_metrics_service(session, monkeypatch):
     assert metrics.sharpe_ratio is not None
     assert metrics.max_drawdown_percent is not None
     assert metrics.beta is not None
+
+
+def test_risk_metrics_service_uses_pnl_returns_not_raw_values(session, monkeypatch):
+    """If raw value changes were used, a large mid-month purchase would create
+    a fake ~1000% monthly return and explode volatility/beta. Corrected returns
+    from AnalyticsService should keep the metrics in a sensible range.
+    """
+    from schemas import PortfolioHistoryPoint, BenchmarkPoint, MonthlyPnL
+
+    d1 = datetime.date(2023, 1, 1)
+    d2 = datetime.date(2023, 2, 1)
+    d3 = datetime.date(2023, 3, 1)
+
+    def fake_history(self, start, end):
+        return [
+            PortfolioHistoryPoint(date=d1, value=1000, cost=900),
+            PortfolioHistoryPoint(date=d2, value=11000, cost=900),
+            PortfolioHistoryPoint(date=d3, value=12000, cost=900),
+        ]
+
+    def fake_monthly_pnl(self, start, end):
+        # Corrected returns: purchases are excluded, so both months are ~10%.
+        return [
+            MonthlyPnL(month="2023-01", start_value=1000, end_value=1100, pnl=100, pnl_percent=10.0),
+            MonthlyPnL(month="2023-02", start_value=1100, end_value=1200, pnl=100, pnl_percent=9.09),
+        ]
+
+    def fake_benchmark(self, symbol, start, end):
+        return [
+            BenchmarkPoint(date=d1, portfolio_value=1000, benchmark_value=1000),
+            BenchmarkPoint(date=d2, portfolio_value=11000, benchmark_value=1050),
+            BenchmarkPoint(date=d3, portfolio_value=12000, benchmark_value=1100),
+        ]
+
+    monkeypatch.setattr("services.portfolio_history.PortfolioHistoryService.get_history", fake_history)
+    monkeypatch.setattr("services.analytics.AnalyticsService._monthly_pnl", fake_monthly_pnl)
+    monkeypatch.setattr("services.benchmark.BenchmarkService.get_comparison", fake_benchmark)
+
+    metrics = RiskMetricsService(session).get_metrics()
+    assert metrics.volatility is not None
+    assert metrics.volatility < 1.0, f"volatility should be <100%, got {metrics.volatility}"
+    assert metrics.sharpe_ratio is not None
+    assert metrics.beta is not None
+
+
+def test_monthly_pnl_excludes_new_purchases(session, monkeypatch):
+    asset = _create_asset(session, "VCB")
+    d1 = datetime.date(2023, 1, 1)
+    d2 = datetime.date(2023, 1, 15)
+    d3 = datetime.date(2023, 1, 31)
+    _add_tx(session, asset, "BUY", 10, 100, d2, fee=5)
+    session.add(PriceSnapshot(asset_id=asset.id, date=d1, price=100, change=0, change_percent=0))
+    session.add(PriceSnapshot(asset_id=asset.id, date=d3, price=110, change=10, change_percent=10))
+    session.commit()
+
+    def fake_history(self, symbol, asset_type, start, end):
+        return {d1: 100, d3: 110}
+
+    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_history)
+
+    monthly_pnl = AnalyticsService(session)._monthly_pnl(d1, d3)
+    assert len(monthly_pnl) == 1
+    assert monthly_pnl[0].start_value == 0.0
+    assert monthly_pnl[0].end_value == 1100.0
+    # PnL = end_value - start_value - net_buy_cost = 1100 - 0 - (10*100 + 5) = 95
+    assert monthly_pnl[0].pnl == 95.0
+    # Percent is based on invested capital (start_value + net_investment), not start_value alone.
+    assert monthly_pnl[0].pnl_percent == round((95 / 1005) * 100, 2)
+
+
+def test_monthly_pnl_excludes_start_of_month_purchase(session, monkeypatch):
+    asset = _create_asset(session, "VCB")
+    d1 = datetime.date(2023, 1, 1)
+    d3 = datetime.date(2023, 1, 31)
+    _add_tx(session, asset, "BUY", 10, 100, d1, fee=5)
+    session.add(PriceSnapshot(asset_id=asset.id, date=d1, price=100, change=0, change_percent=0))
+    session.add(PriceSnapshot(asset_id=asset.id, date=d3, price=110, change=10, change_percent=10))
+    session.commit()
+
+    def fake_history(self, symbol, asset_type, start, end):
+        return {d1: 100, d3: 110}
+
+    monkeypatch.setattr("services.market_data.MarketDataService.fetch_history", fake_history)
+
+    monthly_pnl = AnalyticsService(session)._monthly_pnl(d1, d3)
+    assert len(monthly_pnl) == 1
+    assert monthly_pnl[0].start_value == 1000.0
+    assert monthly_pnl[0].end_value == 1100.0
+    # Purchase on the start date is already in start_value, so it is not counted again.
+    # PnL = end_value - start_value - 0 = 100
+    assert monthly_pnl[0].pnl == 100.0
+    assert monthly_pnl[0].pnl_percent == 10.0
 
 
 def test_analytics_service(session, monkeypatch):

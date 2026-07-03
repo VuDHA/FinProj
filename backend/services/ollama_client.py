@@ -78,7 +78,7 @@ class OllamaClient:
             return data.get("response", "")
 
         try:
-            result = AIQueue().run(task_name, _call)
+            result = AIQueue().run_with_provider("ollama_generation", task_name, _call)
             log_ai_call(
                 task_name=task_name,
                 start_time=start,
@@ -131,7 +131,7 @@ class OllamaClient:
             return embedding
 
         try:
-            result = AIQueue().run(task_name, _call)
+            result = AIQueue().run_with_provider("ollama_embedding", task_name, _call)
             log_ai_call(
                 task_name=task_name,
                 start_time=start,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bot, Plus, RefreshCw, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePersistentState } from "../hooks/usePersistentState";
 import { Link } from "react-router-dom";
 import {
@@ -21,6 +21,9 @@ import {
   YAxis,
 } from "recharts";
 import API from "../api/client";
+import { getAnalyticsInsight } from "../api/ai";
+import { AiGenerateButton } from "../components/AiGenerateButton";
+import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { InfoTooltip } from "../components/InfoTooltip";
@@ -31,6 +34,7 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useToast } from "../contexts/ToastContext";
+import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
 
@@ -144,6 +148,16 @@ export function Analytics() {
     onError: (error: any) => {
       showToast(error?.response?.data?.detail || "Không thể cập nhật dữ liệu", "error");
     },
+  });
+
+  const analyticsInsight = useAiInsight({
+    taskName: "analytics_insight",
+    fetcher: () =>
+      getAnalyticsInsight(
+        filterType,
+        filterType === "custom" ? customStart : undefined,
+        filterType === "custom" ? customEnd : undefined
+      ),
   });
 
   const totalPnl = data?.type_returns?.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0) || 0;
@@ -261,6 +275,26 @@ export function Analytics() {
 
       {data && data.type_returns.length > 0 && (
         <>
+          <FintechCard delay={0.04}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="card-title inline-flex items-center gap-2">
+                <Bot className="w-4 h-4 text-indigo-500" />
+                Phân tích AI
+              </h3>
+              <AiGenerateButton
+                label="Phân tích"
+                onClick={() => analyticsInsight.generate()}
+                loading={analyticsInsight.loading}
+              />
+            </div>
+            <AiInsightCard
+              data={analyticsInsight.data}
+              loading={analyticsInsight.loading}
+              error={analyticsInsight.error}
+              onClose={analyticsInsight.clear}
+            />
+          </FintechCard>
+
           <FintechCard delay={0.05}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="card-title inline-flex items-center">
@@ -723,7 +757,7 @@ export function Analytics() {
             <FintechCard delay={0.42}>
               <div className="card-title mb-1 inline-flex items-center">
                 {labels.analytics.volatility}
-                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+                <InfoTooltip content={labels.tooltips.analyticsVolatility} />
               </div>
               <div className="metric-value text-accent-blue">
                 {risk.data?.volatility != null ? `${(risk.data.volatility * 100).toFixed(2)}%` : "—"}
@@ -732,7 +766,7 @@ export function Analytics() {
             <FintechCard delay={0.44}>
               <div className="card-title mb-1 inline-flex items-center">
                 {labels.analytics.sharpeRatio}
-                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+                <InfoTooltip content={labels.tooltips.analyticsSharpeRatio} />
               </div>
               <div className="metric-value text-accent-violet">
                 {risk.data?.sharpe_ratio != null ? risk.data.sharpe_ratio.toFixed(2) : "—"}
@@ -741,7 +775,7 @@ export function Analytics() {
             <FintechCard delay={0.46}>
               <div className="card-title mb-1 inline-flex items-center">
                 {labels.analytics.maxDrawdown}
-                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+                <InfoTooltip content={labels.tooltips.analyticsMaxDrawdown} />
               </div>
               <div className="metric-value text-accent-rose">
                 {risk.data?.max_drawdown_percent != null ? `${risk.data.max_drawdown_percent.toFixed(2)}%` : "—"}
@@ -750,7 +784,7 @@ export function Analytics() {
             <FintechCard delay={0.48}>
               <div className="card-title mb-1 inline-flex items-center">
                 {labels.analytics.beta}
-                <InfoTooltip content={labels.tooltips.analyticsRiskMetrics} />
+                <InfoTooltip content={labels.tooltips.analyticsBeta} />
               </div>
               <div className="metric-value text-accent-cyan">
                 {risk.data?.beta != null ? risk.data.beta.toFixed(2) : "—"}

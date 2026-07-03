@@ -78,6 +78,61 @@ class PromptParser:
         except ValueError as e:
             raise PromptParserError(f"AI response did not match the backtest schema: {e}")
 
+    def parse_stress_prompt(self, prompt: str, base: BacktestRequest) -> BacktestRequest:
+        """Apply a stress/what-if scenario from a prompt to a base BacktestRequest."""
+        today = datetime.date.today()
+        default_start = (today - datetime.timedelta(days=365)).isoformat()
+        default_end = today.isoformat()
+
+        base_data = {
+            "symbols": base.symbols or [],
+            "start_date": base.start_date.isoformat() if base.start_date else default_start,
+            "end_date": base.end_date.isoformat() if base.end_date else default_end,
+            "strategy": base.strategy,
+            "rebalance_frequency": base.rebalance_frequency,
+            "initial_cash": base.initial_cash,
+            "positions": [
+                {
+                    "symbol": p.symbol,
+                    "price": p.price,
+                    "quantity": p.quantity,
+                    "ratio": p.ratio,
+                }
+                for p in (base.positions or [])
+            ],
+        }
+
+        try:
+            from services.batch_ai import BatchAIService
+
+            service = BatchAIService(batch_size=1)
+            data = service.parse_stress_prompts([prompt], base_data, language="vi")[0]
+        except Exception as e:
+            raise PromptParserError(f"AI service failed: {e}")
+
+        if data is None:
+            raise PromptParserError("AI service returned no data.")
+
+        merged = base_data.copy()
+        merged.update(data)
+        merged["start_date"] = self._normalize_date(merged.get("start_date", default_start))
+        merged["end_date"] = self._normalize_date(merged.get("end_date", default_end))
+
+        if "symbols" in merged:
+            merged["symbols"] = [s.strip().upper() for s in merged["symbols"] if s and s.strip()]
+
+        if merged.get("allocations"):
+            merged["allocations"] = {
+                k.strip().upper(): float(v)
+                for k, v in merged["allocations"].items()
+                if k and str(v).strip()
+            }
+
+        try:
+            return BacktestRequest(**merged)
+        except ValueError as e:
+            raise PromptParserError(f"AI response did not match the backtest schema: {e}")
+
     def _normalize_date(self, value) -> str:
         """Return an ISO date string from various LLM outputs."""
         if isinstance(value, datetime.date):

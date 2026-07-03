@@ -50,6 +50,16 @@ class Settings(BaseSettings):
     OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
     OLLAMA_EMBEDDING_DIMENSION: int = 768
 
+    # Provider-aware rate limits for the AI queue (Gemini free tier).
+    GEMINI_GENERATION_RPM: int = 15
+    GEMINI_GENERATION_CONCURRENT: int = 2
+    GEMINI_EMBEDDING_RPM: int = 100
+    GEMINI_EMBEDDING_CONCURRENT: int = 5
+    OLLAMA_GENERATION_RPM: int = 60
+    OLLAMA_GENERATION_CONCURRENT: int = 1
+    OLLAMA_EMBEDDING_RPM: int = 60
+    OLLAMA_EMBEDDING_CONCURRENT: int = 1
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(__file__), ".env")
     )

@@ -5,7 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
 from database import get_session
-from schemas import CompareCorrelation, CompareMetrics
+from schemas import CompareAIInsightRequest, CompareAIInsightResponse, CompareCorrelation, CompareMetrics
+from .ai_utils import handle_ai_insight_error
+from services.ai_insights import CompareInsightService
 from services.compare import CompareService
 
 router = APIRouter(prefix="/compare", tags=["compare"])
@@ -70,3 +72,18 @@ def get_correlation(
     if start > end:
         raise HTTPException(status_code=400, detail="start must be before or equal to end")
     return CompareService(session).correlation(pairs, start, end)
+
+
+@router.post("/ai-insight", response_model=CompareAIInsightResponse)
+@handle_ai_insight_error
+def get_compare_ai_insight(
+    payload: CompareAIInsightRequest,
+    session: Session = Depends(get_session),
+):
+    if len(payload.symbols) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 symbols are required")
+    return CompareInsightService().generate(
+        payload.symbols,
+        [m.model_dump() for m in payload.metrics],
+        payload.correlation.matrix,
+    )

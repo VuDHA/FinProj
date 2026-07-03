@@ -13,7 +13,7 @@ import { labels } from "../i18n/vi";
 import { FintechCard } from "./ui/FintechCard";
 
 const TARGET_FIELDS: Record<"assets" | "transactions", string[]> = {
-  assets: ["symbol", "name", "type", "exchange", "currency"],
+  assets: ["symbol", "name", "type", "exchange", "currency", "value"],
   transactions: ["symbol", "type", "quantity", "price", "fee", "date", "notes"],
 };
 

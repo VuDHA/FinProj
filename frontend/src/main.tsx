@@ -24,7 +24,6 @@ const queryClient = new QueryClient({
 
 const persister = createSyncStoragePersister({
   storage: getLocalStorage(),
-  maxAge: Infinity,
 });
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -33,6 +32,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       client={queryClient}
       persistOptions={{
         persister,
+        maxAge: Infinity,
         dehydrateOptions: { shouldDehydrateQuery: () => true },
       }}
     >

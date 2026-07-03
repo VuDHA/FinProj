@@ -4,6 +4,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from config import settings
+from services.ai_insights.base_prompt import master_prompt
 from services.ai_provider import AIProviderFactory
 from services.gemini_client import GeminiClient, GeminiClientError
 from services.ollama_client import OllamaClient
@@ -74,6 +75,19 @@ class BatchAIService:
         if self._fallback is not None:
             return self._generate_fallback(prompt, max_tokens, task_name)
         raise BatchAIError(f"No AI provider available for {task_name}")
+
+    def generate_insight(
+        self,
+        prompt: str,
+        max_tokens: int = 4096,
+        task_name: str = "ai_insight",
+    ) -> str:
+        """Generate a single AI insight with provider fallback.
+
+        Returns raw text. The caller is responsible for parsing any structured
+        JSON from the response.
+        """
+        return self._generate_with_fallback(prompt, max_tokens, task_name)
 
     @staticmethod
     def _extract_json(text: str) -> Optional[str]:
@@ -151,12 +165,14 @@ class BatchAIService:
             context_block = f"Bối cảnh:\n{context}\n\n" if language == "vi" else f"Context:\n{context}\n\n"
 
         instructions = (
+            f"{master_prompt(language)}\n\n"
             "Bạn là chuyên gia phân loại tin tức tài chính. "
             "Với mỗi tin bên dưới, trả về 3-5 tag ngắn gọn liên quan đến tài chính/chứng khoán. "
             "Mỗi tag 1-2 từ, viết thường, không dấu câu, cách nhau bằng dấu phẩy. "
             "Tất cả tag bằng tiếng Việt.\n\n"
             if language == "vi"
-            else "You are a financial news classifier. For each article below, return 3-5 short tags related to finance/stocks. Each tag is 1-2 words, lowercase, no punctuation, separated by commas.\n\n"
+            else f"{master_prompt(language)}\n\n"
+            "You are a financial news classifier. For each article below, return 3-5 short tags related to finance/stocks. Each tag is 1-2 words, lowercase, no punctuation, separated by commas.\n\n"
         )
 
         results: List[Optional[List[str]]] = [None] * len(items)
@@ -209,6 +225,7 @@ class BatchAIService:
             context_block = f"Bối cảnh:\n{context}\n\n" if language == "vi" else f"Context:\n{context}\n\n"
         if language == "vi":
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "Bạn là chuyên gia phân loại tin tức tài chính. "
                 "Hãy đọc tiêu đề và tóm tắt, rồi trả về từ 3 đến 5 tag ngắn gọn, "
                 "liên quan đến chứng khoán, tài chính hoặc kinh tế. "
@@ -221,6 +238,7 @@ class BatchAIService:
             )
         else:
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "You are a financial news classifier. Read the title and summary, "
                 "then return 3-5 short tags related to finance, stocks, or the economy. "
                 "Each tag is 1-2 words, lowercase, no punctuation, separated by commas.\n\n"
@@ -253,6 +271,7 @@ class BatchAIService:
 
         task_name = "batch_relevance"
         instructions = (
+            f"{master_prompt(language)}\n\n"
             "Bạn là chuyên gia phân tích tin tức tài chính. Với mỗi tin bên dưới, "
             "đánh giá mức độ liên quan đến đầu tư (chứng khoán, ngân hàng, vĩ mô, doanh nghiệp, "
             "thị trường toàn cầu, hàng hóa, trái phiếu, tiền tệ). "
@@ -267,7 +286,8 @@ class BatchAIService:
             "- standout: true nếu tin quan trọng và đáng chú ý cho nhà đầu tư, ngược lại false\n"
             "- reason: giải thích ngắn trong 1 câu\n\n"
             if language == "vi"
-            else "You are a financial analyst. For each article below, evaluate relevance to investing "
+            else f"{master_prompt(language)}\n\n"
+            "You are a financial analyst. For each article below, evaluate relevance to investing "
             "(stocks, banking, macroeconomics, corporate earnings, global markets, commodities, bonds, currencies). "
             "News from Bloomberg, Reuters, CNBC, Financial Times about markets is highly relevant.\n"
             "Scale:\n"
@@ -334,6 +354,7 @@ class BatchAIService:
         category = item.get("category", "")
         if language == "vi":
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "Bạn là chuyên gia tài chính. Đánh giá mức độ liên quan của tin tức sau đối với nhà đầu tư.\n\n"
                 f"Tiêu đề: {title}\n"
                 f"Tóm tắt: {summary}\n"
@@ -346,6 +367,7 @@ class BatchAIService:
             )
         else:
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "You are a finance expert. Evaluate how relevant this article is to investors.\n\n"
                 f"Title: {title}\n"
                 f"Summary: {summary}\n"
@@ -389,23 +411,38 @@ class BatchAIService:
             context_block = f"Bối cảnh cá nhân:\n{context}\n\n" if language == "vi" else f"Personal context:\n{context}\n\n"
 
         article_lines = "\n".join(
-            f"{i + 1}. {a.get('title', '')}"
-            + (f" - {a.get('summary', '')[:200]}" if a.get("summary") else "")
+            f"{i + 1}. Tiêu đề: {a.get('title', '')}\n   Tóm tắt: {a.get('summary', '')[:300]}"
             for i, a in enumerate(items[:5])
+            if a.get("title") or a.get("summary")
         )
 
-        prompt = (
-            "Bạn là trợ lý tài chính. Dưới đây là một số tin tức gần đây. "
-            "Hãy tóm tắt ngắn gọn trong 3-5 gạch đầu dòng, chỉ nêu ý chính.\n\n"
-            if language == "vi"
-            else "You are a financial assistant. Summarize the recent news below in 3-5 bullet points, main takeaways only.\n\n"
-        )
+        if language == "vi":
+            prompt = (
+                "Bạn là API tóm tắt tin tức tài chính. CHỈ trả về bài tóm tắt, không chào hỏi, "
+                "không giải thích thêm, không liệt kê gạch đầu dòng. "
+                "Viết một bài tóm tắt liền mạch, tự nhiên, dễ hiểu, gồm 3-4 đoạn văn. "
+                "Mỗi đoạn nên đề cập đến một khía cạnh chính: bối cảnh thị trường, các yếu tố then chốt, "
+                "và ý nghĩa đối với nhà đầu tư. "
+                "Nếu có bối cảnh cá nhân, hãy đề cập đến các mã người dùng đang quan tâm.\n\n"
+            )
+        else:
+            prompt = (
+                "You are a financial news summary API. ONLY return the summary, no greetings, "
+                "no extra explanations, no bullet points. "
+                "Write a coherent, natural, easy-to-read summary in 3-4 paragraphs. "
+                "Each paragraph should cover one main aspect: market context, key drivers, "
+                "and implications for investors. "
+                "If personal context is provided, mention the user's watched symbols where relevant.\n\n"
+            )
         prompt += f"{context_block}{article_lines}\n\nTóm tắt:"
+
+        # Gemini can handle longer output; keep local models modest.
+        max_tokens = 2048 if self._is_gemini() else 384
 
         try:
             return self._generate_with_fallback(
                 prompt,
-                max_tokens=256,
+                max_tokens=max_tokens,
                 task_name="batch_summary",
             ).strip()
         except Exception as e:
@@ -429,11 +466,13 @@ class BatchAIService:
         )
 
         instructions = (
+            f"{master_prompt(language)}\n\n"
             "Bạn là trợ lý tài chính. Với mỗi danh sách tiêu đề cột, trả về JSON object "
             "với key là tiêu đề gốc và value là trường đích. "
             "Nếu không khớp, dùng null.\n\n"
             if language == "vi"
-            else "You are a financial assistant. For each list of column headers, return a JSON object mapping original header to target field. Use null if no match.\n\n"
+            else f"{master_prompt(language)}\n\n"
+            "You are a financial assistant. For each list of column headers, return a JSON object mapping original header to target field. Use null if no match.\n\n"
         )
 
         results: List[Optional[Dict[str, Optional[str]]]] = [None] * len(headers_list)
@@ -484,6 +523,7 @@ class BatchAIService:
         )
         if language == "vi":
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "Bạn là trợ lý tài chính. Ánh xạ mỗi tiêu đề cột sang trường đích phù hợp. "
                 "Trả về JSON object duy nhất với key là tiêu đề gốc và value là trường đích. "
                 "Nếu không khớp, dùng null.\n\n"
@@ -494,6 +534,7 @@ class BatchAIService:
             )
         else:
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "You are a financial assistant. Map each source column header to a target field. "
                 "Return a single JSON object where keys are original headers and values are target fields. "
                 "Use null if no match.\n\n"
@@ -525,6 +566,7 @@ class BatchAIService:
             return []
 
         instructions = (
+            f"{master_prompt(language)}\n\n"
             "Bạn là trợ lý tài chính. Với mỗi yêu cầu backtest, trả về JSON object với:\n"
             "- symbols: mảng ticker\n"
             "- start_date: YYYY-MM-DD\n"
@@ -534,7 +576,8 @@ class BatchAIService:
             "- initial_cash: số\n"
             "- allocations: object {ticker: phần trăm}\n\n"
             if language == "vi"
-            else "You are a financial assistant. For each backtest prompt, return a JSON object with:\n"
+            else f"{master_prompt(language)}\n\n"
+            "You are a financial assistant. For each backtest prompt, return a JSON object with:\n"
             "- symbols: array of tickers\n"
             "- start_date: YYYY-MM-DD\n"
             "- end_date: YYYY-MM-DD\n"
@@ -571,6 +614,91 @@ class BatchAIService:
 
         return results
 
+    def parse_stress_prompts(
+        self,
+        prompts: List[str],
+        base_request: Dict[str, Any],
+        language: str = "vi",
+    ) -> List[Optional[Dict[str, Any]]]:
+        """Return parsed stress/what-if backtest modifications for each prompt."""
+        if not prompts:
+            return []
+
+        base_json = json.dumps(base_request, ensure_ascii=False, default=str)
+        instructions = (
+            f"{master_prompt(language)}\n\n"
+            "Bạn là trợ lý tài chính. Người dùng đang mô tả một kịch bản stress/what-if cho backtest. "
+            "Dựa trên yêu cầu backtest hiện tại (base), trả về JSON object chỉ chứa các trường CẦN THAY ĐỔI. "
+            "Có thể thay đổi: symbols, start_date, end_date, strategy, rebalance_frequency, "
+            "initial_cash, allocations, positions.\n\n"
+            f"Base request:\n{base_json}\n\n"
+            if language == "vi"
+            else f"{master_prompt(language)}\n\n"
+            "You are a financial assistant. The user is describing a stress/what-if scenario for a backtest. "
+            "Based on the current base request, return a JSON object containing ONLY the fields that should change. "
+            "You may change: symbols, start_date, end_date, strategy, rebalance_frequency, "
+            "initial_cash, allocations, positions.\n\n"
+            f"Base request:\n{base_json}\n\n"
+        )
+
+        results: List[Optional[Dict[str, Any]]] = [None] * len(prompts)
+        for batch_start in range(0, len(prompts), self.batch_size):
+            batch = prompts[batch_start : batch_start + self.batch_size]
+            prompt = instructions
+            for i, user_prompt in enumerate(batch):
+                prompt += f"{i + 1}. {user_prompt}\n"
+            prompt += "\nReturn a JSON array of objects, one per prompt:\nJSON:"
+
+            try:
+                raw = self._generate_with_fallback(
+                    prompt,
+                    max_tokens=2048,
+                    task_name="batch_stress_parser",
+                )
+                parsed = self._parse_batch_response(raw)
+                for i, entry in enumerate(parsed):
+                    if i < len(batch):
+                        results[batch_start + i] = self._clean_backtest(entry)
+            except Exception as e:
+                print(f"[batch_ai] stress batch failed: {e}")
+                for i, user_prompt in enumerate(batch):
+                    results[batch_start + i] = self._parse_stress_single(
+                        user_prompt, base_request, language
+                    )
+
+        return results
+
+    def _parse_stress_single(
+        self,
+        user_prompt: str,
+        base_request: Dict[str, Any],
+        language: str,
+    ) -> Optional[Dict[str, Any]]:
+        if self._fallback is None:
+            return None
+        system_prompt = (
+            f"{master_prompt('en')}\n\n"
+            "You are a financial assistant. The user describes a stress/what-if scenario for a backtest. "
+            "Return only a JSON object with the fields that should change from the base request. "
+            "You may change: symbols, start_date, end_date, strategy, rebalance_frequency, "
+            "initial_cash, allocations, positions.\n\n"
+            f"Base request:\n{json.dumps(base_request, ensure_ascii=False, default=str)}\n\n"
+            f"User prompt: {user_prompt}\n\n"
+            "JSON:"
+        )
+        try:
+            raw = self._fallback.generate(
+                prompt=system_prompt,
+                model=settings.OLLAMA_MODEL,
+                options={"temperature": 0.1, "num_predict": 256},
+                task_name="ollama_stress_fallback",
+            )
+            data = self._parse_single_json(raw) or {}
+            return self._clean_backtest(data)
+        except Exception as e:
+            print(f"[batch_ai] single stress fallback failed: {e}")
+            return None
+
     def _parse_backtest_single(
         self,
         user_prompt: str,
@@ -582,6 +710,7 @@ class BatchAIService:
         default_start = (today - datetime.timedelta(days=365)).isoformat()
         default_end = today.isoformat()
         system_prompt = (
+            f"{master_prompt('en')}\n\n"
             "You are a financial assistant. Extract a JSON object for a portfolio backtest "
             "from the user's Vietnamese or English prompt. Use ISO dates (YYYY-MM-DD). "
             "Use only 'buy_and_hold' or 'rebalancing' as strategy. "
@@ -687,6 +816,7 @@ class BatchAIService:
         language: str,
         task_type: str,
         extra_fields: Optional[Dict[str, str]] = None,
+        max_summary_length: int = 300,
     ) -> str:
         prompt = instructions
         if context_block:
@@ -700,6 +830,8 @@ class BatchAIService:
             prompt += f"{i + 1}. Title: {item.get(title_key, '')}\n"
             summary = item.get(summary_key, "")
             if summary:
+                if len(summary) > max_summary_length:
+                    summary = summary[:max_summary_length].rsplit(" ", 1)[0] + "..."
                 prompt += f"   Summary: {summary}\n"
             if extra_fields:
                 for key, label in extra_fields.items():

@@ -16,6 +16,7 @@ import {
   YAxis,
 } from "recharts";
 import API from "../api/client";
+import { getBacktestStress } from "../api/ai";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
@@ -50,7 +51,9 @@ export function Backtest() {
     positions: [],
   });
   const [prompt, setPrompt] = usePersistentState("backtest.prompt", "");
+  const [stressPrompt, setStressPrompt] = usePersistentState("backtest.stressPrompt", "");
   const [promptMode, setPromptMode] = usePersistentState("backtest.promptMode", false);
+  const [stressMode, setStressMode] = useState(false);
   const [result, setResult] = useState<any>(null);
 
   const assets = useQuery({
@@ -146,6 +149,47 @@ export function Backtest() {
     },
   });
 
+  const aiStressRun = useMutation({
+    mutationFn: () =>
+      runAi("backtest_stress", () =>
+        getBacktestStress({
+          prompt: stressPrompt,
+          base_request: {
+            strategy: form.strategy,
+            start_date: form.start_date,
+            end_date: form.end_date,
+            initial_cash: Number(form.initial_cash),
+            rebalance_frequency: form.rebalance_frequency,
+            symbols: positionSymbols.length > 0 ? positionSymbols : undefined,
+            positions: form.positions
+              .filter((p) => p.symbol.trim() && Number(p.price) > 0 && Number(p.quantity) > 0)
+              .map((p) => ({
+                symbol: p.symbol.trim().toUpperCase(),
+                price: Number(p.price),
+                quantity: Number(p.quantity),
+                ratio: p.ratio ? Number(p.ratio) : undefined,
+              })),
+          },
+        })
+      ),
+    onSuccess: (data) => {
+      setResult(data.result);
+      setForm({
+        strategy: data.request.strategy,
+        start_date: data.request.start_date,
+        end_date: data.request.end_date,
+        initial_cash: String(data.request.initial_cash),
+        rebalance_frequency: data.request.rebalance_frequency,
+        positions: (data.request.positions || []).map((p: any) => ({
+          symbol: p.symbol || "",
+          price: String(p.price ?? ""),
+          quantity: String(p.quantity ?? ""),
+          ratio: p.ratio != null ? String(p.ratio) : "",
+        })),
+      });
+    },
+  });
+
   const benchmark = useQuery({
     queryKey: ["backtest-benchmark", form.start_date, form.end_date],
     queryFn: async () => {
@@ -179,6 +223,7 @@ export function Backtest() {
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
       {run.isError && <ErrorMessage error={run.error} retry={() => run.mutate()} />}
       {aiRun.isError && <ErrorMessage error={aiRun.error} retry={() => aiRun.mutate()} />}
+      {aiStressRun.isError && <ErrorMessage error={aiStressRun.error} retry={() => aiStressRun.mutate()} />}
       {benchmark.isError && <ErrorMessage error={benchmark.error} retry={() => benchmark.refetch()} />}
       <SectionHeader title={labels.backtest.title} />
 
@@ -459,25 +504,67 @@ export function Backtest() {
           </button>
 
           {promptMode && (
-            <div className="space-y-2">
-              <textarea
-                className="input-fintech w-full min-h-[80px]"
-                placeholder={labels.backtest.promptPlaceholder}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
-              <button
-                onClick={() => aiRun.mutate()}
-                disabled={aiRun.isPending || !prompt.trim() || isBusy}
-                className="btn-secondary w-full"
-              >
-                {aiRun.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                {labels.backtest.runPrompt}
-              </button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStressMode(false)}
+                  className={`text-xs px-2.5 py-1 rounded-md ${!stressMode ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  Tạo kịch bản
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStressMode(true)}
+                  className={`text-xs px-2.5 py-1 rounded-md ${stressMode ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  Stress / What-if
+                </button>
+              </div>
+
+              {!stressMode ? (
+                <>
+                  <textarea
+                    className="input-fintech w-full min-h-[80px]"
+                    placeholder={labels.backtest.promptPlaceholder}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                  />
+                  <button
+                    onClick={() => aiRun.mutate()}
+                    disabled={aiRun.isPending || !prompt.trim() || isBusy}
+                    className="btn-secondary w-full"
+                  >
+                    {aiRun.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    {labels.backtest.runPrompt}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <textarea
+                    className="input-fintech w-full min-h-[80px]"
+                    placeholder="Ví dụ: thử nghiệm khủng hoảng 2022, giảm 40% giá trị, hoặc đầu tư 100% vào VCB trong giai đoạn 2020-2021"
+                    value={stressPrompt}
+                    onChange={(e) => setStressPrompt(e.target.value)}
+                  />
+                  <button
+                    onClick={() => aiStressRun.mutate()}
+                    disabled={aiStressRun.isPending || !stressPrompt.trim() || isBusy}
+                    className="btn-secondary w-full"
+                  >
+                    {aiStressRun.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    Chạy stress/what-if
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -485,7 +572,7 @@ export function Backtest() {
 
       {result && (
         <div className="relative">
-          {(run.isPending || aiRun.isPending) && (
+          {(run.isPending || aiRun.isPending || aiStressRun.isPending) && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm rounded-xl">
               <div className="flex items-center gap-2 text-slate-600">
                 <Loader2 className="w-5 h-5 animate-spin" />

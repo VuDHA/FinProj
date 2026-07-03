@@ -10,6 +10,7 @@ from schemas import AssetCreate, AssetRead
 from services.asset_type_config import (
     generate_symbol,
     get_asset_types,
+    is_market_price_type,
     is_valid_asset_type,
 )
 from services.source_config import is_valid_source_for_type
@@ -36,6 +37,13 @@ def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
             status_code=400,
             detail=f"Source {asset.source} is not supported for asset type {asset.type}",
         )
+
+    if not is_market_price_type(session, asset.type):
+        if asset.manual_value is None or asset.manual_value <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Asset type {asset.type} requires a positive manual value",
+            )
 
     payload = asset.model_dump()
     if payload.get("source") == "":

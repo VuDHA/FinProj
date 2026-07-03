@@ -64,14 +64,14 @@ class GeminiClient:
         prompt: str,
         model: str = settings.GEMINI_MODEL,
         temperature: float = 0.2,
-        max_tokens: int = 256,
+        max_tokens: int = 512,
         task_name: str = "gemini_generate",
     ) -> str:
         """Generate text from a single prompt."""
         from google.genai import types
+        from services.ai_queue import AIQueue, AIQueueBusyError
 
-        start = time.time()
-        try:
+        def _call() -> str:
             response = self._client.models.generate_content(
                 model=model,
                 contents=prompt,
@@ -80,9 +80,16 @@ class GeminiClient:
                     max_output_tokens=max_tokens,
                 ),
             )
-            text = response.text or ""
+            return response.text or ""
+
+        start = time.time()
+        try:
+            text = AIQueue().run_with_provider("gemini_generation", task_name, _call)
             self._log(task_name, time.time() - start, True)
             return text
+        except AIQueueBusyError as e:
+            self._log(task_name, time.time() - start, False, error=str(e))
+            raise GeminiClientError(f"Gemini generation rate limited: {e}") from e
         except Exception as e:
             self._log(task_name, time.time() - start, False, error=str(e))
             raise GeminiClientError(f"Gemini generation failed: {e}") from e
@@ -92,7 +99,7 @@ class GeminiClient:
         prompt: str,
         model: str = settings.GEMINI_MODEL,
         temperature: float = 0.2,
-        max_tokens: int = 512,
+        max_tokens: int = 4096,
         task_name: str = "gemini_generate_batch",
     ) -> str:
         """Generate text from a single prompt that contains multiple tasks.
@@ -101,9 +108,9 @@ class GeminiClient:
         the batched response.
         """
         from google.genai import types
+        from services.ai_queue import AIQueue, AIQueueBusyError
 
-        start = time.time()
-        try:
+        def _call() -> str:
             response = self._client.models.generate_content(
                 model=model,
                 contents=prompt,
@@ -113,9 +120,16 @@ class GeminiClient:
                     response_mime_type="application/json",
                 ),
             )
-            text = response.text or ""
+            return response.text or ""
+
+        start = time.time()
+        try:
+            text = AIQueue().run_with_provider("gemini_generation", task_name, _call)
             self._log(task_name, time.time() - start, True)
             return text
+        except AIQueueBusyError as e:
+            self._log(task_name, time.time() - start, False, error=str(e))
+            raise GeminiClientError(f"Gemini generation rate limited: {e}") from e
         except Exception as e:
             self._log(task_name, time.time() - start, False, error=str(e))
             raise GeminiClientError(f"Gemini batch generation failed: {e}") from e
@@ -128,16 +142,24 @@ class GeminiClient:
         dimension: int = settings.GEMINI_EMBEDDING_DIMENSION,
     ) -> List[float]:
         """Create an embedding vector for a single text."""
-        start = time.time()
-        try:
+        from services.ai_queue import AIQueue, AIQueueBusyError
+
+        def _call() -> List[float]:
             response = self._client.models.embed_content(
                 model=model,
                 contents=text,
                 config=self._embed_config(dimension),
             )
-            vector = self._extract_embedding(response)
+            return self._extract_embedding(response)
+
+        start = time.time()
+        try:
+            vector = AIQueue().run_with_provider("gemini_embedding", task_name, _call)
             self._log(task_name, time.time() - start, True)
             return vector
+        except AIQueueBusyError as e:
+            self._log(task_name, time.time() - start, False, error=str(e))
+            raise GeminiClientError(f"Gemini embedding rate limited: {e}") from e
         except Exception as e:
             self._log(task_name, time.time() - start, False, error=str(e))
             raise GeminiClientError(f"Gemini embedding failed: {e}") from e
@@ -152,16 +174,24 @@ class GeminiClient:
         """Create embedding vectors for a list of texts."""
         if not texts:
             return []
-        start = time.time()
-        try:
+        from services.ai_queue import AIQueue, AIQueueBusyError
+
+        def _call() -> List[List[float]]:
             response = self._client.models.embed_content(
                 model=model,
                 contents=texts,
                 config=self._embed_config(dimension),
             )
-            vectors = [self._extract_embedding(item) for item in response.embeddings]
+            return [self._extract_embedding(item) for item in response.embeddings]
+
+        start = time.time()
+        try:
+            vectors = AIQueue().run_with_provider("gemini_embedding", task_name, _call)
             self._log(task_name, time.time() - start, True)
             return vectors
+        except AIQueueBusyError as e:
+            self._log(task_name, time.time() - start, False, error=str(e))
+            raise GeminiClientError(f"Gemini embedding rate limited: {e}") from e
         except Exception as e:
             self._log(task_name, time.time() - start, False, error=str(e))
             raise GeminiClientError(f"Gemini batch embedding failed: {e}") from e

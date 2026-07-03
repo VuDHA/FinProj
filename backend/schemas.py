@@ -504,3 +504,50 @@ class CompareMetrics(BaseModel):
 class CompareCorrelation(BaseModel):
     labels: List[str]
     matrix: List[List[float]]
+
+
+# AI insight schemas
+
+class AIInsightResponse(BaseModel):
+    overall: str
+    details: str
+    suggestions: List[str] = []
+    used_ollama: bool = False
+    cooldown_seconds: int = 0
+
+
+class PortfolioAIInsightResponse(AIInsightResponse):
+    pass
+
+
+class AnalyticsAIInsightResponse(AIInsightResponse):
+    pass
+
+
+class MarketAIInsightResponse(AIInsightResponse):
+    pass
+
+
+class RebalanceAIInsightResponse(AIInsightResponse):
+    pass
+
+
+class CompareAIInsightRequest(BaseModel):
+    symbols: List[str]
+    metrics: List[CompareMetrics]
+    correlation: CompareCorrelation
+
+
+class CompareAIInsightResponse(AIInsightResponse):
+    pass
+
+
+class BacktestStressRequest(BaseModel):
+    prompt: str = Field(..., min_length=5, max_length=1000)
+    base_request: Optional[BacktestRequest] = None
+
+
+class BacktestStressResponse(BaseModel):
+    request: BacktestRequest
+    result: BacktestResult
+    used_ollama: bool = False

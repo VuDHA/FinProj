@@ -7,9 +7,13 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import Asset, PriceSnapshot
-from schemas import BenchmarkPoint, FundDetail, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
+from schemas import BenchmarkPoint, FundDetail, MarketAIInsightResponse, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
+from .ai_utils import handle_ai_insight_error
+from services.ai_insights import MarketInsightService
 from services.asset_type_config import is_market_price_type
+from services.gold_fx import get_gold_fx
 from services.market_data import MarketDataService
+from services.portfolio import PortfolioService
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
@@ -211,6 +215,21 @@ def get_market_history(
     service = MarketDataService(session)
     history = service.fetch_market_history_with_backfill(symbol, type, start, end)
     return [{"date": d, "price": p} for d, p in sorted(history.items())]
+
+
+@router.post("/market-ai-insight", response_model=MarketAIInsightResponse)
+@handle_ai_insight_error
+def get_market_ai_insight(session: Session = Depends(get_session)):
+    service = MarketDataService(session)
+    watchlist = service.fetch_quotes(DEFAULT_WATCHLIST)
+    portfolio = PortfolioService(session).get_portfolio()
+    stock_fund_items = [
+        item.model_dump()
+        for item in portfolio.items
+        if item.type in ("STOCK", "FUND", "ETF")
+    ]
+    gold_fx = get_gold_fx()
+    return MarketInsightService().generate(watchlist, stock_fund_items, gold_fx.model_dump())
 
 
 class BenchmarkPricePoint(BaseModel):

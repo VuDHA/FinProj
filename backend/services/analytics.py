@@ -266,6 +266,25 @@ class AnalyticsService:
                 total += qty * price
             return round(total, 2)
 
+        def _net_investment(start: datetime.date, end: datetime.date) -> float:
+            """Net cash injected into the portfolio during (start, end].
+
+            Buy transactions are cash outflows; sell transactions are cash inflows.
+            Transactions exactly on the start date are excluded because the
+            start portfolio value already includes them.
+            """
+            buy_cost = 0.0
+            sell_proceeds = 0.0
+            for asset in assets:
+                for t in asset_transactions.get(asset.id, []):
+                    if t.date <= start or t.date > end:
+                        continue
+                    if t.type == "BUY":
+                        buy_cost += t.quantity * t.price + t.fee
+                    elif t.type == "SELL":
+                        sell_proceeds += t.quantity * t.price - t.fee
+            return round(buy_cost - sell_proceeds, 2)
+
         result = []
         prev_value = _value_at_date(start_date)
         for month_start in all_months:
@@ -276,8 +295,10 @@ class AnalyticsService:
             month_end = min(month_end, end_date)
 
             month_value = _value_at_date(month_end)
-            pnl = round(month_value - prev_value, 2) if prev_value else 0.0
-            pnl_percent = round((pnl / prev_value * 100), 2) if prev_value else 0.0
+            net_investment = _net_investment(month_start, month_end)
+            pnl = round(month_value - prev_value - net_investment, 2)
+            invested_capital = round(prev_value + net_investment, 2)
+            pnl_percent = round((pnl / invested_capital * 100), 2) if invested_capital > 0 else 0.0
             result.append(
                 MonthlyPnL(
                     month=month_start.strftime("%Y-%m"),

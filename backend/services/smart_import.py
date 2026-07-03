@@ -1,3 +1,4 @@
+import datetime
 import json
 from typing import Any, Dict, List, Optional
 
@@ -5,13 +6,13 @@ from sqlalchemy import select
 from sqlmodel import Session
 
 from config import settings
-from models import Asset, Transaction
+from models import Asset, PriceSnapshot, Transaction
 from schemas import CsvImportResult
-from services.asset_type_config import get_asset_type_codes
+from services.asset_type_config import get_asset_type_codes, is_market_price_type
 from services.file_utils import read_excel_sheet_names, read_rows
 
 
-ASSET_TARGET_FIELDS = ["symbol", "name", "type", "exchange", "currency"]
+ASSET_TARGET_FIELDS = ["symbol", "name", "type", "exchange", "currency", "value"]
 REQUIRED_ASSET_FIELDS = ["symbol", "name", "type"]
 TRANSACTION_TARGET_FIELDS = ["symbol", "type", "quantity", "price", "fee", "date", "notes"]
 REQUIRED_TRANSACTION_FIELDS = ["symbol", "type", "quantity", "price", "date"]
@@ -139,6 +140,7 @@ class SmartImportService:
                 "type": ["loại", "loại tài sản"],
                 "exchange": ["sàn"],
                 "currency": ["tiền tệ", "đơn vị tiền"],
+                "value": ["giá trị", "giá", "định giá", "giá trị tài sản"],
                 "quantity": ["số lượng", "khối lượng"],
                 "price": ["giá", "đơn giá"],
                 "fee": ["phí", "hoa hồng"],
@@ -185,6 +187,17 @@ class SmartImportService:
             return self._import_transactions(session, rows, target_to_source)
         return CsvImportResult(created=0, skipped=0, errors=["Invalid import type"])
 
+    @staticmethod
+    def _parse_value(row: Dict[str, Any], target_to_source: Dict[str, str]) -> Optional[float]:
+        raw = (row.get(target_to_source.get("value", "")) or "").strip().replace(",", "")
+        if not raw:
+            return None
+        try:
+            value = float(raw)
+            return value if value > 0 else None
+        except ValueError:
+            return None
+
     def _import_assets(
         self, session: Session, rows: List[Dict[str, Any]], target_to_source: Dict[str, str]
     ) -> CsvImportResult:
@@ -209,6 +222,14 @@ class SmartImportService:
             if existing:
                 skipped += 1
                 continue
+
+            value = self._parse_value(row, target_to_source)
+            if not is_market_price_type(session, type_):
+                if value is None:
+                    errors.append(f"Row {i}: asset type {type_} requires a positive value")
+                    skipped += 1
+                    continue
+
             asset = Asset(
                 symbol=symbol,
                 name=name,
@@ -217,8 +238,19 @@ class SmartImportService:
                 currency=(row.get(target_to_source.get("currency", "")) or "VND").strip() or "VND",
             )
             session.add(asset)
+            session.commit()
+            session.refresh(asset)
             created += 1
-        session.commit()
+
+            if value:
+                session.add(
+                    PriceSnapshot(
+                        asset_id=asset.id,
+                        date=datetime.date.today(),
+                        price=value,
+                    )
+                )
+                session.commit()
         return CsvImportResult(created=created, skipped=skipped, errors=errors)
 
     def _import_transactions(
@@ -227,7 +259,6 @@ class SmartImportService:
         created = 0
         skipped = 0
         errors: List[str] = []
-        import datetime
 
         for i, row in enumerate(rows, start=2):
             symbol = (row.get(target_to_source.get("symbol", "")) or "").strip().upper()
@@ -270,6 +301,20 @@ class SmartImportService:
                 session.add(asset)
                 session.commit()
                 session.refresh(asset)
+
+            if price <= 0 and not is_market_price_type(session, asset.type):
+                snapshot = session.exec(
+                    select(PriceSnapshot)
+                    .where(PriceSnapshot.asset_id == asset.id)
+                    .order_by(PriceSnapshot.date.desc())
+                ).first()
+                if snapshot and snapshot.price > 0:
+                    price = snapshot.price
+
+            if price <= 0:
+                errors.append(f"Row {i}: price must be positive or resolvable")
+                skipped += 1
+                continue
 
             if type_ == "SELL":
                 existing = session.exec(

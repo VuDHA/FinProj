@@ -1,13 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Save, Scale } from "lucide-react";
+import { Bot, Save, Scale } from "lucide-react";
 import API from "../api/client";
+import { getRebalanceInsight } from "../api/ai";
+import { AiGenerateButton } from "../components/AiGenerateButton";
+import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
+import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
 import { formatCurrency, formatPercent } from "../lib/utils";
 
@@ -74,6 +78,11 @@ export function Rebalance() {
   };
 
   const data = rebalance.data;
+
+  const rebalanceInsight = useAiInsight({
+    taskName: "rebalance_insight",
+    fetcher: getRebalanceInsight,
+  });
 
   return (
     <div className="space-y-6">
@@ -227,6 +236,26 @@ export function Rebalance() {
         ) : (
           <div className="text-slate-500 py-8">{labels.rebalance.noSuggestions}</div>
         )}
+      </FintechCard>
+
+      <FintechCard delay={0.3}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="card-title inline-flex items-center gap-2">
+            <Bot className="w-4 h-4 text-indigo-500" />
+            Phân tích AI cân bằng
+          </h3>
+          <AiGenerateButton
+            label="Phân tích"
+            onClick={() => rebalanceInsight.generate()}
+            loading={rebalanceInsight.loading}
+          />
+        </div>
+        <AiInsightCard
+          data={rebalanceInsight.data}
+          loading={rebalanceInsight.loading}
+          error={rebalanceInsight.error}
+          onClose={rebalanceInsight.clear}
+        />
       </FintechCard>
     </div>
   );

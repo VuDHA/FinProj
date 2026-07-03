@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple
 from sqlmodel import Session
 
 from schemas import RiskMetrics
+from services.analytics import AnalyticsService
 from services.benchmark import BenchmarkService
 from services.portfolio_history import PortfolioHistoryService
 
@@ -25,7 +26,12 @@ class RiskMetricsService:
             return RiskMetrics()
 
         portfolio_values = {p.date: p.value for p in portfolio_history}
-        portfolio_monthly = self._monthly_returns(portfolio_values)
+
+        # Use PnL-based returns (purchases excluded) instead of raw portfolio value changes.
+        monthly_pnl = AnalyticsService(self.session)._monthly_pnl(start, end)
+        portfolio_monthly = [
+            item.pnl_percent / 100 for item in monthly_pnl if item.pnl_percent is not None
+        ]
         if len(portfolio_monthly) < 2:
             return RiskMetrics()
 

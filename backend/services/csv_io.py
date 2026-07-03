@@ -1,17 +1,17 @@
 import csv
 import datetime
 import io
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session, select
 
-from models import Asset, Transaction
+from models import Asset, PriceSnapshot, Transaction
 from schemas import CsvImportResult
 from services.asset_type_config import get_asset_type_codes, is_market_price_type
 from services.market_data import MarketDataService
 
 
-ASSET_HEADERS = ["symbol", "name", "type", "exchange", "currency"]
+ASSET_HEADERS = ["symbol", "name", "type", "exchange", "currency", "value"]
 TRANSACTION_HEADERS = ["symbol", "type", "quantity", "price", "fee", "date", "notes"]
 
 
@@ -21,12 +21,18 @@ def export_assets(session: Session) -> str:
     writer = csv.DictWriter(output, fieldnames=ASSET_HEADERS)
     writer.writeheader()
     for a in assets:
+        latest_snapshot = session.exec(
+            select(PriceSnapshot)
+            .where(PriceSnapshot.asset_id == a.id)
+            .order_by(PriceSnapshot.date.desc())
+        ).first()
         writer.writerow({
             "symbol": a.symbol,
             "name": a.name,
             "type": a.type,
             "exchange": a.exchange or "",
             "currency": a.currency,
+            "value": latest_snapshot.price if latest_snapshot else "",
         })
     return output.getvalue()
 
@@ -58,6 +64,17 @@ def import_assets(session: Session, content: str) -> CsvImportResult:
     return import_assets_from_rows(session, rows)
 
 
+def _parse_optional_value(row: Dict[str, Any]) -> Optional[float]:
+    raw = (row.get("value") or "").strip().replace(",", "")
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+        return value if value > 0 else None
+    except ValueError:
+        return None
+
+
 def import_assets_from_rows(session: Session, rows: List[Dict[str, Any]]) -> CsvImportResult:
     created = 0
     skipped = 0
@@ -80,6 +97,16 @@ def import_assets_from_rows(session: Session, rows: List[Dict[str, Any]]) -> Csv
         if existing:
             skipped += 1
             continue
+
+        if not is_market_price_type(session, type_):
+            value = _parse_optional_value(row)
+            if value is None:
+                errors.append(f"Row {i}: asset type {type_} requires a positive value")
+                skipped += 1
+                continue
+        else:
+            value = _parse_optional_value(row)
+
         asset = Asset(
             symbol=symbol,
             name=name,
@@ -88,8 +115,19 @@ def import_assets_from_rows(session: Session, rows: List[Dict[str, Any]]) -> Csv
             currency=(row.get("currency") or "VND").strip(),
         )
         session.add(asset)
+        session.commit()
+        session.refresh(asset)
         created += 1
-    session.commit()
+
+        if value:
+            session.add(
+                PriceSnapshot(
+                    asset_id=asset.id,
+                    date=datetime.date.today(),
+                    price=value,
+                )
+            )
+            session.commit()
     return CsvImportResult(created=created, skipped=skipped, errors=errors)
 
 
@@ -139,6 +177,15 @@ def import_transactions_from_rows(session: Session, rows: List[Dict[str, Any]]) 
             resolved = MarketDataService(session).resolve_historical_price(asset, date)
             if resolved is not None:
                 price = resolved
+
+        if price <= 0 and not is_market_price_type(session, asset.type):
+            snapshot = session.exec(
+                select(PriceSnapshot)
+                .where(PriceSnapshot.asset_id == asset.id)
+                .order_by(PriceSnapshot.date.desc())
+            ).first()
+            if snapshot and snapshot.price > 0:
+                price = snapshot.price
 
         if price <= 0:
             errors.append(f"Row {i}: price must be positive or resolvable from market data")

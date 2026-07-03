@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   Bell,
+  Bot,
   Flame,
   Landmark,
   LineChart,
@@ -28,7 +29,10 @@ import {
   YAxis,
 } from "recharts";
 import API from "../api/client";
+import { getPortfolioInsight } from "../api/ai";
 import { getAlerts, getDailyBrief, getTrending } from "../api/news";
+import { AiGenerateButton } from "../components/AiGenerateButton";
+import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { InfoTooltip } from "../components/InfoTooltip";
@@ -40,6 +44,7 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useToast } from "../contexts/ToastContext";
+import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency } from "../lib/utils";
 
@@ -177,6 +182,11 @@ export function Dashboard() {
     },
   });
 
+  const portfolioInsight = useAiInsight({
+    taskName: "portfolio_insight",
+    fetcher: getPortfolioInsight,
+  });
+
   const data = portfolio.data || {
     total_value: 0,
     total_cost: 0,
@@ -278,6 +288,26 @@ export function Dashboard() {
       ) : (
         <SummaryCards {...data} history={history.data} />
       )}
+
+      <FintechCard delay={0.08}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="card-title inline-flex items-center gap-2">
+            <Bot className="w-4 h-4 text-indigo-500" />
+            Phân tích AI danh mục
+          </h3>
+          <AiGenerateButton
+            label="Phân tích"
+            onClick={() => portfolioInsight.generate()}
+            loading={portfolioInsight.loading}
+          />
+        </div>
+        <AiInsightCard
+          data={portfolioInsight.data}
+          loading={portfolioInsight.loading}
+          error={portfolioInsight.error}
+          onClose={portfolioInsight.clear}
+        />
+      </FintechCard>
 
       <FintechCard delay={0.1} className="!p-3">
         <div className="flex flex-wrap items-center gap-2">

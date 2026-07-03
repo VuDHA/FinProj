@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Plus, Search, X } from "lucide-react";
+import { Bot, Plus, Search, X } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   CompareSymbol,
@@ -21,6 +21,9 @@ import {
   getQuotes,
   getSymbols,
 } from "../api/compare";
+import { getCompareInsight } from "../api/ai";
+import { AiGenerateButton } from "../components/AiGenerateButton";
+import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { FintechCard } from "../components/ui/FintechCard";
@@ -28,6 +31,7 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { InfoTooltip } from "../components/InfoTooltip";
+import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
 
@@ -48,9 +52,14 @@ function today() {
   return new Date().toISOString().split("T")[0];
 }
 
-function getRangeDates(range: RangePreset, customStart: string, customEnd: string) {
+interface DateRange {
+  start: string;
+  end: string;
+}
+
+function getRangeDates(range: RangePreset, customStart: string, customEnd: string): DateRange {
   if (range === "CUSTOM" && (!customStart || !customEnd)) {
-    const fallback = getRangeDates("1Y", "", "");
+    const fallback: DateRange = getRangeDates("1Y", "", "");
     return { start: fallback.start, end: fallback.end };
   }
 
@@ -311,6 +320,24 @@ export function Compare() {
   const anyError =
     quotes.error || metrics.error || histories.some((h) => h.error);
 
+  const compareInsight = useAiInsight({
+    taskName: "compare_insight",
+    fetcher: () => {
+      if (hydratedSelected.length < 2) {
+        throw new Error(labels.compare.correlationNeedTwo);
+      }
+      const corrLabels = correlation.data?.labels || hydratedSelected.map((s) => s.symbol);
+      return getCompareInsight({
+        symbols: hydratedSelected.map((s) => s.symbol),
+        metrics: metrics.data || [],
+        correlation: {
+          labels: corrLabels,
+          matrix: correlation.data?.matrix || [],
+        },
+      });
+    },
+  });
+
   return (
     <div className="space-y-6">
       <SectionHeader
@@ -433,6 +460,27 @@ export function Compare() {
         <>
           {anyError && <ErrorMessage error={anyError as Error} retry={() => quotes.refetch()} />}
 
+          <FintechCard delay={0.05}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="card-title inline-flex items-center gap-2">
+                <Bot className="w-4 h-4 text-indigo-500" />
+                Phân tích AI so sánh
+              </h3>
+              <AiGenerateButton
+                label="Phân tích"
+                onClick={() => compareInsight.generate()}
+                loading={compareInsight.loading}
+                disabled={hydratedSelected.length < 2}
+              />
+            </div>
+            <AiInsightCard
+              data={compareInsight.data}
+              loading={compareInsight.loading}
+              error={compareInsight.error}
+              onClose={compareInsight.clear}
+            />
+          </FintechCard>
+
           <div className="flex gap-2 border-b border-fintech-border">
             {TABS.map((tab) => (
               <button
@@ -467,7 +515,7 @@ export function Compare() {
                     <tr>
                       <th className="text-left py-2 px-3">{labels.compare.type}</th>
                       <th className="text-left py-2 px-3">{labels.market.symbol}</th>
-                      <th className="text-left py-2 px-3">{labels.market.name}</th>
+                      <th className="text-left py-2 px-3">{labels.assets.name}</th>
                       <th className="text-right py-2 px-3">{labels.compare.price}</th>
                       <th className="text-right py-2 px-3">{labels.compare.change}</th>
                       <th className="text-right py-2 px-3">{labels.compare.changePercent}</th>

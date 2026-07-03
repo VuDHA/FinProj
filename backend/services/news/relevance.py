@@ -3,6 +3,7 @@ import re
 from typing import Dict, List, Optional
 
 from config import settings
+from services.ai_insights.base_prompt import master_prompt
 from services.ollama_client import OllamaClient
 
 
@@ -74,6 +75,7 @@ class RelevanceScorer:
 
         if language == "vi":
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "Bạn là chuyên gia tài chính. Hãy đánh giá mức độ liên quan của tin tức sau "
                 "đối với nhà đầu tư Việt Nam (cổ phiếu, chứng khoán, ngân hàng, doanh nghiệp, "
                 "kinh tế vĩ mô, thị trường tài chính).\n\n"
@@ -88,6 +90,7 @@ class RelevanceScorer:
             )
         else:
             prompt = (
+                f"{master_prompt(language)}\n\n"
                 "You are a finance expert. Evaluate how relevant the following article is "
                 "to global investors (markets, stocks, central banks, macroeconomics, "
                 "corporate earnings, commodities, bonds).\n\n"

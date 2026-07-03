@@ -2,6 +2,7 @@ import re
 from typing import Dict, List, Optional
 
 from config import settings
+from services.ai_insights.base_prompt import master_prompt
 from services.ollama_client import OllamaClient, OllamaClientError
 
 
@@ -35,6 +36,7 @@ class LocalTagger:
                 context_block = f"Context:\n{context}\n\n"
         if language == "vi":
             return (
+                f"{master_prompt(language)}\n\n"
                 "Bạn là chuyên gia phân loại tin tức tài chính. "
                 "Hãy đọc tiêu đề và tóm tắt, rồi trả về từ 3 đến 5 tag ngắn gọn, "
                 "liên quan đến chứng khoán, tài chính hoặc kinh tế. "
@@ -46,6 +48,7 @@ class LocalTagger:
                 "Tags:"
             )
         return (
+            f"{master_prompt(language)}\n\n"
             "You are a financial news classifier. Read the title and summary, "
             "then return 3-5 short tags related to finance, stocks, or the economy. "
             "Each tag is 1-2 words, lowercase, no punctuation, separated by commas. "
