@@ -1,0 +1,74 @@
+backend/services/prompt_parser.py
+  s_93c19996ba83b2::t_0ce0a8d9de173f 17
+backend/services/embedding_store.py
+  s_93c19996ba83b2::t_56a28db5732f48 2
+  s_93c19996ba83b2::t_5baac0e978665b 142-163
+  s_93c19996ba83b2::t_3e70467e1d9bf2 242
+  s_93c19996ba83b2::t_ffec06855ab6df 126-135
+  s_93c19996ba83b2::t_c4a915f84f4359 63-85,89-91,93,95,98-99,101-121,123-124,136-138
+  s_93c19996ba83b2::t_1d213c1cf9a837 9
+backend/.env.example
+  s_93c19996ba83b2::t_fbaba46913c2f0 17-19
+  s_93c19996ba83b2::t_5d7acca3f402b9 20-22
+  s_93c19996ba83b2::t_6fd494b8943e11 14
+backend/services/gemini_client.py
+  s_93c19996ba83b2::t_9a4ef8b6b9cb78 31,34-40
+  s_93c19996ba83b2::t_bf5edb00c9a768 71-72,103-104
+  s_93c19996ba83b2::t_09dda0d1f81e59 128,136,150,160,169-175
+  s_93c19996ba83b2::t_5642e744a9a6ab 176
+backend/services/news/tagging.py
+  s_93c19996ba83b2::t_e29c004043946b 9,11-12
+backend/tests/test_gemini_batch.py
+  s_93c19996ba83b2::t_01e6a41327f3db 157-178
+  s_93c19996ba83b2::t_ea850740e423fa 58-59
+backend/services/batch_ai.py
+  s_93c19996ba83b2::t_1d21404aeabcaa 177
+  s_93c19996ba83b2::t_adba719334f4a3 272-275
+  s_93c19996ba83b2::t_60c6f0cf16100f 261-264
+  s_93c19996ba83b2::t_2a9434715538c8 305,308-310
+  s_93c19996ba83b2::t_618eb80aae3022 725-726,728,730
+  s_93c19996ba83b2::t_b86bac607556d5 7
+  s_93c19996ba83b2::t_94b358501b730b 9
+  s_93c19996ba83b2::t_d3d8f68ac19af7 88-120
+  s_93c19996ba83b2::t_9ba34744e472cd 256-260,265,267,270-271,276-277
+  s_93c19996ba83b2::t_4542ad3ccf956a 278
+  s_93c19996ba83b2::t_43e60e75ef5b54 311-313
+  s_93c19996ba83b2::t_8428fae7ce7305 731-733
+backend/services/env_config.py
+  s_93c19996ba83b2::t_9b6030355e03a4 130-131,137-138
+  s_93c19996ba83b2::t_7558dad9a4c2c5 81-85
+  s_93c19996ba83b2::t_d47965c3b617b7 27
+backend/services/news/crawler.py
+  s_93c19996ba83b2::t_8574094b51b970 115-123
+  s_93c19996ba83b2::t_dc008fcfa0d78c 166,170,177-180
+  s_93c19996ba83b2::t_3503fee185cc40 172-173,176
+  s_93c19996ba83b2::t_2686b9878edd57 124
+backend/config.py
+  s_93c19996ba83b2::t_e55862900c6c8c 27
+backend/services/news/ai.py
+  s_93c19996ba83b2::t_179ab0bfba751b 10,12
+backend/services/smart_import.py
+  s_93c19996ba83b2::t_7e30fceb6a60ea 21-25
+backend/services/ai_provider.py
+  s_93c19996ba83b2::t_c143ebd4451b82 5
+backend/services/news/relevance.py
+  s_93c19996ba83b2::t_87477ee65c73fe 6
+  s_93c19996ba83b2::t_5a729569aa007e 3
+  s_93c19996ba83b2::t_b347f3f05018dc 12-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5e692c98c665c2fe8dc5d2052c20fce625b11d5e",
+  "prompts": {},
+  "sessions": {
+    "s_93c19996ba83b2": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "313470f9-4d4d-4f43-8bc2-4e579374aa0d",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
