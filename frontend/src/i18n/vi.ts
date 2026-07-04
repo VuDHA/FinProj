@@ -48,6 +48,8 @@ export const labels = {
     biggestDrift: "Chênh lệch lớn nhất",
     topSuggestion: "Đề xuất hàng đầu",
     market: "Thị trường",
+    portfolio: "Danh mục",
+    compare: "So sánh",
     topMovers: "Biến động mạnh",
     news: "Tin tức",
     unreadAlerts: "Cảnh báo chưa đọc",
@@ -63,11 +65,13 @@ export const labels = {
     noBrief: "Chưa có tóm tắt",
     viewAll: "Xem tất cả",
     allocation: "Phân bổ",
+    currentAllocation: "Phân bổ hiện tại",
   },
   summary: {
     totalValue: "Giá trị hiện tại",
     totalCost: "Vốn đã bỏ ra",
     pnl: "Lãi/Lỗ",
+    stableValue: "Tài sản ổn định",
   },
   assets: {
     title: "Tài sản",
@@ -78,11 +82,15 @@ export const labels = {
     exchange: "Sàn (tùy chọn)",
     currency: "Tiền tệ",
     value: "Giá trị",
+    manualValue: "Giá trị thủ công",
     add: "Thêm tài sản",
     list: "Danh sách tài sản",
     noAssets: "Chưa có tài sản nào.",
     actions: "Thao tác",
     delete: "Xóa",
+    edit: "Sửa",
+    newTransaction: "Giao dịch mới",
+    searchAssets: "Tìm tài sản...",
   },
   assetTypes: {
     STOCK: "Cổ phiếu",
@@ -98,6 +106,8 @@ export const labels = {
     type: "Loại",
     buy: "Mua",
     sell: "Bán",
+    deposit: "Nạp thêm",
+    withdrawal: "Rút một phần",
     quantity: "Số lượng",
     price: "Giá",
     fee: "Phí",
@@ -106,6 +116,12 @@ export const labels = {
     add: "Thêm giao dịch",
     list: "Danh sách giao dịch",
     noTransactions: "Chưa có giao dịch nào.",
+    editTransaction: "Sửa giao dịch",
+    saveTransaction: "Lưu giao dịch",
+    priceMode: "Chế độ giá",
+    marketPrice: "Giá thị trường",
+    manualPrice: "Giá thủ công",
+    pricePreview: "Giá thị trường hiện tại",
     dateCol: "Ngày",
     assetCol: "Tài sản",
     typeCol: "Loại",
@@ -265,6 +281,7 @@ export const labels = {
     title: "So sánh cổ phiếu & quỹ",
     addSymbol: "Thêm mã",
     searchPlaceholder: "Tìm theo mã hoặc tên",
+    normalizedChart: "Biểu đồ chuẩn hóa",
     noSymbols: "Chưa chọn mã nào.",
     addSymbolsHint: "Thêm ít nhất một cổ phiếu hoặc chứng chỉ quỹ để so sánh.",
     maxSymbols: "Tối đa {max} mã",
@@ -303,6 +320,11 @@ export const labels = {
     noHistory: "Không có lịch sử giá trong khoảng thời gian đã chọn.",
     error: "Lỗi tải dữ liệu",
     remove: "Xóa",
+    selectAsset: "Chọn tài sản",
+    fillMissing: "Lấp đầy dữ liệu thiếu",
+    filling: "Đang lấp đầy...",
+    filled: "Đã lấp đầy {count} ngày",
+    fillError: "Lấp đầy thất bại",
   },
   news: {
     title: "Tin tức tài chính",
@@ -450,8 +472,9 @@ export const labels = {
     backtestStrategy: "Chiến lược kiểm thử giả lập danh mục theo thời gian.",
     rebalanceSuggestion: "Gợi ý mua/bán để đưa danh mục về đúng tỷ trọng mục tiêu.",
     totalValue: "Tổng giá trị danh mục dựa trên giá thị trường hiện tại.",
-    totalCost: "Tổng vốn đã đầu tư, bao gồm giá mua và phí giao dịch.",
-    pnl: "Lãi hoặc lỗ so với vốn đã bỏ ra.",
+    totalCost: "Tổng vốn đã đầu tư, bao gồm giá mua và phí giao dịch. Tài sản ổn định vẫn được tính trong tổng giá trị.",
+    pnl: "Lãi hoặc lỗ trên các tài sản có giá thị trường. Tài sản ổn định không được tính vào lãi/lỗ.",
+    stableValue: "Giá trị các tài sản ổn định (bất động sản, bảo hiểm, tiết kiệm,...) không định giá theo thị trường hàng ngày.",
     monthlyPnl: "Lãi/lỗ thực tế của danh mục giữa các điểm chốt giá cuối tháng. Các giao dịch mua/bán trong tháng đã được loại trừ để chỉ còn biến động giá thị trường.",
     allocationByType: "Phân bổ giá trị danh mục theo từng loại tài sản.",
     portfolioTrend: "Biểu đồ so sánh giá trị danh mục với chỉ số VN-Index theo thời gian.",
@@ -466,7 +489,7 @@ export const labels = {
     assetName: "Tên hiển thị cho tài sản trong danh mục.",
     assetExchange: "Sàn giao dịch (tùy chọn), ví dụ: HOSE, HNX, UPCOM.",
     assetCurrency: "Đơn vị tiền tệ mặc định là VND; thay đổi nếu tài sản ngoại tệ.",
-    transactionType: "Loại giao dịch: Mua tăng vị thế, Bán giảm vị thế.",
+    transactionType: "Loại giao dịch: Mua/Nạp thêm tăng vị thế; Bán/Rút một phần giảm vị thế. Nạp/Rút chỉ dùng cho tài sản không có giá thị trường.",
     transactionQuantity: "Số lượng đơn vị tài sản, ví dụ: cổ phiếu, chứng chỉ quỹ, gram vàng.",
     transactionPrice: "Giá thực hiện mỗi đơn vị tài sản.",
     transactionFee: "Phí giao dịch, thuế hoặc các chi phí liên quan.",
@@ -505,6 +528,7 @@ export const labels = {
     saveAll: "Lưu tất cả",
     groupCore: "Cơ sở dữ liệu & API",
     groupScheduler: "Lập lịch",
+    groupNewsScheduler: "Lập lịch tin tức",
     groupOllama: "Ollama AI",
     requiresRestart: "Cần khởi động lại backend",
   },
@@ -630,16 +654,20 @@ export const labels = {
   },
 };
 
-export function formatCurrency(n: number, currency: string = "VND", maximumFractionDigits: number = 2): string {
-  return new Intl.NumberFormat("vi-VN", {
+export function formatCurrency(n: number, currency: string = "VND", fractionDigits: number = 2): string {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
-    maximumFractionDigits,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(n);
 }
 
 export function formatNumber(n: number, fractionDigits: number = 2): string {
-  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: fractionDigits }).format(n);
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(n);
 }
 
 export function formatPercent(n: number, fractionDigits: number = 2): string {

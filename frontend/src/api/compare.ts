@@ -59,6 +59,18 @@ export async function getHistory(
   return data;
 }
 
+export async function fillMissingHistory(
+  symbol: string,
+  type: string,
+  start: string,
+  end: string
+): Promise<{ symbol: string; type: string; filled: number; start: string; end: string }> {
+  const { data } = await API.post(`/prices/market-history/${symbol}/fill`, null, {
+    params: { type, start, end },
+  });
+  return data;
+}
+
 export async function getMetrics(
   symbols: string[],
   types: string[],

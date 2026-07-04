@@ -100,7 +100,7 @@ class NewsFeedService:
             tag=tag,
             region=region,
         )
-        query = query.order_by(NewsArticle.published_at.desc()).offset(offset).limit(limit)
+        query = query.order_by(func.coalesce(NewsArticle.published_at, NewsArticle.fetched_at).desc()).offset(offset).limit(limit)
         return list(self.session.exec(query).all())
 
     def count_articles(
@@ -174,7 +174,7 @@ class NewsFeedService:
         )
         if region:
             query = query.where(NewsArticle.region == region)
-        query = query.order_by(NewsArticle.published_at.desc()).offset(offset).limit(limit)
+        query = query.order_by(func.coalesce(NewsArticle.published_at, NewsArticle.fetched_at).desc()).offset(offset).limit(limit)
         return list(self.session.exec(query).all())
 
     def count_personalized_feed(

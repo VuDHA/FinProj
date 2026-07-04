@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from models import Asset, Income, Transaction
+from models import Asset, Income, PriceSnapshot, Transaction
 from schemas import AllocationTargetCreate, SettingCreate
 from services.source_config import DEFAULT_SOURCES
 from sqlmodel import select
@@ -437,5 +437,157 @@ def test_smart_import_invalid_payload(client):
         "/api/v1/import-export/smart-import",
         files={"file": ("assets.csv", "mã,tên,loại\nVCB,Vietcombank,STOCK", "text/csv")},
         data={"payload": "not json"},
+    )
+    assert response.status_code == 400
+
+
+def test_update_asset(client, session):
+    asset = _create_asset(session, symbol="RE", name="Real Estate", type="REAL_ESTATE")
+    response = client.put(
+        f"/api/v1/assets/{asset.id}",
+        json={"name": "Real Estate updated", "currency": "VND", "manual_value": 1500},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Real Estate updated"
+    assert data["currency"] == "VND"
+
+
+def test_update_asset_symbol_and_type_immutable(client, session):
+    asset = _create_asset(session, symbol="VCB", name="Vietcombank", type="STOCK")
+    response = client.put(
+        f"/api/v1/assets/{asset.id}",
+        json={"symbol": "VCB2", "type": "FUND", "name": "Vietcombank"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "VCB"
+    assert data["type"] == "STOCK"
+
+
+def test_update_transaction(client, session):
+    asset = _create_asset(session)
+    tx = Transaction(asset_id=asset.id, type="BUY", quantity=10, price=100, fee=0, date=datetime.date(2023, 1, 1))
+    session.add(tx)
+    session.commit()
+    session.refresh(tx)
+    response = client.put(
+        f"/api/v1/transactions/{tx.id}",
+        json={"quantity": 20, "price": 110, "fee": 5, "date": "2023-02-01", "notes": "updated"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["quantity"] == 20
+    assert data["price"] == 110
+    assert data["fee"] == 5
+    assert data["notes"] == "updated"
+
+
+def test_update_transaction_sell_exceeds_holding(client, session):
+    asset = _create_asset(session)
+    buy = Transaction(asset_id=asset.id, type="BUY", quantity=10, price=100, fee=0, date=datetime.date(2023, 1, 1))
+    sell = Transaction(asset_id=asset.id, type="SELL", quantity=5, price=110, fee=0, date=datetime.date(2023, 2, 1))
+    session.add(buy)
+    session.add(sell)
+    session.commit()
+    session.refresh(sell)
+    response = client.put(
+        f"/api/v1/transactions/{sell.id}",
+        json={"quantity": 15},
+    )
+    assert response.status_code == 400
+
+
+def test_create_transaction_manual_price_for_non_market_asset(client, session):
+    asset = Asset(symbol="RE", name="Real Estate", type="REAL_ESTATE", currency="VND", is_active=True)
+    session.add(asset)
+    session.add(PriceSnapshot(asset_id=asset.id, date=datetime.date.today(), price=1500))
+    session.commit()
+    session.refresh(asset)
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "BUY", "quantity": 10, "price": 1500, "fee": 0, "date": "2023-01-01"},
+    )
+    assert response.status_code == 200
+    assert response.json()["price"] == 1500
+
+
+def test_create_transaction_price_fallback_to_market_snapshot(client, session):
+    asset = _create_asset(session)
+    snapshot = PriceSnapshot(asset_id=asset.id, date=datetime.date(2023, 1, 1), price=95)
+    session.add(snapshot)
+    session.commit()
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "BUY", "quantity": 10, "fee": 0, "date": "2023-01-01"},
+    )
+    assert response.status_code == 200
+    assert response.json()["price"] == 95
+
+
+def test_create_transaction_future_date(client, session):
+    asset = _create_asset(session)
+    future = datetime.date.today() + datetime.timedelta(days=1)
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "BUY", "quantity": 10, "price": 100, "fee": 0, "date": future.isoformat()},
+    )
+    assert response.status_code == 400
+
+
+def test_create_deposit_withdrawal_non_market_asset(client, session):
+    asset = Asset(symbol="RE", name="Real Estate", type="REAL_ESTATE", currency="VND", is_active=True)
+    session.add(asset)
+    session.add(PriceSnapshot(asset_id=asset.id, date=datetime.date.today(), price=1000))
+    session.commit()
+    session.refresh(asset)
+
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "DEPOSIT", "quantity": 5, "price": 1000, "fee": 0, "date": "2023-01-01"},
+    )
+    assert response.status_code == 200
+    assert response.json()["type"] == "DEPOSIT"
+
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "WITHDRAWAL", "quantity": 3, "price": 1000, "fee": 0, "date": "2023-01-02"},
+    )
+    assert response.status_code == 200
+    assert response.json()["type"] == "WITHDRAWAL"
+
+
+
+def test_deposit_withdrawal_rejected_for_market_asset(client, session):
+    asset = _create_asset(session)
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "DEPOSIT", "quantity": 10, "price": 100, "fee": 0, "date": "2023-01-01"},
+    )
+    assert response.status_code == 400
+
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "WITHDRAWAL", "quantity": 10, "price": 100, "fee": 0, "date": "2023-01-01"},
+    )
+    assert response.status_code == 400
+
+
+
+def test_withdrawal_exceeds_holding_non_market_asset(client, session):
+    asset = Asset(symbol="RE", name="Real Estate", type="REAL_ESTATE", currency="VND", is_active=True)
+    session.add(asset)
+    session.add(PriceSnapshot(asset_id=asset.id, date=datetime.date.today(), price=1000))
+    session.commit()
+    session.refresh(asset)
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "BUY", "quantity": 10, "price": 1000, "fee": 0, "date": "2023-01-01"},
+    )
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/v1/transactions/",
+        json={"asset_id": asset.id, "type": "WITHDRAWAL", "quantity": 15, "price": 1000, "fee": 0, "date": "2023-01-02"},
     )
     assert response.status_code == 400

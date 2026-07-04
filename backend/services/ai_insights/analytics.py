@@ -26,6 +26,13 @@ class AnalyticsInsightService:
             f"giá vốn={format_currency(analytics.get('total_cost', 0))}, "
             f"thu nhập={format_currency(analytics.get('total_income', 0))}"
         )
+        stable_value = analytics.get('stable_value', 0)
+        if stable_value:
+            data_lines.append(
+                f"Tài sản ổn định (không định giá thị trường hàng ngày): "
+                f"giá trị={format_currency(stable_value)}. "
+                f"Loại tài sản này được hiển thị riêng và không tính vào lợi nhuận/lỗ."
+            )
 
         top = minify_dict(analytics.get("top_performers", [])[: self.MAX_PERFORMERS], ["symbol", "pnl_percent"])
         if top:

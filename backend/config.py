@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     SCHEDULER_HOUR: int = 15
     SCHEDULER_MINUTE: int = 35
 
+    # News scheduler settings
+    NEWS_SCHEDULER_ENABLED: bool = True
+    NEWS_VN_MARKET_INTERVAL_MINUTES: int = 15
+    NEWS_VN_OFF_HOURS_INTERVAL_MINUTES: int = 30
+    NEWS_GLOBAL_INTERVAL_MINUTES: int = 30
+
     # AI provider: "gemini" | "ollama". Gemini is the primary provider;
     # Ollama is used as fallback when Gemini is unavailable or disabled.
     AI_PROVIDER: str = "ollama"

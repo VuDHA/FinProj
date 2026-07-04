@@ -42,6 +42,14 @@ class AssetRead(AssetCreate):
     is_active: bool
 
 
+class AssetUpdate(BaseModel):
+    name: Optional[str] = None
+    exchange: Optional[str] = None
+    currency: Optional[str] = None
+    source: Optional[str] = None
+    manual_value: Optional[float] = None
+
+
 class TransactionCreate(BaseModel):
     asset_id: int
     type: str
@@ -54,6 +62,14 @@ class TransactionCreate(BaseModel):
 
 class TransactionRead(TransactionCreate):
     id: int
+
+
+class TransactionUpdate(BaseModel):
+    quantity: Optional[float] = None
+    price: Optional[float] = None
+    fee: Optional[float] = None
+    date: Optional[datetime.date] = None
+    notes: Optional[str] = None
 
 
 class AlertCreate(BaseModel):
@@ -152,6 +168,9 @@ class PortfolioSummary(BaseModel):
     total_cost: float
     total_pnl: float
     total_pnl_percent: float
+    market_value: float
+    market_cost: float
+    stable_value: float
     items: List[PortfolioItem]
 
 
@@ -263,6 +282,7 @@ class AnalyticsSummary(BaseModel):
     total_income: float
     total_value: float
     total_cost: float
+    stable_value: float
     portfolio_value_by_type: List[PortfolioValueByType]
     filter_type: str
     period_start: str
@@ -391,6 +411,7 @@ class SmartImportRequest(BaseModel):
 class ArticleRead(BaseModel):
     id: int
     source_id: int
+    source_name: Optional[str] = None
     url: str
     title: str
     summary: Optional[str] = None

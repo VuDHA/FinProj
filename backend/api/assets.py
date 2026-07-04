@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import Asset, PriceSnapshot
-from schemas import AssetCreate, AssetRead
+from schemas import AssetCreate, AssetRead, AssetUpdate
 from services.asset_type_config import (
     generate_symbol,
     get_asset_types,
@@ -82,6 +82,62 @@ def get_asset(asset_id: int, session: Session = Depends(get_session)):
     asset = session.get(Asset, asset_id)
     if not asset or not asset.is_active:
         raise HTTPException(status_code=404, detail="Asset not found")
+    return asset
+
+
+@router.put("/{asset_id}", response_model=AssetRead)
+def update_asset(asset_id: int, update: AssetUpdate, session: Session = Depends(get_session)):
+    asset = session.get(Asset, asset_id)
+    if not asset or not asset.is_active:
+        raise HTTPException(status_code=404, detail="Asset not found")
+
+    if update.source is not None:
+        if update.source == "":
+            update.source = None
+        elif not is_valid_source_for_type(update.source, asset.type):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Source {update.source} is not supported for asset type {asset.type}",
+            )
+
+    if update.name is not None:
+        asset.name = update.name
+    if update.exchange is not None:
+        asset.exchange = update.exchange
+    if update.currency is not None:
+        asset.currency = update.currency
+    if update.source is not None:
+        asset.source = update.source
+
+    if update.manual_value is not None:
+        if not is_market_price_type(session, asset.type):
+            if update.manual_value <= 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Asset type {asset.type} requires a positive manual value",
+                )
+            latest = session.exec(
+                select(PriceSnapshot)
+                .where(PriceSnapshot.asset_id == asset.id)
+                .order_by(PriceSnapshot.date.desc())
+            ).first()
+            today = datetime.date.today()
+            if latest and latest.date == today:
+                latest.price = float(update.manual_value)
+                session.add(latest)
+            else:
+                session.add(
+                    PriceSnapshot(
+                        asset_id=asset.id,
+                        date=today,
+                        price=float(update.manual_value),
+                    )
+                )
+        # For market-priced assets manual_value is not used; ignore it.
+
+    session.add(asset)
+    session.commit()
+    session.refresh(asset)
     return asset
 
 

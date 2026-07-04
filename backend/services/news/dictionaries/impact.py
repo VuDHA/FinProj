@@ -10,6 +10,10 @@ VIETNAMESE_HIGH_IMPACT = [
     "xung đột địa chính trị", "bán tháo", "rút vốn", "cắt giảm", "sa thải hàng loạt",
     "thay đổi luật", "chính sách mới", "quyết định của chính phủ", "thông qua luật",
     "thị trường chứng khoán sụt giảm", "VN-Index giảm mạnh", "HNX-Index", "UPCoM",
+    "cổ tức tiền mặt", "cổ tức cổ phiếu", "phát hành thêm", "mua cổ phiếu quỹ",
+    "vỡ nợ", "vỡ trái phiếu", "gian lận", "thu hồi giấy phép kinh doanh",
+    "tỷ giá USD/VND", "giá dầu thô", "giá vàng", "lãi suất điều hành",
+    "chính sách tiền tệ", "chính sách tài khóa", "thuế", "ngân sách nhà nước",
 ]
 
 VIETNAMESE_MEDIUM_IMPACT = [
@@ -17,6 +21,10 @@ VIETNAMESE_MEDIUM_IMPACT = [
     "thắng thầu", "ký hợp đồng", "tăng vốn", "phát hành thêm", "mua cổ phiếu quỹ",
     "cải thiện", "tăng trưởng", "thị phần", "cạnh tranh", "thay đổi ban lãnh đạo",
     "bổ nhiệm", "miễn nhiệm", "tái cấu trúc",
+    "biên lợi nhuận", "nợ xấu", "tín dụng", "room ngoại", "nới room", "siết room",
+    "xuất khẩu", "nhập khẩu", "đơn hàng", "khởi công", "vận hành thương mại",
+    "nâng xếp hạng", "hạ xếp hạng", "khuyến nghị mua", "khuyến nghị bán",
+    "bất động sản", "ngân hàng", "chứng khoán", "thép", "dầu khí", "bán lẻ", "thủy sản",
 ]
 
 ENGLISH_HIGH_IMPACT = [

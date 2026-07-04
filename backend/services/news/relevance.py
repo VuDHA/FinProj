@@ -53,10 +53,10 @@ class RelevanceScorer:
 
                 service = BatchAIService(batch_size=self._infer_batch_size())
                 language = articles[0].get("language", "vi")
-                return service.score_relevance(articles, language=language, threshold=self.threshold)
+                region = articles[0].get("region", "vn")
+                return service.score_relevance(articles, language=language, threshold=self.threshold, region=region)
             except Exception as e:
-                print(f"[news:relevance] batch service failed: {e}")
-            return [self._rule_based_score(a) for a in articles]
+                return [self._rule_based_score(a) for a in articles]
 
         if self.enabled:
             return [self._llm_score(a) for a in articles]
@@ -160,6 +160,13 @@ class RelevanceScorer:
             "đầu tư", "tăng trưởng", "gdp", "lãi suất", "fed", "crypto", "bitcoin",
             "etf", "quỹ", "trái phiếu", "bất động sản", "xuất khẩu", "nhập khẩu",
             "kinh tế", "vĩ mô", "vi mô", "lạm phát", "thuế", "ngân sách",
+            "kết quả kinh doanh", "kqkd", "cổ tức", "mua cổ phiếu quỹ", "phát hành thêm",
+            "room ngoại", "nới room", "siết room", "tái cấu trúc", "thay đổi ban lãnh đạo",
+            "biên lợi nhuận", "nợ xấu", "tín dụng", "giá dầu", "giá vàng", "usd/vnd",
+            "tỷ giá usd/vnd", "tỷ giá", "chính sách tiền tệ", "chính sách tài khóa",
+            "bán lẻ", "thép", "dầu khí", "thủy sản", "xuất khẩu", "khởi công",
+            "vận hành thương mại", "đơn hàng", "thắng thầu", "ký hợp đồng", "hợp tác",
+            "sáp nhập", "mua lại", "phá sản", "vỡ nợ", "vỡ trái phiếu", "gian lận",
         }
         global_keywords = {
             "market", "stock", "stocks", "equity", "equities", "earnings", "revenue",

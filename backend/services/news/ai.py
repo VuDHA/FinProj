@@ -107,7 +107,6 @@ class NewsAI:
         cache_key = self._summary_cache_key(articles, language, rag_context)
         cached = self._get_cached_summary(cache_key)
         if cached is not None:
-            print(f"[news:ai] returning cached summary ({len(articles)} articles)")
             return cached
 
         if not self.enabled:
@@ -121,11 +120,9 @@ class NewsAI:
 
             service = BatchAIService(batch_size=1)
             result = service.summarize(articles, language=language, context=rag_context)
-            print(f"[news:ai] summary generated in {time.time() - start:.2f}s")
             self._summary_cache[cache_key] = (time.time(), result)
             return result
         except Exception as e:
-            print(f"[news:ai] ai failed: {e}")
             result = self._fallback_summary(articles, language)
             self._summary_cache[cache_key] = (time.time(), result)
             return result

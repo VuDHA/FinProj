@@ -36,7 +36,15 @@ function computeStyle(position: TooltipPosition, rect: Rect) {
   const centerX = rect.left + rect.width / 2;
   const centerY = rect.top + rect.height / 2;
 
-  switch (position) {
+  // Flip left/right to the opposite side if it would overflow the viewport.
+  let finalPosition = position;
+  if (position === "right" && rect.right + GAP + TOOLTIP_WIDTH > vw) {
+    finalPosition = "left";
+  } else if (position === "left" && rect.left - GAP - TOOLTIP_WIDTH < 0) {
+    finalPosition = "right";
+  }
+
+  switch (finalPosition) {
     case "top": {
       top = rect.top - GAP;
       left = centerX;
@@ -68,15 +76,18 @@ function computeStyle(position: TooltipPosition, rect: Rect) {
   }
 
   // Keep inside viewport horizontally
-  if (position === "top" || position === "bottom") {
+  if (finalPosition === "top" || finalPosition === "bottom") {
     left = Math.max(TOOLTIP_WIDTH / 2 + 8, Math.min(vw - TOOLTIP_WIDTH / 2 - 8, left));
   }
-  if (position === "left" || position === "right") {
+  if (finalPosition === "left" || finalPosition === "right") {
+    // Clamp left so the tooltip body stays within the viewport.
+    left = Math.max(8, Math.min(vw - TOOLTIP_WIDTH - 8, left));
     top = Math.max(40, Math.min(vh - 80, top));
   }
 
   return {
-    tooltip: position === "top" || position === "bottom"
+    position: finalPosition,
+    tooltip: finalPosition === "top" || finalPosition === "bottom"
       ? { left, top, transform: "translate(-50%, -100%)" }
       : { left, top, transform: "translate(0, -50%)" },
     arrow: { left: arrowLeft, top: arrowTop },
@@ -104,6 +115,7 @@ export function InfoTooltip({ content, title, className = "", position = "top" }
   }, [open]);
 
   const style = rect ? computeStyle(position, rect) : null;
+  const finalPosition = style?.position || position;
 
   return (
     <span
@@ -120,9 +132,9 @@ export function InfoTooltip({ content, title, className = "", position = "top" }
         createPortal(
           <AnimatePresence>
             <motion.div
-              initial={{ opacity: 0, y: position === "top" ? 4 : position === "bottom" ? -4 : 0, x: position === "left" ? 4 : position === "right" ? -4 : 0 }}
+              initial={{ opacity: 0, y: finalPosition === "top" ? 4 : finalPosition === "bottom" ? -4 : 0, x: finalPosition === "left" ? 4 : finalPosition === "right" ? -4 : 0 }}
               animate={{ opacity: 1, y: 0, x: 0 }}
-              exit={{ opacity: 0, y: position === "top" ? 4 : position === "bottom" ? -4 : 0, x: position === "left" ? 4 : position === "right" ? -4 : 0 }}
+              exit={{ opacity: 0, y: finalPosition === "top" ? 4 : finalPosition === "bottom" ? -4 : 0, x: finalPosition === "left" ? 4 : finalPosition === "right" ? -4 : 0 }}
               transition={{ duration: 0.15 }}
               className="fixed z-[9999] w-56 rounded-xl border border-slate-200/80 bg-white/95 p-3 text-xs text-slate-600 shadow-xl backdrop-blur-md pointer-events-none"
               style={style?.tooltip}

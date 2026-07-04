@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Pencil, Search, Trash2, ArrowRightLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
@@ -51,6 +52,7 @@ function typeBadgeClass(type: string): string {
 export function Assets() {
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [form, setForm] = usePersistentState("assets.form", {
     symbol: "",
     name: "",
@@ -62,6 +64,15 @@ export function Assets() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    exchange: "",
+    currency: "VND",
+    source: null as string | null,
+    manual_value: "",
+  });
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = usePersistentState("assets.search", "");
 
   const assetTypes = useQuery<AssetTypeMap>({
@@ -134,6 +145,68 @@ export function Assets() {
       setDeleteTarget(null);
     },
   });
+
+  const update = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: any }) => API.put(`/assets/${id}`, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["assets"] });
+      qc.invalidateQueries({ queryKey: ["portfolio"] });
+      setEditTarget(null);
+      setEditErrors({});
+      showToast("Đã cập nhật tài sản", "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể cập nhật tài sản", "error");
+    },
+  });
+
+  const openEditAsset = (asset: any) => {
+    setEditTarget(asset);
+    setEditForm({
+      name: asset.name || "",
+      exchange: asset.exchange || "",
+      currency: asset.currency || "VND",
+      source: asset.source || null,
+      manual_value: asset.manual_value ? String(asset.manual_value) : "",
+    });
+    setEditErrors({});
+  };
+
+  const handleEditChange = (field: keyof typeof editForm, value: string | null) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+    if (editErrors[field]) {
+      setEditErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleEditSubmit = () => {
+    const assetType = typeConfig[editTarget.type];
+    const needsManualValue = assetType?.marketPrice === false;
+    const validators: Record<string, { value: string; validators: any[] }> = {
+      name: { value: editForm.name, validators: [required("Vui lòng nhập tên tài sản")] },
+    };
+    if (needsManualValue) {
+      validators.manual_value = { value: editForm.manual_value, validators: [positiveNumber("Vui lòng nhập giá trị dương")] };
+    }
+    const validationErrors = validateForm(validators);
+    setEditErrors(validationErrors);
+    if (hasErrors(validationErrors)) return;
+
+    const payload: any = {
+      name: editForm.name,
+      exchange: editForm.exchange,
+      currency: editForm.currency,
+      source: editForm.source,
+    };
+    if (editForm.manual_value) {
+      payload.manual_value = parseFloat(editForm.manual_value);
+    }
+    update.mutate({ id: editTarget.id, payload });
+  };
+
+  const handleNewTransaction = (asset: any) => {
+    navigate("/transactions", { state: { asset_id: asset.id } });
+  };
 
   const handleSubmit = () => {
     const validators: Record<string, { value: string; validators: any[] }> = {
@@ -269,6 +342,7 @@ export function Assets() {
       {assetTypes.isError && <ErrorMessage error={assetTypes.error} retry={() => assetTypes.refetch()} />}
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
       {create.isError && <ErrorMessage error={create.error} retry={() => create.mutate()} />}
+      {update.isError && <ErrorMessage error={update.error} retry={() => update.reset()} />}
       {remove.isError && <ErrorMessage error={remove.error} retry={() => remove.reset()} />}
       <SectionHeader title={labels.assets.title} />
 
@@ -376,14 +450,32 @@ export function Assets() {
                       )}
                     </td>
                     <td className="text-right">
-                      <button
-                        onClick={() => setDeleteTarget({ id: asset.id, name: asset.name })}
-                        disabled={remove.isPending}
-                        className="inline-flex items-center justify-center p-2 rounded-lg text-accent-rose hover:bg-accent-rose/10 transition-colors disabled:opacity-50"
-                        aria-label={`Xóa ${asset.name}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          onClick={() => handleNewTransaction(asset)}
+                          className="inline-flex items-center justify-center p-2 rounded-lg text-accent-emerald hover:bg-accent-emerald/10 transition-colors"
+                          title={labels.assets.newTransaction}
+                          aria-label={`${labels.assets.newTransaction} ${asset.name}`}
+                        >
+                          <ArrowRightLeft className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openEditAsset(asset)}
+                          disabled={update.isPending}
+                          className="inline-flex items-center justify-center p-2 rounded-lg text-accent-blue hover:bg-accent-blue/10 transition-colors disabled:opacity-50"
+                          aria-label={`Sửa ${asset.name}`}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget({ id: asset.id, name: asset.name })}
+                          disabled={remove.isPending}
+                          className="inline-flex items-center justify-center p-2 rounded-lg text-accent-rose hover:bg-accent-rose/10 transition-colors disabled:opacity-50"
+                          aria-label={`Xóa ${asset.name}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -399,6 +491,87 @@ export function Assets() {
           </div>
         )}
       </FintechCard>
+
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl p-6 space-y-4">
+            <h3 className="card-title">{labels.assets.edit}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{labels.assets.symbol}</label>
+                <input type="text" disabled value={editTarget.symbol} className="input-fintech bg-slate-50" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{labels.assets.type}</label>
+                <input type="text" disabled value={typeLabel(editTarget.type)} className="input-fintech bg-slate-50" />
+              </div>
+              <div className="md:col-span-2">
+                <input
+                  type="text"
+                  placeholder={labels.assets.name}
+                  className={`input-fintech ${editErrors.name ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
+                  value={editForm.name}
+                  onChange={(e) => handleEditChange("name", e.target.value)}
+                />
+                {editErrors.name && <p className="text-xs text-rose-500 mt-1">{editErrors.name}</p>}
+              </div>
+              <div>
+                <input
+                  type="text"
+                  placeholder={labels.assets.exchange}
+                  className="input-fintech"
+                  value={editForm.exchange}
+                  onChange={(e) => handleEditChange("exchange", e.target.value)}
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  placeholder={labels.assets.currency}
+                  className="input-fintech"
+                  value={editForm.currency}
+                  onChange={(e) => handleEditChange("currency", e.target.value)}
+                />
+              </div>
+              <div>
+                <SourceSelect
+                  assetType={editTarget.type}
+                  value={editForm.source}
+                  onChange={(value) => handleEditChange("source", value)}
+                />
+              </div>
+              {typeConfig[editTarget.type]?.marketPrice === false && (
+                <div>
+                  <input
+                    type="number"
+                    placeholder={labels.assets.manualValue}
+                    className={`input-fintech ${editErrors.manual_value ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
+                    value={editForm.manual_value}
+                    onChange={(e) => handleEditChange("manual_value", e.target.value)}
+                  />
+                  {editErrors.manual_value && <p className="text-xs text-rose-500 mt-1">{editErrors.manual_value}</p>}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditTarget(null)}
+                className="btn-secondary"
+                disabled={update.isPending}
+              >
+                {labels.common.cancel}
+              </button>
+              <button
+                onClick={handleEditSubmit}
+                disabled={update.isPending}
+                className="btn-primary"
+              >
+                {update.isPending ? labels.common.saving : labels.common.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

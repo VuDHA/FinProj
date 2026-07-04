@@ -80,3 +80,28 @@ def test_compare_backfills_history(client, session, monkeypatch):
     assert asset is not None
     snapshots = session.exec(select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)).all()
     assert len(snapshots) == len(prices)
+
+
+def test_fill_market_history(client, session, monkeypatch):
+    today = datetime.date.today()
+    start = today - datetime.timedelta(days=5)
+    prices = {start + datetime.timedelta(days=i): 100 + i for i in range(6)}
+
+    def fake_history(self, symbol, asset_type, start, end):
+        return prices
+
+    monkeypatch.setattr("services.market_data.MarketDataService.fetch_market_history", fake_history)
+    response = client.post(
+        "/api/v1/prices/market-history/VCB/fill",
+        params={"type": "STOCK", "start": start.isoformat(), "end": today.isoformat()},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "VCB"
+    assert data["type"] == "STOCK"
+    assert data["filled"] == len(prices)
+
+    asset = session.exec(select(Asset).where(Asset.symbol == "VCB", Asset.type == "STOCK")).first()
+    assert asset is not None
+    snapshots = session.exec(select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)).all()
+    assert len(snapshots) == len(prices)

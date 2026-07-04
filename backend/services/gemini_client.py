@@ -57,7 +57,6 @@ class GeminiClient:
         msg = f"[gemini] task={task_name} status={status} total={duration:.2f}s"
         if error:
             msg += f" error={error}"
-        print(msg)
 
     def generate(
         self,
@@ -208,9 +207,12 @@ class GeminiClient:
     @staticmethod
     def _extract_embedding(response: Any) -> List[float]:
         """Return the embedding vector from an EmbedContentResponse or embedding item."""
+        # A full EmbedContentResponse contains a list of embeddings; pick the first one.
+        if hasattr(response, "embeddings") and response.embeddings:
+            response = response.embeddings[0]
         if hasattr(response, "values"):
             values = response.values
-        elif hasattr(response, "embedding"):
+        elif hasattr(response, "embedding") and hasattr(response.embedding, "values"):
             values = response.embedding.values
         else:
             raise GeminiClientError("Gemini embedding response has no values")

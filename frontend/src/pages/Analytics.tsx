@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bot, Plus, RefreshCw, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bot, Landmark, Plus, RefreshCw, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { usePersistentState } from "../hooks/usePersistentState";
 import { Link } from "react-router-dom";
 import {
@@ -118,6 +118,14 @@ export function Analytics() {
         }>;
       },
   });
+
+  const assetTypes = useQuery<{ [key: string]: { marketPrice: boolean } }>({
+    queryKey: ["asset-types"],
+    queryFn: async () => (await API.get("/settings/asset-types")).data.types,
+  });
+
+  const isMarketType = (type: string) =>
+    assetTypes.data?.[type]?.marketPrice !== false;
 
   const data = analytics.data;
 
@@ -419,7 +427,7 @@ export function Analytics() {
             </div>
           </FintechCard>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <FintechCard delay={0.1}>
               <div className="card-title mb-1 inline-flex items-center">
                 {labels.analytics.totalPnl}
@@ -432,6 +440,21 @@ export function Analytics() {
                 <TrendBadge value={totalPnlPercent} />
               </div>
             </FintechCard>
+            {data.stable_value > 0 && (
+              <FintechCard delay={0.12}>
+                <div className="card-title mb-1 inline-flex items-center">
+                  <Landmark className="w-4 h-4 mr-1.5 text-accent-violet" />
+                  {labels.summary.stableValue}
+                  <InfoTooltip content={labels.tooltips.stableValue} />
+                </div>
+                <div className="metric-value text-accent-violet">
+                  <AnimatedNumber value={data.stable_value} formatter={formatCurrency} />
+                </div>
+                {/* <div className="mt-2 text-xs text-slate-500">
+                  {labels.summary.totalValue}: {formatCurrency(data.total_value)}
+                </div> */}
+              </FintechCard>
+            )}
             <FintechCard delay={0.15}>
               <div className="card-title mb-1 inline-flex items-center">
                 {labels.analytics.topGainer}
@@ -636,7 +659,7 @@ export function Analytics() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
               <h3 className="card-title inline-flex items-center">
                 {labels.analytics.assetValueTable}
-                <InfoTooltip content={labels.tooltips.pnl} />
+                <InfoTooltip content={labels.tooltips.allocationByType} />
               </h3>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="relative w-full max-w-xs">
@@ -703,13 +726,17 @@ export function Analytics() {
                           <td className="text-right font-mono">{formatCurrency(item.current_value)}</td>
                           <td className="text-right font-mono">{formatCurrency(item.cost)}</td>
                           <td
-                            className={`text-right font-mono ${item.pnl >= 0 ? "text-accent-emerald" : "text-accent-rose"
+                            className={`text-right font-mono ${!isMarketType(item.type)
+                              ? "text-slate-400"
+                              : item.pnl >= 0
+                                ? "text-accent-emerald"
+                                : "text-accent-rose"
                               }`}
                           >
-                            {formatCurrency(item.pnl)}
+                            {isMarketType(item.type) ? formatCurrency(item.pnl) : "-"}
                           </td>
                           <td className="text-right">
-                            <TrendBadge value={item.pnl_percent} />
+                            {isMarketType(item.type) ? <TrendBadge value={item.pnl_percent} /> : <span className="text-slate-400">-</span>}
                           </td>
                         </tr>
                       ))}

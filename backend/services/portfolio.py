@@ -6,6 +6,7 @@ from models import Asset, PriceSnapshot, Transaction
 from schemas import PortfolioItem, PortfolioSummary
 from services.asset_type_config import is_market_price_type
 from services.market_data import MarketDataService
+from services.transaction_types import is_buy_type, is_sell_type
 
 
 class PortfolioService:
@@ -49,10 +50,12 @@ class PortfolioService:
             quantity = 0.0
             cost = 0.0
             for t in transactions:
-                if t.type == "BUY":
+                effective_price = self.market.resolve_effective_price(asset, t.date, t.price)
+                price = effective_price if effective_price and effective_price > 0 else t.price
+                if is_buy_type(t.type):
                     quantity += t.quantity
-                    cost += t.quantity * t.price + t.fee
-                elif t.type == "SELL":
+                    cost += t.quantity * price + t.fee
+                elif is_sell_type(t.type):
                     if quantity > 0:
                         avg_cost = cost / quantity
                         cost -= t.quantity * avg_cost
@@ -85,6 +88,9 @@ class PortfolioService:
         items: List[PortfolioItem] = []
         total_cost = 0.0
         total_value = 0.0
+        market_value = 0.0
+        market_cost = 0.0
+        stable_value = 0.0
 
         for asset in held_assets:
             quantity = holdings[asset.id]["quantity"]
@@ -109,6 +115,13 @@ class PortfolioService:
             total_cost += cost
             total_value += current_value
 
+            is_market = is_market_price_type(self.session, asset.type)
+            if is_market:
+                market_value += current_value
+                market_cost += cost
+            else:
+                stable_value += current_value
+
             items.append(
                 PortfolioItem(
                     asset_id=asset.id,
@@ -127,13 +140,17 @@ class PortfolioService:
 
         self.session.commit()
 
-        total_pnl = total_value - total_cost
-        total_pnl_percent = (total_pnl / total_cost * 100) if total_cost else 0.0
+        # PnL is calculated only on market-priced assets; stable assets are excluded.
+        total_pnl = market_value - market_cost
+        total_pnl_percent = (total_pnl / market_cost * 100) if market_cost else 0.0
 
         return PortfolioSummary(
             total_value=total_value,
             total_cost=total_cost,
             total_pnl=total_pnl,
             total_pnl_percent=total_pnl_percent,
+            market_value=market_value,
+            market_cost=market_cost,
+            stable_value=stable_value,
             items=items,
         )

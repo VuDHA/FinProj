@@ -10,6 +10,7 @@ except ImportError:
     CronTrigger = None
     APSCHEDULER_AVAILABLE = False
 
+from config import settings
 from database import engine
 from services.news.alerts import AlertService
 from services.news.crawler import NewsCrawlerService
@@ -43,30 +44,41 @@ def update_global_news():
 
 def add_news_jobs(scheduler: BackgroundScheduler):
     """Register news-related cron jobs on the shared scheduler."""
-    # VN market hours: crawl every 15 minutes from 08:30 to 15:15
+    if not settings.NEWS_SCHEDULER_ENABLED:
+        print("[news scheduler] disabled by settings")
+        return
+
+    vn_market_interval = max(1, settings.NEWS_VN_MARKET_INTERVAL_MINUTES)
+    vn_off_hours_interval = max(1, settings.NEWS_VN_OFF_HOURS_INTERVAL_MINUTES)
+    global_interval = max(1, settings.NEWS_GLOBAL_INTERVAL_MINUTES)
+
+    # VN market hours: crawl every N minutes from 08:30 to 15:15
     scheduler.add_job(
         update_vn_news,
         "cron",
         hour="8-15",
-        minute="*/15",
+        minute=f"*/{vn_market_interval}",
         id="news_update_vn_hours",
         replace_existing=True,
     )
-    # VN off-hours: crawl every 30 minutes
+    # VN off-hours: crawl every N minutes
     scheduler.add_job(
         update_vn_news,
         "cron",
         hour="16-23,0-7",
-        minute="*/30",
+        minute=f"*/{vn_off_hours_interval}",
         id="news_update_off_hours",
         replace_existing=True,
     )
-    # Global news: slower cadence, every 30 minutes
+    # Global news: slower cadence, every N minutes
     scheduler.add_job(
         update_global_news,
         "cron",
-        minute="*/30",
+        minute=f"*/{global_interval}",
         id="news_update_global",
         replace_existing=True,
     )
-    print("[news scheduler] registered jobs")
+    print(
+        f"[news scheduler] registered jobs: vn_market={vn_market_interval}min, "
+        f"vn_off_hours={vn_off_hours_interval}min, global={global_interval}min"
+    )

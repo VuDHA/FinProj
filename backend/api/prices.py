@@ -217,6 +217,27 @@ def get_market_history(
     return [{"date": d, "price": p} for d, p in sorted(history.items())]
 
 
+@router.post("/market-history/{symbol}/fill")
+def fill_market_history(
+    symbol: str,
+    type: str,
+    start: datetime.date,
+    end: datetime.date,
+    session: Session = Depends(get_session),
+):
+    service = MarketDataService(session)
+    history = service.force_backfill_history(symbol, type, start, end)
+    if not history:
+        raise HTTPException(status_code=502, detail="Failed to fetch market history")
+    return {
+        "symbol": symbol.upper(),
+        "type": type,
+        "filled": len(history),
+        "start": start,
+        "end": end,
+    }
+
+
 @router.post("/market-ai-insight", response_model=MarketAIInsightResponse)
 @handle_ai_insight_error
 def get_market_ai_insight(session: Session = Depends(get_session)):

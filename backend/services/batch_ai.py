@@ -11,6 +11,11 @@ from services.gemini_client import GeminiClient, GeminiClientError
 from services.ollama_client import OllamaClient
 
 
+# Longer summaries give the AI more context. Gemini models support large context
+# windows, so we keep this high rather than the previous 300-char default.
+DEFAULT_NEWS_SUMMARY_MAX_LENGTH = 4000
+
+
 class BatchAIError(Exception):
     """Raised when no AI provider can handle a batch request."""
 
@@ -86,7 +91,7 @@ class BatchAIService:
                     prompt, max_tokens, task_name, response_mime_type=response_mime_type
                 )
             except (GeminiClientError, BatchAIError) as e:
-                print(f"[batch_ai] gemini failed for {task_name}: {e}")
+                pass
         if self._fallback is not None:
             return self._generate_fallback(prompt, max_tokens, task_name)
         raise BatchAIError(f"No AI provider available for {task_name}")
@@ -215,7 +220,6 @@ class BatchAIService:
                             entry.get("tags", ""), max_tags
                         )
             except Exception as e:
-                print(f"[batch_ai] tag batch failed: {e}")
                 # Fall back per item
                 for i, item in enumerate(batch):
                     results[batch_start + i] = self._generate_tags_single(
@@ -272,7 +276,6 @@ class BatchAIService:
             )
             return self._clean_tags(raw, max_tags)
         except Exception as e:
-            print(f"[batch_ai] single tag fallback failed: {e}")
             return []
 
     def score_relevance(
@@ -280,42 +283,46 @@ class BatchAIService:
         items: List[Dict[str, Any]],
         language: str = "vi",
         threshold: float = settings.NEWS_RELEVANCE_THRESHOLD,
+        region: str = "vn",
     ) -> List[Dict[str, Any]]:
         """Return a relevance score dict for each article."""
         if not items:
             return []
 
         task_name = "batch_relevance"
-        instructions = (
-            f"{master_prompt(language)}\n\n"
-            "Bạn là chuyên gia phân tích tin tức tài chính. Với mỗi tin bên dưới, "
-            "đánh giá mức độ liên quan đến đầu tư (chứng khoán, ngân hàng, vĩ mô, doanh nghiệp, "
-            "thị trường toàn cầu, hàng hóa, trái phiếu, tiền tệ). "
-            "Tin từ Bloomberg, Reuters, CNBC, Financial Times về thị trường là rất liên quan.\n"
-            "Thang điểm:\n"
-            "- 0.8–1.0: tin lớn ảnh hưởng toàn thị trường (Fed, lãi suất, lợi nhuận lớn, khủng hoảng)\n"
-            "- 0.6–0.79: tin đáng chú ý cho nhà đầu tư (doanh nghiệp, ngành, kinh tế vĩ mô)\n"
-            "- 0.4–0.59: tin liên quan nhẹ, không đủ nổi bật\n"
-            "- 0.0–0.39: tin ít liên quan hoặc không liên quan đến đầu tư\n"
-            "Trả về:\n"
-            "- relevance_score: số thực từ 0.0 đến 1.0\n"
-            "- standout: true nếu tin quan trọng và đáng chú ý cho nhà đầu tư, ngược lại false\n"
-            "- reason: giải thích ngắn trong 1 câu\n\n"
-            if language == "vi"
-            else f"{master_prompt(language)}\n\n"
-            "You are a financial analyst. For each article below, evaluate relevance to investing "
-            "(stocks, banking, macroeconomics, corporate earnings, global markets, commodities, bonds, currencies). "
-            "News from Bloomberg, Reuters, CNBC, Financial Times about markets is highly relevant.\n"
-            "Scale:\n"
-            "- 0.8–1.0: major market-moving news (Fed, rates, big earnings, crises)\n"
-            "- 0.6–0.79: notable for investors (companies, sectors, macro)\n"
-            "- 0.4–0.59: lightly related, not standout\n"
-            "- 0.0–0.39: little or no investment relevance\n"
-            "Return:\n"
-            "- relevance_score: float from 0.0 to 1.0\n"
-            "- standout: true if the article is notable and valuable to investors, otherwise false\n"
-            "- reason: one-sentence explanation\n\n"
-        )
+        if language == "vi" or region == "vn":
+            instructions = (
+                f"{master_prompt(language)}\n\n"
+                "Bạn là chuyên gia phân tích tin tức tài chính. Với mỗi tin bên dưới, "
+                "đánh giá mức độ liên quan đến nhà đầu tư tại Việt Nam (cổ phiếu, chứng khoán, "
+                "ngân hàng, doanh nghiệp niêm yết, kinh tế vĩ mô, lãi suất, tỷ giá, hàng hóa, "
+                "trái phiếu, tiền tệ). Tin từ các nguồn uy tín về thị trường Việt Nam là rất liên quan.\n"
+                "Thang điểm:\n"
+                "- 0.8–1.0: tin lớn ảnh hưởng toàn thị trường (Fed, lãi suất, KQKD lớn, khủng hoảng)\n"
+                "- 0.6–0.79: tin đáng chú ý cho nhà đầu tư (doanh nghiệp, ngành, kinh tế vĩ mô)\n"
+                "- 0.4–0.59: tin liên quan nhẹ, không đủ nổi bật\n"
+                "- 0.0–0.39: tin ít liên quan hoặc không liên quan đến đầu tư\n"
+                "Trả về:\n"
+                "- relevance_score: số thực từ 0.0 đến 1.0\n"
+                "- standout: true nếu tin quan trọng và đáng chú ý cho nhà đầu tư, ngược lại false\n"
+                "- reason: giải thích ngắn trong 1 câu\n\n"
+            )
+        else:
+            instructions = (
+                f"{master_prompt(language)}\n\n"
+                "You are a financial analyst. For each article below, evaluate relevance to investing "
+                "(stocks, banking, macroeconomics, corporate earnings, global markets, commodities, bonds, currencies). "
+                "News from Bloomberg, Reuters, CNBC, Financial Times about markets is highly relevant.\n"
+                "Scale:\n"
+                "- 0.8–1.0: major market-moving news (Fed, rates, big earnings, crises)\n"
+                "- 0.6–0.79: notable for investors (companies, sectors, macro)\n"
+                "- 0.4–0.59: lightly related, not standout\n"
+                "- 0.0–0.39: little or no investment relevance\n"
+                "Return:\n"
+                "- relevance_score: float from 0.0 to 1.0\n"
+                "- standout: true if the article is notable and valuable to investors, otherwise false\n"
+                "- reason: one-sentence explanation\n\n"
+            )
 
         results: List[Optional[Dict[str, Any]]] = [None] * len(items)
         for batch_start in range(0, len(items), self.batch_size):
@@ -336,20 +343,16 @@ class BatchAIService:
                     max_tokens=4096,
                     task_name=task_name,
                 )
-                print(f"[relevance:raw] len={len(raw)} first={raw[:200]!r} last={raw[-200:]!r}")
                 parsed = self._parse_batch_response(raw)
-                print(f"[relevance:parsed] {parsed}")
                 for i, entry in enumerate(parsed):
                     if i < len(batch):
                         cleaned = self._clean_relevance(entry, threshold)
                         title = batch[i].get("title", "")[:60]
-                        print(
-                            f"[relevance] {title!r} score={cleaned['relevance_score']} "
-                            f"standout={cleaned['is_standout']} reason={cleaned['reason'][:60]}"
-                        )
+                        #     f"[relevance] {title!r} score={cleaned['relevance_score']} "
+                        #     f"standout={cleaned['is_standout']} reason={cleaned['reason'][:60]}"
+                        # )
                         results[batch_start + i] = cleaned
             except Exception as e:
-                print(f"[batch_ai] relevance batch failed: {e}")
                 for i, item in enumerate(batch):
                     results[batch_start + i] = self._score_relevance_single(
                         item, language, threshold
@@ -403,13 +406,11 @@ class BatchAIService:
             )
             entry = self._parse_single_json(raw) or {}
             cleaned = self._clean_relevance(entry, threshold)
-            print(
-                f"[relevance:fallback] {title[:60]!r} score={cleaned['relevance_score']} "
-                f"standout={cleaned['is_standout']}"
-            )
+            #     f"[relevance:fallback] {title[:60]!r} score={cleaned['relevance_score']} "
+            #     f"standout={cleaned['is_standout']}"
+            # )
             return cleaned
         except Exception as e:
-            print(f"[batch_ai] single relevance fallback failed: {e}")
             return self._default_relevance(threshold)
 
     def summarize(
@@ -438,7 +439,7 @@ class BatchAIService:
             if published:
                 parts.append(f"   Ngày: {published}")
             if summary:
-                parts.append(f"   Tóm tắt: {summary[:300]}")
+                parts.append(f"   Tóm tắt: {summary[:DEFAULT_NEWS_SUMMARY_MAX_LENGTH]}")
             if tags:
                 parts.append(f"   Chủ đề: {tags}")
             if symbols:
@@ -494,7 +495,6 @@ class BatchAIService:
             ).strip()
             return self._clean_summary_output(raw)
         except Exception as e:
-            print(f"[batch_ai] summary failed: {e}")
             return "Không có tin tức để tóm tắt." if language == "vi" else "No articles to summarize."
 
     @staticmethod
@@ -568,7 +568,6 @@ class BatchAIService:
                             entry, batch[i], target_fields
                         )
             except Exception as e:
-                print(f"[batch_ai] mapping batch failed: {e}")
                 for i, headers in enumerate(batch):
                     results[batch_start + i] = self._suggest_mapping_single(
                         headers, import_type, language
@@ -624,7 +623,6 @@ class BatchAIService:
             entry = self._parse_single_json(raw) or {}
             return self._clean_mapping(entry, headers, target_fields)
         except Exception as e:
-            print(f"[batch_ai] single mapping fallback failed: {e}")
             return {h: None for h in headers}
 
     def parse_backtest_prompts(
@@ -677,7 +675,6 @@ class BatchAIService:
                     if i < len(batch):
                         results[batch_start + i] = self._clean_backtest(entry)
             except Exception as e:
-                print(f"[batch_ai] backtest batch failed: {e}")
                 for i, user_prompt in enumerate(batch):
                     results[batch_start + i] = self._parse_backtest_single(
                         user_prompt, language
@@ -731,7 +728,6 @@ class BatchAIService:
                     if i < len(batch):
                         results[batch_start + i] = self._clean_backtest(entry)
             except Exception as e:
-                print(f"[batch_ai] stress batch failed: {e}")
                 for i, user_prompt in enumerate(batch):
                     results[batch_start + i] = self._parse_stress_single(
                         user_prompt, base_request, language
@@ -767,7 +763,6 @@ class BatchAIService:
             data = self._parse_single_json(raw) or {}
             return self._clean_backtest(data)
         except Exception as e:
-            print(f"[batch_ai] single stress fallback failed: {e}")
             return None
 
     def _parse_backtest_single(
@@ -813,7 +808,6 @@ class BatchAIService:
             data["end_date"] = self._normalize_date(data.get("end_date", default_end))
             return data
         except Exception as e:
-            print(f"[batch_ai] single backtest fallback failed: {e}")
             return None
 
     @staticmethod
@@ -854,7 +848,7 @@ class BatchAIService:
                     vectors.extend(batch_vectors)
                 return vectors
             except Exception as e:
-                print(f"[batch_ai] gemini embed batch failed: {e}")
+                pass
 
         # Fallback to Ollama per text.
         if self._fallback is not None:
@@ -868,8 +862,7 @@ class BatchAIService:
                             task_name="ollama_embed_fallback",
                         )
                     )
-                except Exception as e:
-                    print(f"[batch_ai] ollama embed fallback failed: {e}")
+                except Exception:
                     results.append(None)
             return results
 
@@ -887,7 +880,7 @@ class BatchAIService:
         language: str,
         task_type: str,
         extra_fields: Optional[Dict[str, str]] = None,
-        max_summary_length: int = 300,
+        max_summary_length: int = DEFAULT_NEWS_SUMMARY_MAX_LENGTH,
     ) -> str:
         prompt = instructions
         if context_block:
@@ -932,12 +925,10 @@ class BatchAIService:
         except json.JSONDecodeError:
             json_text = BatchAIService._extract_json(text)
             if json_text is None:
-                print(f"[batch_ai] could not extract JSON from response")
                 return []
             try:
                 data = json.loads(json_text)
-            except json.JSONDecodeError as e:
-                print(f"[batch_ai] JSON parse failed: {e}")
+            except json.JSONDecodeError:
                 return []
         if isinstance(data, dict):
             # Sometimes the model wraps the array under a key like "results"

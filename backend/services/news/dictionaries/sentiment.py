@@ -9,6 +9,9 @@ VIETNAMESE_POSITIVE = [
     "cải thiện", "mở rộng", "đầu tư", "tăng vốn", "hợp tác", "thắng thầu",
     "được chấp thuận", "phê duyệt", "thông qua", "thành công", "tốt hơn",
     "củng cố", "đứng đầu", "dẫn đầu", "vững mạnh", "sinh lời", "hiệu quả",
+    "lãi kỷ lục", "lãi cao", "mua cổ phiếu quỹ", "mua lại cổ phiếu", "room ngoại tăng",
+    "biên lợi nhuận cải thiện", "doanh thu tăng", "xuất khẩu tăng", "đơn hàng lớn",
+    "được cấp phép", "khởi công", "vận hành thương mại", "hoàn thành", "nới room",
 ]
 
 VIETNAMESE_NEGATIVE = [
@@ -19,6 +22,10 @@ VIETNAMESE_NEGATIVE = [
     "bán tháo", "rút vốn", "cắt giảm", "sa thải", "đình chỉ", "thu hồi",
     "phá giá", "lạm phát cao", "lãi suất tăng", "khủng hoảng", "suy thoái",
     "chiến tranh", "xung đột", "bất ổn", "cú sốc", "thất bại", "trì hoãn",
+    "lỗ lũy kế", "lỗ ròng", "hạ kỳ vọng", "hạ dự báo", "cắt dự báo", "kém hơn dự báo",
+    "doanh thu giảm", "biên lợi nhuận thu hẹp", "nợ xấu tăng", "tín dụng thắt chặt",
+    "room ngoại giảm", "bị cấm", "thu hồi giấy phép", "phạt nặng", "truy thu thuế",
+    "khủng hoảng niềm tin", "mất niềm tin", "vỡ nợ", "vỡ trái phiếu", "gian lận",
 ]
 
 ENGLISH_POSITIVE = [

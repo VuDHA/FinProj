@@ -13,7 +13,9 @@ from schemas import (
     TypeReturn,
     MonthlyPnL,
 )
+from services.asset_type_config import is_market_price_type
 from services.market_data import MarketDataService
+from services.transaction_types import is_buy_type, is_sell_type
 from services.portfolio import PortfolioService
 
 
@@ -31,11 +33,14 @@ class AnalyticsService:
 
         portfolio = PortfolioService(self.session).get_portfolio()
 
-        items = sorted(portfolio.items, key=lambda x: x.pnl_percent, reverse=True)
+        market_items = [
+            item for item in portfolio.items if is_market_price_type(self.session, item.type)
+        ]
+        items = sorted(market_items, key=lambda x: x.pnl_percent, reverse=True)
         top = items[:5]
         bottom = items[-5:][::-1]
 
-        type_returns = self._type_returns(portfolio.items)
+        type_returns = self._type_returns(market_items)
         monthly_pnl = self._monthly_pnl(start_date, end_date)
         income_summary = self._income_summary(start_date, end_date)
         total_value, value_by_type = self._portfolio_value_at_date(end_date)
@@ -70,6 +75,7 @@ class AnalyticsService:
             total_income=round(sum(i.total for i in income_summary), 2),
             total_value=round(total_value, 2),
             total_cost=total_cost,
+            stable_value=round(portfolio.stable_value, 2),
             portfolio_value_by_type=value_by_type,
             filter_type=filter_type,
             period_start=start_date.isoformat(),
@@ -139,9 +145,9 @@ class AnalyticsService:
             for t in transactions:
                 if t.date > date:
                     break
-                if t.type == "BUY":
+                if is_buy_type(t.type):
                     qty += t.quantity
-                elif t.type == "SELL":
+                elif is_sell_type(t.type):
                     qty -= t.quantity
             if qty <= 0:
                 continue
@@ -197,6 +203,7 @@ class AnalyticsService:
         self, start_date: datetime.date, end_date: datetime.date
     ) -> List[MonthlyPnL]:
         assets = self.session.exec(select(Asset).where(Asset.is_active == True)).all()
+        assets = [a for a in assets if is_market_price_type(self.session, a.type)]
         if not assets:
             return []
 
@@ -235,9 +242,9 @@ class AnalyticsService:
             for t in asset_transactions.get(asset_id, []):
                 if t.date > date:
                     break
-                if t.type == "BUY":
+                if is_buy_type(t.type):
                     qty += t.quantity
-                elif t.type == "SELL":
+                elif is_sell_type(t.type):
                     qty -= t.quantity
             return qty
 
@@ -273,16 +280,19 @@ class AnalyticsService:
             Transactions exactly on the start date are excluded because the
             start portfolio value already includes them.
             """
+            market = MarketDataService(self.session)
             buy_cost = 0.0
             sell_proceeds = 0.0
             for asset in assets:
                 for t in asset_transactions.get(asset.id, []):
                     if t.date <= start or t.date > end:
                         continue
-                    if t.type == "BUY":
-                        buy_cost += t.quantity * t.price + t.fee
-                    elif t.type == "SELL":
-                        sell_proceeds += t.quantity * t.price - t.fee
+                    effective_price = market.resolve_effective_price(asset, t.date, t.price)
+                    price = effective_price if effective_price and effective_price > 0 else t.price
+                    if is_buy_type(t.type):
+                        buy_cost += t.quantity * price + t.fee
+                    elif is_sell_type(t.type):
+                        sell_proceeds += t.quantity * price - t.fee
             return round(buy_cost - sell_proceeds, 2)
 
         result = []

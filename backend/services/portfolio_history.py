@@ -5,11 +5,14 @@ from sqlmodel import Session, select
 
 from models import Asset, PriceSnapshot, Transaction
 from schemas import PortfolioHistoryPoint
+from services.market_data import MarketDataService
+from services.transaction_types import is_buy_type, is_sell_type
 
 
 class PortfolioHistoryService:
     def __init__(self, session: Session):
         self.session = session
+        self.market = MarketDataService(session)
 
     def get_history(
         self,
@@ -64,7 +67,7 @@ class PortfolioHistoryService:
                 if qty <= 0:
                     continue
                 avg_cost = self._avg_cost_on_date(
-                    asset_transactions.get(asset.id, []), d
+                    asset_transactions.get(asset.id, []), d, asset
                 )
                 price = self._latest_price(asset_snapshots.get(asset.id, {}), d)
                 if price <= 0:
@@ -101,25 +104,26 @@ class PortfolioHistoryService:
         for t in transactions:
             if t.date > date:
                 break
-            if t.type == "BUY":
+            if is_buy_type(t.type):
                 qty += t.quantity
-            elif t.type == "SELL":
+            elif is_sell_type(t.type):
                 qty -= t.quantity
         return qty
 
-    @staticmethod
-    def _avg_cost_on_date(transactions: List[Transaction], date: datetime.date) -> float:
+    def _avg_cost_on_date(self, transactions: List[Transaction], date: datetime.date, asset: Asset) -> float:
         qty = 0.0
         cost = 0.0
         for t in transactions:
             if t.date > date:
                 break
-            if t.type == "BUY":
+            effective_price = self.market.resolve_effective_price(asset, t.date, t.price)
+            price = effective_price if effective_price and effective_price > 0 else t.price
+            if is_buy_type(t.type):
                 qty += t.quantity
-                cost += t.quantity * t.price + t.fee
-            elif t.type == "SELL":
+                cost += t.quantity * price + t.fee
+            elif is_sell_type(t.type):
                 qty -= t.quantity
-                cost -= t.quantity * t.price
+                cost -= t.quantity * price
         if qty <= 0:
             return 0.0
         return cost / qty

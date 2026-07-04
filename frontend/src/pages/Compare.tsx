@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   CartesianGrid,
@@ -11,10 +12,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Bot, Plus, Search, X } from "lucide-react";
+import { Bot, Database, Plus, Search, X } from "lucide-react";
 import { motion } from "framer-motion";
 import {
   CompareSymbol,
+  fillMissingHistory,
   getCorrelation,
   getHistory,
   getMetrics,
@@ -108,6 +110,7 @@ const COLORS = [
 
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<Tab>("quotes");
   const [search, setSearch] = useState("");
@@ -116,6 +119,9 @@ export function Compare() {
   );
   const [customStart, setCustomStart] = useState(searchParams.get("start") || "");
   const [customEnd, setCustomEnd] = useState(searchParams.get("end") || "");
+  const [chartFillSymbol, setChartFillSymbol] = useState<string>("");
+  const [fillLoading, setFillLoading] = useState(false);
+  const [fillResult, setFillResult] = useState<string | null>(null);
 
   const { start, end } = useMemo(
     () => getRangeDates(range, customStart, customEnd),
@@ -164,6 +170,14 @@ export function Compare() {
     () => hydratedSelected.map((s) => s.type),
     [hydratedSelected]
   );
+
+  useEffect(() => {
+    if (!chartFillSymbol && hydratedSelected.length > 0) {
+      setChartFillSymbol(hydratedSelected[0].symbol);
+    } else if (chartFillSymbol && !hydratedSelected.some((s) => s.symbol === chartFillSymbol)) {
+      setChartFillSymbol(hydratedSelected.length > 0 ? hydratedSelected[0].symbol : "");
+    }
+  }, [hydratedSelected, chartFillSymbol]);
 
   const updateUrl = (next: SelectedSymbol[], nextRange: RangePreset, startValue: string, endValue: string) => {
     const params = new URLSearchParams();
@@ -222,6 +236,26 @@ export function Compare() {
     updateUrl(hydratedSelected, "CUSTOM", startValue, endValue);
   };
 
+  const handleFillMissing = async () => {
+    if (!chartFillSymbol) return;
+    const asset = hydratedSelected.find((s) => s.symbol === chartFillSymbol);
+    if (!asset) return;
+
+    setFillLoading(true);
+    setFillResult(null);
+    try {
+      const result = await fillMissingHistory(chartFillSymbol, asset.type, start, end);
+      await queryClient.invalidateQueries({
+        queryKey: ["compare-history", chartFillSymbol, asset.type, start, end],
+      });
+      setFillResult(labels.compare.filled.replace("{count}", String(result.filled)));
+    } catch (e) {
+      setFillResult(labels.compare.fillError);
+    } finally {
+      setFillLoading(false);
+    }
+  };
+
   const filteredSymbols = useMemo(() => {
     if (!allSymbols.data || !search.trim()) return [];
     const term = search.toLowerCase();
@@ -234,6 +268,32 @@ export function Compare() {
       )
       .slice(0, 50);
   }, [allSymbols.data, search, hydratedSelected]);
+
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+
+  useLayoutEffect(() => {
+    if (!filteredSymbols.length) return;
+    const update = () => {
+      const rect = searchRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 50,
+      });
+    };
+    update();
+    const main = document.querySelector("main");
+    window.addEventListener("resize", update);
+    main?.addEventListener("scroll", update, { passive: true });
+    return () => {
+      window.removeEventListener("resize", update);
+      main?.removeEventListener("scroll", update);
+    };
+  }, [filteredSymbols.length]);
 
   const quotes = useQuery({
     queryKey: ["compare-quotes", symbolsList.join(","), typesList.join(",")],
@@ -348,7 +408,7 @@ export function Compare() {
       <FintechCard>
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
+            <div ref={searchRef} className="relative z-50 flex-1">
               <div className="flex items-center gap-2 rounded-xl border border-fintech-border bg-white px-3 py-2">
                 <Search className="w-4 h-4 text-slate-400" />
                 <input
@@ -360,8 +420,13 @@ export function Compare() {
                   disabled={hydratedSelected.length >= MAX_SYMBOLS}
                 />
               </div>
-              {filteredSymbols.length > 0 && (
-                <div className="absolute z-20 mt-1 w-full rounded-xl border border-fintech-border bg-white shadow-lg max-h-60 overflow-auto">
+            </div>
+            {filteredSymbols.length > 0 &&
+              createPortal(
+                <div
+                  className="fixed z-50 rounded-xl border border-fintech-border bg-white shadow-lg max-h-60 overflow-auto"
+                  style={dropdownStyle}
+                >
                   {filteredSymbols.map((s) => (
                     <button
                       key={s.symbol}
@@ -375,9 +440,9 @@ export function Compare() {
                       <Plus className="w-4 h-4 text-accent-blue" />
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
-            </div>
 
             <div className="flex items-center gap-2 flex-wrap">
               {(["1M", "1Q", "1Y", "YTD", "CUSTOM"] as RangePreset[]).map((r) => (
@@ -561,10 +626,38 @@ export function Compare() {
 
           {!isLoading && activeTab === "chart" && (
             <FintechCard>
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="font-semibold text-slate-800">{labels.compare.normalizedChart}</h3>
-                <InfoTooltip content={labels.compare.normalizedChartHint} />
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-slate-800">{labels.compare.normalizedChart}</h3>
+                  <InfoTooltip content={labels.compare.normalizedChartHint} />
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={chartFillSymbol}
+                    onChange={(e) => setChartFillSymbol(e.target.value)}
+                    className="rounded-lg border border-fintech-border px-3 py-2 text-sm bg-white"
+                  >
+                    {hydratedSelected.map((s) => (
+                      <option key={s.symbol} value={s.symbol}>
+                        {s.symbol} - {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleFillMissing}
+                    disabled={fillLoading || !chartFillSymbol}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Database className="w-4 h-4" />
+                    {fillLoading ? labels.compare.filling : labels.compare.fillMissing}
+                  </button>
+                </div>
               </div>
+              {fillResult && (
+                <p className={`text-sm mb-3 ${fillResult === labels.compare.fillError ? "text-accent-rose" : "text-emerald-600"}`}>
+                  {fillResult}
+                </p>
+              )}
               {!hasAnyHistory ? (
                 <p className="text-sm text-slate-500">{labels.compare.noHistory}</p>
               ) : (

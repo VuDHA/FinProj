@@ -9,6 +9,12 @@ from models import Asset, PriceSnapshot, Transaction
 from schemas import CsvImportResult
 from services.asset_type_config import get_asset_type_codes, is_market_price_type
 from services.market_data import MarketDataService
+from services.transaction_types import (
+    is_buy_type,
+    is_sell_type,
+    MARKET_TRANSACTION_TYPES,
+    NON_MARKET_TRANSACTION_TYPES,
+)
 
 
 ASSET_HEADERS = ["symbol", "name", "type", "exchange", "currency", "value"]
@@ -144,7 +150,7 @@ def import_transactions_from_rows(session: Session, rows: List[Dict[str, Any]]) 
     for i, row in enumerate(rows, start=2):
         symbol = (row.get("symbol") or "").strip().upper()
         type_ = (row.get("type") or "").strip().upper()
-        if not symbol or type_ not in ("BUY", "SELL"):
+        if not symbol or type_ not in MARKET_TRANSACTION_TYPES | NON_MARKET_TRANSACTION_TYPES:
             errors.append(f"Row {i}: invalid symbol or type")
             skipped += 1
             continue
@@ -173,6 +179,18 @@ def import_transactions_from_rows(session: Session, rows: List[Dict[str, Any]]) 
             session.commit()
             session.refresh(asset)
 
+        allowed_types = (
+            NON_MARKET_TRANSACTION_TYPES
+            if not is_market_price_type(session, asset.type)
+            else MARKET_TRANSACTION_TYPES
+        )
+        if type_ not in allowed_types:
+            errors.append(
+                f"Row {i}: type {type_} is not allowed for {asset.type} assets"
+            )
+            skipped += 1
+            continue
+
         if price <= 0 and is_market_price_type(session, asset.type):
             resolved = MarketDataService(session).resolve_historical_price(asset, date)
             if resolved is not None:
@@ -192,12 +210,12 @@ def import_transactions_from_rows(session: Session, rows: List[Dict[str, Any]]) 
             skipped += 1
             continue
 
-        if type_ == "SELL":
+        if is_sell_type(type_):
             existing = session.exec(
                 select(Transaction).where(Transaction.asset_id == asset.id)
             ).all()
             holding = sum(
-                t.quantity if t.type == "BUY" else -t.quantity for t in existing
+                t.quantity if is_buy_type(t.type) else -t.quantity for t in existing
             )
             if quantity > holding:
                 errors.append(f"Row {i}: cannot sell {quantity}, holding is {holding}")

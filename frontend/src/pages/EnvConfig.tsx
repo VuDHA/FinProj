@@ -29,6 +29,15 @@ const GROUPS: EnvGroup[] = [
   { title: labels.envConfig.groupCore, keys: ["DATABASE_URL", "API_PREFIX", "CORS_ORIGINS"] },
   { title: labels.envConfig.groupScheduler, keys: ["SCHEDULER_HOUR", "SCHEDULER_MINUTE"] },
   {
+    title: labels.envConfig.groupNewsScheduler,
+    keys: [
+      "NEWS_SCHEDULER_ENABLED",
+      "NEWS_VN_MARKET_INTERVAL_MINUTES",
+      "NEWS_VN_OFF_HOURS_INTERVAL_MINUTES",
+      "NEWS_GLOBAL_INTERVAL_MINUTES",
+    ],
+  },
+  {
     title: labels.envConfig.groupOllama, keys: [
       "OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "OLLAMA_TIMEOUT", "OLLAMA_MAX_TAGS",
       "OLLAMA_AI_QUEUE_TIMEOUT_SECONDS", "OLLAMA_EMBEDDING_ENABLED", "OLLAMA_EMBEDDING_MODEL", "OLLAMA_EMBEDDING_DIMENSION",

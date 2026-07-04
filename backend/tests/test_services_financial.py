@@ -7,6 +7,7 @@ from models import AllocationTarget, Asset, Income, PriceSnapshot, Transaction
 from schemas import BacktestRequest, PortfolioItem, PortfolioSummary
 from services.backtest import BacktestService
 from services.csv_io import export_assets, export_transactions, import_assets, import_transactions
+from services.market_data import MarketDataService
 from services.portfolio import PortfolioService
 from services.portfolio_history import PortfolioHistoryService
 from services.risk_metrics import RiskMetricsService
@@ -320,6 +321,9 @@ def test_analytics_service(session, monkeypatch):
             total_cost=900,
             total_pnl=100,
             total_pnl_percent=11.11,
+            market_value=1000,
+            market_cost=900,
+            stable_value=0,
             items=[
                 PortfolioItem(
                     asset_id=1,
@@ -361,6 +365,9 @@ def test_rebalance_service(session, monkeypatch):
             total_cost=900,
             total_pnl=100,
             total_pnl_percent=11.11,
+            market_value=1000,
+            market_cost=900,
+            stable_value=0,
             items=[
                 PortfolioItem(
                     asset_id=1,
@@ -435,3 +442,27 @@ def test_backtest_service_rebalancing(session, monkeypatch):
     result = BacktestService(session).run(request)
     assert result.final_value >= 1000
     assert result.trades
+
+
+def test_resolve_effective_price_uses_input_first(session):
+    asset = _create_asset(session, "VCB")
+    d = datetime.date(2023, 1, 1)
+    service = MarketDataService(session)
+    assert service.resolve_effective_price(asset, d, 123) == 123
+
+
+def test_resolve_effective_price_falls_back_to_snapshot(session):
+    asset = _create_asset(session, "VCB")
+    d = datetime.date(2023, 1, 1)
+    session.add(PriceSnapshot(asset_id=asset.id, date=d, price=95))
+    session.commit()
+    service = MarketDataService(session)
+    assert service.resolve_effective_price(asset, d, None) == 95
+
+
+def test_resolve_effective_price_non_market_asset_requires_input(session):
+    asset = _create_asset(session, "RE", type="REAL_ESTATE")
+    d = datetime.date(2023, 1, 1)
+    service = MarketDataService(session)
+    assert service.resolve_effective_price(asset, d, None) is None
+    assert service.resolve_effective_price(asset, d, 1500) == 1500

@@ -1,11 +1,12 @@
 import datetime
 from typing import Dict, List, Optional
 
-from sqlalchemy import func
 from sqlmodel import Session, select
 
 from models import Asset, NewsArticle, NewsSymbol, Transaction, Watchlist
 from services.embedding_store import EmbeddingStore
+from services.market_data import MarketDataService
+from services.transaction_types import is_buy_type
 
 
 class RagContextService:
@@ -41,12 +42,17 @@ class RagContextService:
         ).all()
 
         # Aggregate portfolio by type for a quick allocation view.
-        type_values = self.session.exec(
-            select(Asset.type, func.sum(Transaction.quantity * Transaction.price))
+        market = MarketDataService(self.session)
+        buy_transactions = self.session.exec(
+            select(Transaction, Asset)
             .join(Asset, Asset.id == Transaction.asset_id)
-            .where(Transaction.type == "BUY")
-            .group_by(Asset.type)
+            .where(Transaction.type.in_(["BUY", "DEPOSIT"]))
         ).all()
+        type_values: Dict[str, float] = {}
+        for tx, asset in buy_transactions:
+            effective_price = market.resolve_effective_price(asset, tx.date, tx.price)
+            price = effective_price if effective_price and effective_price > 0 else tx.price
+            type_values[asset.type] = type_values.get(asset.type, 0.0) + tx.quantity * price
 
         return {
             "portfolio_symbols": [a.symbol for a in assets],
@@ -64,7 +70,7 @@ class RagContextService:
                 }
                 for tx, symbol in recent_transactions
             ],
-            "type_allocation": {t: round(float(v), 2) for t, v in type_values},
+            "type_allocation": {t: round(v, 2) for t, v in type_values.items()},
         }
 
     def similar_articles(self, title: str, summary: str, k: int = 5) -> List[Dict[str, any]]:

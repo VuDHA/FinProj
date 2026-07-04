@@ -1,4 +1,5 @@
 import {
+  Landmark,
   PiggyBank,
   TrendingDown,
   TrendingUp,
@@ -30,12 +31,14 @@ export function SummaryCards({
   total_cost,
   total_pnl,
   total_pnl_percent,
+  stable_value,
   history,
 }: {
   total_value: number;
   total_cost: number;
   total_pnl: number;
   total_pnl_percent: number;
+  stable_value?: number;
   history?: Array<{ date: string; value: number; cost: number }>;
 }) {
   const valueSparkline = history?.length
@@ -81,6 +84,20 @@ export function SummaryCards({
       sparkline: pnlSparkline,
       badge: total_pnl_percent,
     },
+    ...(stable_value && stable_value > 0
+      ? [
+        {
+          label: labels.summary.stableValue,
+          tooltip: labels.tooltips.stableValue,
+          value: stable_value,
+          formatter: formatCurrency,
+          icon: Landmark,
+          color: "violet" as const,
+          trend: "neutral" as const,
+          sparkline: generateSparkline(stable_value, 24, "neutral"),
+        },
+      ]
+      : []),
   ];
 
   const iconTone = {
@@ -88,10 +105,13 @@ export function SummaryCards({
     blue: "bg-accent-blue/10 text-accent-blue ring-accent-blue/20",
     emerald: "bg-accent-emerald/10 text-accent-emerald ring-accent-emerald/20",
     rose: "bg-accent-rose/10 text-accent-rose ring-accent-rose/20",
+    violet: "bg-accent-violet/10 text-accent-violet ring-accent-violet/20",
   };
 
+  const gridCols = cards.length > 3 ? "md:grid-cols-4" : "md:grid-cols-3";
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className={`grid grid-cols-1 ${gridCols} gap-4`}>
       {cards.map((card, i) => {
         const Icon = card.icon;
         return (

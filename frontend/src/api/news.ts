@@ -4,6 +4,7 @@ import { labels } from "../i18n/vi";
 export interface Article {
   id: number;
   source_id: number;
+  source_name: string | null;
   url: string;
   title: string;
   summary: string | null;

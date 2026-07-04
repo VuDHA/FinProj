@@ -1,5 +1,5 @@
 const APP_PREFIX = "wealthvn_";
-export const CACHE_VERSION = 1;
+export const CACHE_VERSION = 2;
 
 const noopStorage: Storage = {
   getItem: () => null,

@@ -235,6 +235,11 @@ function ArticleRow({ article }: { article: any }) {
             <p className="text-sm text-slate-500 line-clamp-2 mb-2">{article.summary}</p>
           )}
           <div className="flex flex-wrap items-center gap-2 text-xs">
+            {article.source_name && (
+              <span className="px-2 py-0.5 rounded-md bg-slate-800 text-white font-medium">
+                {article.source_name}
+              </span>
+            )}
             {article.symbols?.map((s: string) => (
               <span key={s} className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono">
                 {s}
@@ -281,7 +286,7 @@ export function News() {
   const [sentimentFilter, setSentimentFilter] = usePersistentState("news.sentimentFilter", "");
   const [impactFilter, setImpactFilter] = usePersistentState<ImpactOption>("news.impactFilter", "");
   const [tagFilter, setTagFilter] = usePersistentState("news.tagFilter", "");
-  const [sourceFilter, setSourceFilter] = usePersistentState("news.sourceFilter", "");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [dateFrom, setDateFrom] = usePersistentState("news.dateFrom", "");
   const [dateTo, setDateTo] = usePersistentState("news.dateTo", "");
   const [page, setPage] = usePersistentState("news.page", 0);
@@ -438,6 +443,16 @@ export function News() {
     queryFn: () => getSources(),
     enabled: activeTab === "all",
   });
+
+  useEffect(() => {
+    if (!sourceFilter || sources.isLoading) return;
+    const availableIds = new Set(
+      sources.data?.filter((s) => s.region === region).map((s) => String(s.id)) ?? []
+    );
+    if (!availableIds.has(sourceFilter)) {
+      setSourceFilter("");
+    }
+  }, [sources.data, sources.isLoading, region, sourceFilter, setSourceFilter]);
 
   const aiStatus = useQuery({
     queryKey: ["ai-status"],

@@ -175,4 +175,3 @@ def log_ai_call(
     )
     if error:
         msg += f" error={error}"
-    print(msg)

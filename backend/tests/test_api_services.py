@@ -242,6 +242,9 @@ def test_get_portfolio(client, monkeypatch):
             total_cost=900,
             total_pnl=100,
             total_pnl_percent=11.11,
+            market_value=1000,
+            market_cost=900,
+            stable_value=0,
             items=[
                 PortfolioItem(
                     asset_id=1,
@@ -294,6 +297,7 @@ def test_get_analytics(client, monkeypatch):
             total_income=0,
             total_value=0,
             total_cost=0,
+            stable_value=0,
             portfolio_value_by_type=[],
             filter_type=filter_type,
             period_start="2023-01-01",

@@ -34,6 +34,11 @@ class EmbeddingStore:
             self.enabled = enabled if enabled is not None else settings.OLLAMA_EMBEDDING_ENABLED
         self._ollama_client: Optional[OllamaClient] = None
         self._gemini_client: Optional[Any] = None
+        self._dimension = (
+            settings.GEMINI_EMBEDDING_DIMENSION
+            if self.use_gemini
+            else settings.OLLAMA_EMBEDDING_DIMENSION
+        )
 
     def _get_ollama_client(self) -> OllamaClient:
         if self._ollama_client is None:
@@ -123,8 +128,24 @@ class EmbeddingStore:
                     print(f"[embedding_store] single embed failed: {e2}")
                     vectors.append(None)
 
+        # Skip vectors whose dimension doesn't match the table to avoid sqlite-vec
+        # "Error opening vector blob" errors.
+        expected = self._dimension
+        validated_vectors: List[Optional[List[float]]] = []
+        for vector in vectors:
+            if vector is not None and len(vector) != expected:
+                print(
+                    f"[embedding_store] vector dimension mismatch: expected {expected}, got {len(vector)}"
+                )
+                validated_vectors.append(None)
+            else:
+                validated_vectors.append(vector)
+        vectors = validated_vectors
+
         # Save all successful embeddings in a single transaction.
-        to_save = [(aid, vector) for aid, vector in zip(ids, vectors) if vector is not None]
+        to_save = [
+            (aid, vector) for aid, vector in zip(ids, vectors) if vector is not None
+        ]
         try:
             self.save_batch(to_save)
         except Exception as e:
@@ -147,13 +168,22 @@ class EmbeddingStore:
         """Insert or replace multiple embedding vectors in one transaction."""
         if not items:
             return
+        expected = self._dimension
+        valid_items = [
+            (article_id, vector)
+            for article_id, vector in items
+            if len(vector) == expected
+        ]
+        if not valid_items:
+            print(f"[embedding_store] no valid vectors to save (expected {expected} dims)")
+            return
         with engine.begin() as conn:
-            for article_id, vector in items:
+            for article_id, vector in valid_items:
                 conn.execute(
                     text(
                         f"""
                         INSERT OR REPLACE INTO {self.TABLE_NAME} (article_id, embedding)
-                        VALUES (:article_id, :embedding)
+                        VALUES (:article_id, vec_f32(:embedding))
                         """
                     ),
                     {
@@ -174,10 +204,10 @@ class EmbeddingStore:
             rows = conn.execute(
                 text(
                     f"""
-                    SELECT article_id, distance
+                    SELECT article_id, vec_distance_L2(embedding, vec_f32(:embedding)) AS distance
                     FROM {self.TABLE_NAME}
-                    WHERE embedding MATCH :embedding
-                    AND k = :k
+                    ORDER BY distance
+                    LIMIT :k
                     """
                 ),
                 {

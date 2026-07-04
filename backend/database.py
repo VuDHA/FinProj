@@ -75,20 +75,41 @@ def _seed_asset_type_settings(session):
 
 
 def _create_embedding_table():
-    """Create the sqlite-vec virtual table for article embeddings."""
+    """Create the regular table for article embeddings.
+
+    We previously used a sqlite-vec vec0 virtual table, but its fixed-size
+    shadow tables can become corrupt (especially sqlite-vec 0.1.6 on Windows,
+    which produces "Error opening vector blob" on the second chunk). A regular
+    BLOB table plus the sqlite-vec scalar functions (vec_f32, vec_distance_L2)
+    avoids the buggy vec0 storage while still supporting similarity search.
+    """
     if not settings.DATABASE_URL.startswith("sqlite"):
         return
-    if not settings.OLLAMA_EMBEDDING_ENABLED:
+    embeddings_enabled = (
+        settings.OLLAMA_EMBEDDING_ENABLED or settings.AI_PROVIDER == "gemini"
+    )
+    if not embeddings_enabled:
         return
-    dim = settings.OLLAMA_EMBEDDING_DIMENSION
     with engine.connect() as conn:
+        # Drop any old vec0 virtual table (including its shadow tables) so we
+        # start from a clean schema. Embeddings can be regenerated later.
+        existing = conn.execute(
+            text(
+                "SELECT sql FROM sqlite_master WHERE type='table' "
+                "AND name='article_embeddings'"
+            )
+        ).fetchone()
+        if existing and "USING vec0" in (existing[0] or ""):
+            print(
+                "[database] dropping old vec0 article_embeddings table and shadow tables"
+            )
+            conn.execute(text("DROP TABLE IF EXISTS article_embeddings"))
         conn.execute(
             text(
-                f"""
-                CREATE VIRTUAL TABLE IF NOT EXISTS article_embeddings USING vec0(
-                    article_id INTEGER,
-                    embedding FLOAT[{dim}],
-                    chunk_size=64
+                """
+                CREATE TABLE IF NOT EXISTS article_embeddings (
+                    article_id INTEGER PRIMARY KEY,
+                    embedding BLOB NOT NULL
                 )
                 """
             )

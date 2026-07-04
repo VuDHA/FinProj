@@ -80,6 +80,22 @@ class MarketDataService:
             return None, [f"Asset type {asset.type} does not support automatic price fetch"]
         return self.selector.fetch_price(asset)
 
+    def resolve_effective_price(
+        self, asset: Asset, date: datetime.date, input_price: Optional[float]
+    ) -> Optional[float]:
+        """Return the price to use for calculations and storage.
+
+        Priority:
+        1. The user-provided input price if it is positive.
+        2. A resolved market price for market-priced assets.
+        3. None if no price can be determined.
+        """
+        if input_price and input_price > 0:
+            return input_price
+        if not is_market_price_type(self.session, asset.type):
+            return None
+        return self.resolve_historical_price(asset, date)
+
     def resolve_historical_price(
         self, asset: Asset, date: datetime.date
     ) -> Optional[float]:
@@ -299,6 +315,36 @@ class MarketDataService:
         live = self.fetch_market_history(symbol, asset_type, start, end)
         if live:
             self._save_history(asset.id, live, existing_map)
+        return live
+
+    def force_backfill_history(
+        self,
+        symbol: str,
+        asset_type: str,
+        start: datetime.date,
+        end: datetime.date,
+    ) -> Dict[datetime.date, float]:
+        """Fetch market history and persist all missing PriceSnapshot rows for the range.
+
+        Unlike fetch_market_history_with_backfill, this always fetches live data
+        and writes any missing dates into the local snapshot table, regardless of
+        how much data already exists.
+        """
+        asset = self._ensure_asset(symbol, asset_type)
+        snapshots = self.session.exec(
+            select(PriceSnapshot).where(
+                PriceSnapshot.asset_id == asset.id,
+                PriceSnapshot.date >= start,
+                PriceSnapshot.date <= end,
+            ).order_by(PriceSnapshot.date.asc())
+        ).all()
+        existing_map = {s.date: s for s in snapshots}
+
+        live = self.fetch_market_history(symbol, asset_type, start, end)
+        if not live:
+            return {}
+
+        self._save_history(asset.id, live, existing_map)
         return live
 
     def fetch_all_stocks(self) -> List[dict]:

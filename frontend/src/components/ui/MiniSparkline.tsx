@@ -10,7 +10,7 @@ interface MiniSparklineProps {
   data: number[];
   width?: number;
   height?: number;
-  color?: "emerald" | "rose" | "cyan" | "blue" | "amber";
+  color?: "emerald" | "rose" | "cyan" | "blue" | "amber" | "violet";
   showArea?: boolean;
 }
 
@@ -20,6 +20,7 @@ const colorMap = {
   cyan: { stroke: "#22D3EE", fill: "rgba(34, 211, 238, 0.15)" },
   blue: { stroke: "#3B82F6", fill: "rgba(59, 130, 246, 0.15)" },
   amber: { stroke: "#FBBF24", fill: "rgba(251, 191, 36, 0.15)" },
+  violet: { stroke: "#A78BFA", fill: "rgba(167, 139, 250, 0.15)" },
 };
 
 export function MiniSparkline({

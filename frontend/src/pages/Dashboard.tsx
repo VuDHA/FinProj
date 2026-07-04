@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
+  Activity,
   ArrowRight,
   Bell,
   Bot,
-  Flame,
-  Landmark,
-  LineChart,
+  GitCompare,
+  LineChart as LineChartIcon,
   Newspaper,
-  PiggyBank,
   Plus,
   Receipt,
   RefreshCw,
@@ -19,10 +19,9 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
+  Legend,
   Line,
-  Pie,
-  PieChart,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -30,7 +29,8 @@ import {
 } from "recharts";
 import API from "../api/client";
 import { getPortfolioInsight } from "../api/ai";
-import { getAlerts, getDailyBrief, getTrending } from "../api/news";
+import { getSymbols, getHistory } from "../api/compare";
+import { getAlerts, getDailyBrief, type Article } from "../api/news";
 import { AiGenerateButton } from "../components/AiGenerateButton";
 import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
@@ -40,44 +40,58 @@ import { PriceAlertsSection } from "../components/PriceAlertsSection";
 import { SummaryCards } from "../components/SummaryCards";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
+import { MiniSparkline } from "../components/ui/MiniSparkline";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
+import { usePersistentState } from "../hooks/usePersistentState";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useToast } from "../contexts/ToastContext";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency } from "../lib/utils";
+import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
 
-const COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#FB7185", "#8B5CF6", "#3B82F6"];
+const TYPE_COLORS: Record<string, string> = {
+  STOCK: "#3B82F6",
+  FUND: "#A78BFA",
+  ETF: "#22D3EE",
+  GOLD: "#FBBF24",
+  CRYPTO: "#FB7185",
+  REAL_ESTATE: "#34D399",
+  LIFE_INSURANCE: "#6366F1",
+};
 const WATCHLIST_SYMBOLS =
   "VCB,VHM,VIC,FPT,GAS,HPG,MBB,MSN,MWG,PLX,SSI,TCB,VIB,VPB,E1VFVN30,FUEVFVND,FUESSVFL";
+const WATCHLIST_STOCKS = [
+  "VCB", "VHM", "VIC", "FPT", "GAS", "HPG", "MBB", "MSN", "MWG", "PLX", "SSI", "TCB", "VIB", "VPB",
+];
+const WATCHLIST_FUNDS = ["E1VFVN30", "FUEVFVND", "FUESSVFL"];
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const width = 80;
-  const height = 24;
-  const points = data
-    .map((v, i) => {
-      const x = (i / (data.length - 1 || 1)) * width;
-      const y = height - ((v - min) / range) * height;
-      return `${x},${y}`;
-    })
-    .join(" ");
-  return (
-    <svg width={width} height={height} className="overflow-visible">
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        points={points}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx={width} cy={height - ((data[data.length - 1] - min) / range) * height} r={2.5} fill={color} />
-    </svg>
-  );
+function generatePriceSparkline(price: number, changePercent: number, points = 14): number[] {
+  const prev = price / (1 + changePercent / 100);
+  const data: number[] = [];
+  for (let i = 0; i < points; i++) {
+    const ratio = i / (points - 1);
+    const base = prev + (price - prev) * ratio;
+    const noise = (Math.random() - 0.5) * Math.abs(price - prev) * 0.4;
+    data.push(Math.max(base + noise, price * 0.5));
+  }
+  data[data.length - 1] = price;
+  return data;
+}
+
+function formatRelativeTime(date: string | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return "Vừa xong";
+  if (diffMin < 60) return `${diffMin} phút`;
+  if (diffHour < 24) return `${diffHour} giờ`;
+  if (diffDay < 7) return `${diffDay} ngày`;
+  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
 }
 
 function SectionLink({ to, children }: { to: string; children: React.ReactNode }) {
@@ -137,17 +151,63 @@ export function Dashboard() {
     queryFn: async () => (await API.get("/rebalance/")).data,
   });
 
-  const marketWatchlist = useQuery({
-    queryKey: ["market-watchlist"],
+  const [marketTab, setMarketTab] = usePersistentState<"STOCK" | "FUND" | "GOLD">(
+    "dashboard.marketTab",
+    "STOCK"
+  );
+  const [compareA, setCompareA] = usePersistentState("dashboard.compareA", "");
+  const [compareB, setCompareB] = usePersistentState("dashboard.compareB", "");
+
+  const [newsRegion, setNewsRegion] = usePersistentState<"vn" | "global">(
+    "dashboard.newsRegion",
+    "vn"
+  );
+
+  const portfolioSymbols = (portfolio.data?.items || [])
+    .filter((item: any) => ["STOCK", "FUND"].includes(item.type))
+    .map((item: any) => item.symbol);
+  const marketSymbols = Array.from(new Set([...portfolioSymbols, ...WATCHLIST_SYMBOLS.split(",")]));
+
+  const marketQuotes = useQuery({
+    queryKey: ["market-quotes", marketSymbols],
     queryFn: async () => {
-      const { data } = await API.get("/prices/quote", { params: { symbols: WATCHLIST_SYMBOLS } });
+      const { data } = await API.get("/prices/quote", { params: { symbols: marketSymbols.join(",") } });
       return data as Array<{ symbol: string; price: number; change: number; change_percent: number; date: string }>;
     },
+    enabled: marketSymbols.length > 0,
   });
 
   const goldFx = useQuery({
     queryKey: ["gold-fx"],
     queryFn: async () => (await API.get("/gold-fx/")).data,
+  });
+
+  const compareSymbolsList = useQuery({
+    queryKey: ["compare-symbols"],
+    queryFn: getSymbols,
+  });
+
+  const compareToday = new Date().toISOString().split("T")[0];
+  const compareStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  const compareHistoryA = useQuery({
+    queryKey: ["compare-history", compareA, compareStart, compareToday],
+    queryFn: async () => {
+      const symbol = compareSymbolsList.data?.find((s) => s.symbol === compareA);
+      if (!symbol) return [];
+      return getHistory(compareA, symbol.type, compareStart, compareToday);
+    },
+    enabled: !!compareA && compareSymbolsList.data != null,
+  });
+
+  const compareHistoryB = useQuery({
+    queryKey: ["compare-history", compareB, compareStart, compareToday],
+    queryFn: async () => {
+      const symbol = compareSymbolsList.data?.find((s) => s.symbol === compareB);
+      if (!symbol) return [];
+      return getHistory(compareB, symbol.type, compareStart, compareToday);
+    },
+    enabled: !!compareB && compareSymbolsList.data != null,
   });
 
   const alerts = useQuery({
@@ -156,13 +216,8 @@ export function Dashboard() {
   });
 
   const dailyBrief = useQuery({
-    queryKey: ["news-daily-brief"],
-    queryFn: async () => getDailyBrief(24, "vn"),
-  });
-
-  const trending = useQuery({
-    queryKey: ["news-trending"],
-    queryFn: async () => getTrending(24),
+    queryKey: ["news-daily-brief", newsRegion],
+    queryFn: async () => getDailyBrief(24, newsRegion),
   });
 
   const refresh = useMutation({
@@ -192,18 +247,11 @@ export function Dashboard() {
     total_cost: 0,
     total_pnl: 0,
     total_pnl_percent: 0,
+    market_value: 0,
+    market_cost: 0,
+    stable_value: 0,
     items: [],
   };
-
-  const allocation = data.items.reduce((acc: Record<string, number>, item: any) => {
-    acc[item.type] = (acc[item.type] || 0) + item.current_value;
-    return acc;
-  }, {});
-
-  const pieData = Object.entries(allocation).map(([name, value]) => ({
-    name: labels.assetTypes[name as keyof typeof labels.assetTypes] ?? name,
-    value,
-  }));
 
   const trendMap = new Map<string, { label: string; portfolio?: number; benchmark?: number }>();
   for (const point of history.data || []) {
@@ -222,30 +270,77 @@ export function Dashboard() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([_, { label, portfolio, benchmark }]) => ({ date: label, portfolio, benchmark }));
 
-  const topMovers = (marketWatchlist.data || [])
-    .filter((q) => q.change_percent != null)
-    .sort((a, b) => Math.abs(b.change_percent) - Math.abs(a.change_percent))
-    .slice(0, 3);
+  const portfolioMarketItems = (portfolio.data?.items || [])
+    .filter((item: any) => item.type === marketTab)
+    .map((item: any) => {
+      const quote = marketQuotes.data?.find((q: any) => q.symbol === item.symbol);
+      return quote
+        ? { ...quote, isPortfolio: true }
+        : { symbol: item.symbol, price: 0, change: 0, change_percent: 0, isPortfolio: true };
+    })
+    .filter((item: any) => item.price > 0);
+
+  const watchlistMarketItems = (marketQuotes.data || [])
+    .filter((q: any) => {
+      if (marketTab === "STOCK") return WATCHLIST_STOCKS.includes(q.symbol);
+      if (marketTab === "FUND") return WATCHLIST_FUNDS.includes(q.symbol);
+      return false;
+    })
+    .map((q: any) => ({ ...q, isPortfolio: false }))
+    .filter((q: any) => !portfolioMarketItems.find((p: any) => p.symbol === q.symbol));
+
+  const marketListItems = [...portfolioMarketItems, ...watchlistMarketItems].slice(0, 5);
+
+  const goldListItems = (goldFx.data?.gold || []) as Array<{ source: string; buy: number; sell: number }>;
+
+  const compareChartData = useMemo(() => {
+    const rawSeries: Record<string, Record<string, number>> = {};
+    const allDates = new Set<string>();
+    [
+      { symbol: compareA, data: compareHistoryA.data || [] },
+      { symbol: compareB, data: compareHistoryB.data || [] },
+    ].forEach(({ symbol, data }) => {
+      if (!symbol || data.length === 0) return;
+      const firstPrice = data[0].price;
+      if (firstPrice <= 0) return;
+      const series: Record<string, number> = {};
+      data.forEach((point) => {
+        series[point.date] = (point.price / firstPrice) * 100;
+        allDates.add(point.date);
+      });
+      rawSeries[symbol] = series;
+    });
+    if (allDates.size === 0) return [];
+    const sortedDates = Array.from(allDates).sort();
+    const filledSeries: Record<string, Record<string, number>> = {};
+    [compareA, compareB].forEach((symbol) => {
+      const series = rawSeries[symbol];
+      if (!series) return;
+      let lastValue: number | null = null;
+      const filled: Record<string, number> = {};
+      sortedDates.forEach((date) => {
+        if (series[date] !== undefined) lastValue = series[date];
+        if (lastValue !== null) filled[date] = lastValue;
+      });
+      filledSeries[symbol] = filled;
+    });
+    return sortedDates
+      .map((date) => ({
+        date: new Date(date).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }),
+        a: filledSeries[compareA]?.[date] ?? null,
+        b: filledSeries[compareB]?.[date] ?? null,
+      }))
+      .filter((d) => d.a != null || d.b != null);
+  }, [compareHistoryA.data, compareHistoryB.data, compareA, compareB]);
 
   const topGainer = analytics.data?.top_performers?.[0];
   const topLoser = analytics.data?.bottom_performers?.[0];
-  const totalIncome = analytics.data?.total_income || 0;
-  const maxDrawdown = risk.data?.max_drawdown_percent;
 
   const biggestDrift = (rebalance.data?.suggestions || [])
     .map((s: any) => ({ ...s, drift: Math.abs(s.current_percent - s.target_percent) }))
     .sort((a: any, b: any) => b.drift - a.drift)[0];
 
-  const topTrade = rebalance.data?.trades?.[0];
-
   const unreadAlerts = (alerts.data || []).filter((a) => !a.is_read).length;
-  const briefArticle = dailyBrief.data?.top_articles?.[0];
-  const topTrending = trending.data?.symbols?.[0];
-
-  const goldRates = (goldFx.data?.gold || []) as Array<{ source: string; buy: number; sell: number; updated_at?: string }>;
-  const fxRates = (goldFx.data?.fx || []) as Array<{ currency: string; buy: number; sell: number }>;
-  const goldRate = goldRates[0];
-  const fxRate = fxRates[0];
 
   const isLoading =
     portfolio.isLoading ||
@@ -253,7 +348,8 @@ export function Dashboard() {
     analytics.isLoading ||
     risk.isLoading ||
     rebalance.isLoading ||
-    marketWatchlist.isLoading;
+    marketQuotes.isLoading ||
+    compareSymbolsList.isLoading;
 
   return (
     <div className="space-y-6">
@@ -333,7 +429,7 @@ export function Dashboard() {
             {labels.dashboard.news}
           </Link>
           <Link to="/market" className="btn-secondary py-1.5 px-3 text-xs">
-            <LineChart className="w-3.5 h-3.5" />
+            <LineChartIcon className="w-3.5 h-3.5" />
             {labels.market.title}
           </Link>
         </div>
@@ -368,6 +464,15 @@ export function Dashboard() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
+                    <div className="text-xs text-slate-500 mb-0.5">{labels.summary.pnl}</div>
+                    <div className={`font-mono font-semibold ${data.total_pnl >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
+                      <AnimatedNumber value={data.total_pnl} formatter={formatCurrency} />
+                    </div>
+                  </div>
+                  <TrendBadge value={data.total_pnl_percent} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
                     <div className="text-xs text-slate-500 mb-0.5">{labels.dashboard.topGainer}</div>
                     <div className="font-display font-semibold text-slate-900">
                       {topGainer ? topGainer.symbol : "-"}
@@ -386,15 +491,15 @@ export function Dashboard() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
                   <div>
-                    <div className="text-xs text-slate-500 mb-0.5">{labels.dashboard.totalIncome}</div>
-                    <div className="font-mono font-semibold text-accent-emerald">
-                      <AnimatedNumber value={totalIncome} formatter={formatCurrency} />
+                    <div className="text-xs text-slate-500 mb-0.5">{labels.summary.totalValue}</div>
+                    <div className="font-mono font-semibold text-accent-cyan">
+                      <AnimatedNumber value={data.total_value} formatter={formatCurrency} />
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-500 mb-0.5">{labels.dashboard.maxDrawdown}</div>
-                    <div className="font-mono font-semibold text-accent-rose">
-                      {maxDrawdown != null ? `${maxDrawdown.toFixed(2)}%` : "—"}
+                    <div className="text-xs text-slate-500 mb-0.5">{labels.summary.stableValue}</div>
+                    <div className="font-mono font-semibold text-accent-violet">
+                      <AnimatedNumber value={data.stable_value || 0} formatter={formatCurrency} />
                     </div>
                   </div>
                 </div>
@@ -432,21 +537,57 @@ export function Dashboard() {
                     <TrendBadge value={biggestDrift.current_percent - biggestDrift.target_percent} />
                   )}
                 </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-slate-500 mb-0.5">{labels.dashboard.topSuggestion}</div>
-                    <div className="font-display font-semibold text-slate-900">
-                      {topTrade
-                        ? `${topTrade.action === "BUY" ? labels.rebalance.buy : labels.rebalance.sell} ${topTrade.symbol}`
-                        : labels.dashboard.noSuggestions}
+                {(rebalance.data?.suggestions || []).length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>{labels.dashboard.currentAllocation}</span>
+                    </div>
+                    <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="absolute inset-0 flex rounded-full overflow-hidden">
+                        {(rebalance.data?.suggestions || []).map((s: any) => (
+                          <div
+                            key={s.type}
+                            className="h-full"
+                            style={{
+                              width: `${Math.max(0, Math.min(100, s.current_percent))}%`,
+                              backgroundColor: TYPE_COLORS[s.type] || "#64748b",
+                            }}
+                            title={`${labels.assetTypes[s.type as keyof typeof labels.assetTypes] ?? s.type}\nHiện tại: ${formatCurrency(s.current_value)} (${formatPercent(s.current_percent)})\nMục tiêu: ${formatCurrency(s.target_value)} (${formatPercent(s.target_percent)})`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>{labels.rebalance.targetAllocation}</span>
+                    </div>
+                    <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="absolute inset-0 flex rounded-full overflow-hidden">
+                        {(rebalance.data?.suggestions || []).map((s: any) => (
+                          <div
+                            key={s.type}
+                            className="h-full opacity-70"
+                            style={{
+                              width: `${Math.max(0, Math.min(100, s.target_percent))}%`,
+                              backgroundColor: TYPE_COLORS[s.type] || "#64748b",
+                            }}
+                            title={`${labels.assetTypes[s.type as keyof typeof labels.assetTypes] ?? s.type}\nMục tiêu: ${formatCurrency(s.target_value)} (${formatPercent(s.target_percent)})`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {(rebalance.data?.suggestions || []).map((s: any) => (
+                        <div key={s.type} className="flex items-center gap-1 text-[10px] text-slate-500">
+                          <span
+                            className="inline-block w-2 h-2 rounded-full"
+                            style={{ backgroundColor: TYPE_COLORS[s.type] || "#64748b" }}
+                          />
+                          <span>{labels.assetTypes[s.type as keyof typeof labels.assetTypes] ?? s.type} {formatPercent(s.current_percent)}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  {topTrade && (
-                    <span className={topTrade.action === "BUY" ? "badge-gain" : "badge-loss"}>
-                      {formatCurrency(topTrade.estimated_value)}
-                    </span>
-                  )}
-                </div>
+                )}
                 <div className="pt-2 border-t border-slate-100">
                   <div className="text-xs text-slate-500">
                     {labels.rebalance.estimatedValue}:{" "}
@@ -463,31 +604,83 @@ export function Dashboard() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-accent-blue/10 text-accent-blue">
-                  <LineChart className="w-4 h-4" />
+                  <LineChartIcon className="w-4 h-4" />
                 </div>
                 <h3 className="card-title">{labels.dashboard.market}</h3>
               </div>
               <SectionLink to="/market">{labels.dashboard.viewAll}</SectionLink>
             </div>
-            {marketWatchlist.isLoading ? (
+            <div className="flex bg-slate-100 rounded-lg p-0.5 mb-3">
+              {(["STOCK", "FUND", "GOLD"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setMarketTab(tab)}
+                  className={`text-xs px-2 py-1 rounded-md transition-colors ${marketTab === tab
+                    ? "bg-white text-slate-800 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                    }`}
+                >
+                  {labels.assetTypes[tab]}
+                </button>
+              ))}
+            </div>
+            {marketQuotes.isLoading || goldFx.isLoading ? (
               <div className="space-y-2">
                 <Skeleton className="h-10" count={3} />
               </div>
-            ) : topMovers.length > 0 ? (
+            ) : marketTab === "GOLD" ? (
+              goldListItems.length > 0 ? (
+                <div className="space-y-2">
+                  {goldListItems.slice(0, 5).map((g: any) => (
+                    <div key={g.source} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="font-display font-semibold text-slate-900 text-sm">{g.source}</div>
+                        <div className="text-xs text-slate-500">{formatCurrency(g.buy)}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MiniSparkline
+                          data={[g.buy, g.sell]}
+                          color="amber"
+                          width={80}
+                          height={24}
+                          showArea={false}
+                        />
+                        <span className="text-xs font-mono font-semibold text-slate-700">
+                          {formatCurrency(g.sell - g.buy)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500 py-4">{labels.dashboard.noMovers}</div>
+              )
+            ) : marketListItems.length > 0 ? (
               <div className="space-y-2">
-                {topMovers.map((q) => (
+                {marketListItems.map((q: any) => (
                   <div key={q.symbol} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="font-display font-semibold text-slate-900 text-sm">{q.symbol}</div>
+                      <div className="font-display font-semibold text-slate-900 text-sm">
+                        {q.symbol}
+                        {q.isPortfolio && (
+                          <span className="ml-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold bg-accent-blue/10 text-accent-blue ring-1 ring-inset ring-accent-blue/20">
+                            {labels.dashboard.portfolio}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-500">{formatCurrency(q.price)}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Sparkline
-                        data={[
-                          q.price * (1 - q.change_percent / 100),
-                          q.price,
-                        ]}
-                        color={q.change_percent >= 0 ? "#34D399" : "#FB7185"}
+                      <MiniSparkline
+                        data={
+                          q.price > 0 && q.change_percent != null
+                            ? generatePriceSparkline(q.price, q.change_percent)
+                            : [q.price, q.price]
+                        }
+                        color={q.change_percent >= 0 ? "emerald" : "rose"}
+                        width={80}
+                        height={24}
+                        showArea={false}
                       />
                       <TrendBadge value={q.change_percent} />
                     </div>
@@ -506,80 +699,192 @@ export function Dashboard() {
                   <Newspaper className="w-4 h-4" />
                 </div>
                 <h3 className="card-title">{labels.dashboard.news}</h3>
+                {unreadAlerts > 0 && (
+                  <Link
+                    to="/news"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-medium"
+                  >
+                    <Bell className="w-3 h-3" />
+                    {unreadAlerts}
+                  </Link>
+                )}
               </div>
-              <SectionLink to="/news">{labels.dashboard.viewAll}</SectionLink>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-slate-500" />
-                  <span className="text-sm text-slate-700">{labels.dashboard.unreadAlerts}</span>
-                  <InfoTooltip content={labels.tooltips.dashboardUnreadAlerts} />
+              <div className="flex items-center gap-2">
+                <div className="flex bg-slate-100 rounded-lg p-0.5">
+                  {(["vn", "global"] as const).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setNewsRegion(r)}
+                      className={`text-[10px] px-2 py-1 rounded-md transition-colors ${newsRegion === r
+                        ? "bg-white text-slate-800 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                      {r === "vn" ? "VN" : "Global"}
+                    </button>
+                  ))}
                 </div>
-                <span
-                  className={`text-sm font-mono font-semibold ${unreadAlerts > 0 ? "text-accent-amber" : "text-slate-500"}`}
-                >
-                  {unreadAlerts}
-                </span>
-              </div>
-              <div className="pt-2 border-t border-slate-100">
-                <div className="text-xs text-slate-500 mb-1">{labels.dashboard.dailyBrief}</div>
-                <div className="text-sm font-medium text-slate-900 line-clamp-2">
-                  {briefArticle ? briefArticle.title : labels.dashboard.noBrief}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <Flame className="w-3.5 h-3.5" />
-                {labels.dashboard.trending}:{" "}
-                <span className="font-medium text-slate-700">
-                  {topTrending ? `${topTrending.symbol} (${topTrending.mentions})` : labels.dashboard.noTrending}
-                </span>
+                <SectionLink to="/news">{labels.dashboard.viewAll}</SectionLink>
               </div>
             </div>
+            {dailyBrief.isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {(dailyBrief.data?.top_articles || []).slice(0, 4).map((article: Article, idx: number) => {
+                  const tags = article.tags
+                    ?.split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean) ?? [];
+                  return (
+                    <a
+                      key={article.id}
+                      href={article.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`block py-2 group ${idx > 0 ? "border-t border-slate-100" : ""}`}
+                    >
+                      <div className="text-sm font-medium text-slate-900 truncate group-hover:text-accent-blue transition-colors">
+                        {article.title}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
+                        <span className="text-slate-400">{formatRelativeTime(article.published_at)}</span>
+                        {article.source_name && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
+                            {article.source_name}
+                          </span>
+                        )}
+                        {tags[0] && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-medium">
+                            {tags[0]}
+                          </span>
+                        )}
+                      </div>
+                    </a>
+                  );
+                })}
+                {(dailyBrief.data?.top_articles || []).length === 0 && (
+                  <div className="text-xs text-slate-500 py-4">{labels.dashboard.noBrief}</div>
+                )}
+              </div>
+            )}
           </FintechCard>
 
           <FintechCard delay={0.35}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-accent-cyan/10 text-accent-cyan">
-                  <Landmark className="w-4 h-4" />
+                <div className="p-1.5 rounded-lg bg-accent-rose/10 text-accent-rose">
+                  <GitCompare className="w-4 h-4" />
                 </div>
-                <h3 className="card-title">{labels.dashboard.goldFx}</h3>
+                <h3 className="card-title">{labels.dashboard.compare}</h3>
               </div>
-              <SectionLink to="/market">{labels.dashboard.viewAll}</SectionLink>
+              <SectionLink to="/compare">{labels.dashboard.viewAll}</SectionLink>
             </div>
-            {goldFx.isLoading ? (
-              <div className="space-y-2">
-                <Skeleton className="h-12" />
-                <Skeleton className="h-12" />
-              </div>
+            <div className="flex items-center gap-2 mb-3">
+              <select
+                value={compareA}
+                onChange={(e) => setCompareA(e.target.value)}
+                className="input-fintech text-xs flex-1"
+              >
+                <option value="">{labels.compare.searchPlaceholder}</option>
+                {(compareSymbolsList.data || []).map((s) => (
+                  <option key={s.symbol} value={s.symbol}>
+                    {s.symbol} - {s.name}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-slate-400">vs</span>
+              <select
+                value={compareB}
+                onChange={(e) => setCompareB(e.target.value)}
+                className="input-fintech text-xs flex-1"
+              >
+                <option value="">{labels.compare.searchPlaceholder}</option>
+                {(compareSymbolsList.data || []).map((s) => (
+                  <option key={s.symbol} value={s.symbol}>
+                    {s.symbol} - {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {compareA && compareB ? (
+              compareHistoryA.isLoading || compareHistoryB.isLoading ? (
+                <Skeleton className="h-48" />
+              ) : compareChartData.length > 1 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span className="font-medium text-slate-700">{labels.compare.normalizedChart}</span>
+                    <span className="text-[10px]">Chỉ số hóa 100 = ngày đầu</span>
+                  </div>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={compareChartData} margin={{ top: 28, right: 8, bottom: 8, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fill: "#64748b", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          interval="preserveStartEnd"
+                          minTickGap={24}
+                        />
+                        <YAxis
+                          tick={{ fill: "#64748b", fontSize: 10 }}
+                          axisLine={false}
+                          tickLine={false}
+                          width={40}
+                          tickFormatter={(v) => `${v.toFixed(0)}`}
+                        />
+                        <Tooltip
+                          contentStyle={chartTooltipStyle}
+                          formatter={(v: number, name: string) => [
+                            v.toFixed(2),
+                            name === "a" ? compareA : compareB,
+                          ]}
+                          labelFormatter={(label) => `Ngày ${label}`}
+                        />
+                        <Legend
+                          verticalAlign="top"
+                          align="right"
+                          iconType="plainline"
+                          wrapperStyle={{ top: 0, right: 0, fontSize: 11, color: "#475569" }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="a"
+                          stroke="#6366F1"
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+                          connectNulls
+                          name={compareA}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="b"
+                          stroke="#EC4899"
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+                          connectNulls
+                          name={compareB}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-48 flex items-center justify-center text-xs text-slate-500">
+                  {labels.compare.noData}
+                </div>
+              )
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-slate-500 mb-0.5">
-                      {labels.dashboard.gold} {goldRate ? `(${goldRate.source})` : ""}
-                    </div>
-                    <div className="font-mono font-semibold text-slate-900">
-                      {goldRate ? `${formatCurrency(goldRate.buy)} / ${formatCurrency(goldRate.sell)}` : "—"}
-                    </div>
-                  </div>
-                  {goldRate && (
-                    <span className="text-xs text-slate-400">
-                      {goldRate.updated_at ? new Date(goldRate.updated_at).toLocaleDateString("vi-VN") : ""}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-slate-500 mb-0.5">
-                      {labels.dashboard.fx} {fxRate ? `(${fxRate.currency})` : ""}
-                    </div>
-                    <div className="font-mono font-semibold text-slate-900">
-                      {fxRate ? `${formatCurrency(fxRate.buy)} / ${formatCurrency(fxRate.sell)}` : "—"}
-                    </div>
-                  </div>
-                </div>
+              <div className="h-48 flex items-center justify-center text-xs text-slate-500">
+                {labels.compare.searchPlaceholder}
               </div>
             )}
           </FintechCard>
@@ -587,50 +892,68 @@ export function Dashboard() {
           <FintechCard delay={0.4}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-accent-rose/10 text-accent-rose">
-                  <PiggyBank className="w-4 h-4" />
+                <div className="p-1.5 rounded-lg bg-accent-cyan/10 text-accent-cyan">
+                  <Activity className="w-4 h-4" />
                 </div>
-                <h3 className="card-title">{labels.dashboard.allocation}</h3>
+                <h3 className="card-title">{labels.analytics.riskMetrics}</h3>
               </div>
-              <SectionLink to="/assets">{labels.dashboard.viewAll}</SectionLink>
+              <SectionLink to="/analytics">{labels.dashboard.viewAll}</SectionLink>
             </div>
-            <div className="h-40">
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={60}
-                      paddingAngle={3}
-                      stroke="none"
-                    >
-                      {pieData.map((_, i) => (
-                        <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => formatCurrency(v)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-xs text-slate-500">
-                  {labels.dashboard.empty}
+            {isLoading || risk.isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center p-2 rounded-lg bg-slate-50">
+                    <div className="text-[10px] text-slate-500 mb-0.5">{labels.analytics.volatility}</div>
+                    <div className="font-mono font-semibold text-sm text-slate-900">
+                      {risk.data?.volatility != null ? formatPercent(risk.data.volatility) : "—"}
+                    </div>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-slate-50">
+                    <div className="text-[10px] text-slate-500 mb-0.5">{labels.analytics.sharpeRatio}</div>
+                    <div className="font-mono font-semibold text-sm text-slate-900">
+                      {risk.data?.sharpe_ratio != null ? risk.data.sharpe_ratio.toFixed(2) : "—"}
+                    </div>
+                  </div>
+                  <div className="text-center p-2 rounded-lg bg-slate-50">
+                    <div className="text-[10px] text-slate-500 mb-0.5">{labels.analytics.maxDrawdown}</div>
+                    <div className={`font-mono font-semibold text-sm ${(risk.data?.max_drawdown_percent || 0) < 0 ? "text-accent-rose" : "text-slate-900"}`}>
+                      {risk.data?.max_drawdown_percent != null ? formatPercent(risk.data.max_drawdown_percent) : "—"}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {pieData.map((entry, i) => (
-                <div key={entry.name} className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                  {entry.name}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="text-xs text-slate-500">{labels.dashboard.topMovers}</div>
+                  {(analytics.data?.top_performers || []).slice(0, 2).map((item: any) => (
+                    <div key={item.symbol} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="font-display font-semibold text-slate-900 text-sm">{item.symbol}</div>
+                        <span className="text-[10px] text-slate-500">{labels.dashboard.topGainer}</span>
+                      </div>
+                      <TrendBadge value={item.pnl_percent} />
+                    </div>
+                  ))}
+                  {(analytics.data?.bottom_performers || []).slice(0, 2).map((item: any) => (
+                    <div key={item.symbol} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="font-display font-semibold text-slate-900 text-sm">{item.symbol}</div>
+                        <span className="text-[10px] text-slate-500">{labels.dashboard.topLoser}</span>
+                      </div>
+                      <TrendBadge value={item.pnl_percent} />
+                    </div>
+                  ))}
+                  {(analytics.data?.top_performers || []).length === 0 && (analytics.data?.bottom_performers || []).length === 0 && (
+                    <div className="text-xs text-slate-500 py-2">{labels.dashboard.noMovers}</div>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </FintechCard>
+
         </div>
       </div>
 

@@ -36,10 +36,15 @@ from services.rag_context import RagContextService
 router = APIRouter(prefix="/news", tags=["news"])
 
 
-def _article_to_schema(article: NewsArticle, symbols: Optional[List[str]] = None) -> ArticleRead:
+def _article_to_schema(
+    article: NewsArticle,
+    symbols: Optional[List[str]] = None,
+    source_names: Optional[dict] = None,
+) -> ArticleRead:
     return ArticleRead(
         id=article.id,
         source_id=article.source_id,
+        source_name=source_names.get(article.source_id) if source_names else None,
         url=article.url,
         title=article.title,
         summary=article.summary,
@@ -72,6 +77,13 @@ def _load_article_symbols(session: Session, article_ids: List[int]) -> dict:
     return mapping
 
 
+def _load_source_names(session: Session, source_ids: List[int]) -> dict:
+    rows = session.exec(
+        select(NewsSource.id, NewsSource.name).where(NewsSource.id.in_(source_ids))
+    ).all()
+    return {source_id: name for source_id, name in rows}
+
+
 @router.get("", response_model=ArticleListResponse)
 def list_news(
     symbol: Optional[str] = Query(None),
@@ -102,7 +114,9 @@ def list_news(
         offset=offset,
     )
     article_ids = [a.id for a in articles]
+    source_ids = [a.source_id for a in articles]
     symbol_map = _load_article_symbols(session, article_ids)
+    source_names = _load_source_names(session, source_ids)
 
     total = service.count_articles(
         symbol=symbol,
@@ -117,7 +131,10 @@ def list_news(
     )
 
     return ArticleListResponse(
-        items=[_article_to_schema(a, symbol_map.get(a.id, [])) for a in articles],
+        items=[
+            _article_to_schema(a, symbol_map.get(a.id, []), source_names)
+            for a in articles
+        ],
         total=total,
         limit=limit,
         offset=offset,
@@ -142,7 +159,9 @@ def personalized_feed(
         offset=offset,
     )
     article_ids = [a.id for a in articles]
+    source_ids = [a.source_id for a in articles]
     symbol_map = _load_article_symbols(session, article_ids)
+    source_names = _load_source_names(session, source_ids)
     total = service.count_personalized_feed(
         include_portfolio=portfolio,
         include_watchlist=watchlist,
@@ -150,7 +169,10 @@ def personalized_feed(
     )
 
     return ArticleListResponse(
-        items=[_article_to_schema(a, symbol_map.get(a.id, [])) for a in articles],
+        items=[
+            _article_to_schema(a, symbol_map.get(a.id, []), source_names)
+            for a in articles
+        ],
         total=total,
         limit=limit,
         offset=offset,
@@ -258,13 +280,16 @@ def daily_brief(
     service = NewsFeedService(session)
     data = service.daily_brief(hours=hours, scope=scope)
     article_ids = [a.id for a in data["top_articles"]]
+    source_ids = [a.source_id for a in data["top_articles"]]
     symbol_map = _load_article_symbols(session, article_ids)
+    source_names = _load_source_names(session, source_ids)
     return DailyBriefResponse(
         generated_at=data["generated_at"],
         period_hours=data["period_hours"],
         total_articles=data["total_articles"],
         top_articles=[
-            _article_to_schema(a, symbol_map.get(a.id, [])) for a in data["top_articles"]
+            _article_to_schema(a, symbol_map.get(a.id, []), source_names)
+            for a in data["top_articles"]
         ],
         key_symbols=data["key_symbols"],
     )

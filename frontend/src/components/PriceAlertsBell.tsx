@@ -68,7 +68,7 @@ export function PriceAlertsBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-fintech-border bg-white shadow-xl shadow-slate-900/10 overflow-hidden"
+            className="absolute right-0 z-50 mt-2 w-80 sm:w-96 rounded-xl border border-fintech-border bg-white shadow-xl shadow-slate-900/10 overflow-hidden"
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
               <h3 className="font-display font-semibold text-slate-900">{labels.priceAlerts.notifications}</h3>
