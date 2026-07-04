@@ -1,0 +1,242 @@
+backend/services/rag_context.py
+  s_d821dfac88c7b1::t_6685593a8ef51d 8-9
+backend/services/news/dictionaries/impact.py
+  s_e3f998bbf396a8::t_5f12ca47ca7502 13-16,24-27
+backend/services/portfolio_history.py
+  s_d821dfac88c7b1::t_d72d465d335bc0 8-9
+frontend/src/pages/Assets.tsx
+  s_d821dfac88c7b1::t_d232a9f1079ceb 3-4
+  s_d821dfac88c7b1::t_4eb633bb4e7aaa 55,67-74
+  s_d821dfac88c7b1::t_afbb197c2c4d84 149-182,190,203,205,209
+  s_d821dfac88c7b1::t_279082d9cf3551 75
+  s_d821dfac88c7b1::t_2ed0c3776bc34d 183-185,187-189
+  s_d821dfac88c7b1::t_00ae02b62e860c 191-193,200-202
+  s_d821dfac88c7b1::t_0836918744beef 204
+  s_d821dfac88c7b1::t_47f2fe9cfed81b 206-208
+  s_d821dfac88c7b1::t_4c760b98e4100b 210
+backend/jobs/news_updater.py
+  s_e3f998bbf396a8::t_2f7cb962862744 13
+backend/services/analytics.py
+  s_d821dfac88c7b1::t_519304f0ed058c 16,18
+backend/tests/test_news_selective.py
+  s_8015a40243ff0a::t_603eb23c8133ff 1-2
+  s_608cb25c8aa9e5::t_f5f2771af46edd 11-12,14-16
+backend/services/transaction_types.py
+  s_d821dfac88c7b1::t_b5780b6443133c 1-12
+backend/.env.example
+  s_e3f998bbf396a8::t_e4c1dab0403190 5-10
+backend/services/news/sources/base.py
+  s_8015a40243ff0a::t_8ffb4dfab53992 40-45,55,60-201,216
+  s_8015a40243ff0a::t_40d6cdad16106c 202-215
+  s_8015a40243ff0a::t_7a278bdfb388f8 2
+  s_8015a40243ff0a::t_edd3dd9a08f714 217
+frontend/src/pages/Dashboard.tsx
+  s_d821dfac88c7b1::t_2a29533dacd1c7 32-33
+  s_d821dfac88c7b1::t_ff5e9c6fe64adb 201
+  s_d821dfac88c7b1::t_d4c672a75c523f 9
+  s_d821dfac88c7b1::t_d6e9d5ab4fa480 56-57
+  s_e980ef08c343ed::t_8c25937d8524c4 170
+  s_d821dfac88c7b1::t_7b3b0089a87a8f 171-172,322
+  s_e980ef08c343ed::t_22338d281071b0 2
+  s_d821dfac88c7b1::t_2f3e88dc97a256 161-162,167
+  s_d821dfac88c7b1::t_a51f7464c45882 174,177
+  s_d821dfac88c7b1::t_97717ae05bec71 467
+  s_d821dfac88c7b1::t_5ce18ab4c21580 465
+  s_d821dfac88c7b1::t_10466340c1fd3b 52-55,58,64-72
+  s_d821dfac88c7b1::t_fff1582ed5e689 154-160,163-166
+  s_d821dfac88c7b1::t_35a49d50eef8cc 188,190
+  s_d821dfac88c7b1::t_c5dcfb636a86d0 432,466
+  s_d821dfac88c7b1::t_69ef44a6512802 186,189,191-200,202-204
+  s_e980ef08c343ed::t_7b894338b3972f 468-469,471-473,494-496,500-502,654,883,915,921,927
+  s_d821dfac88c7b1::t_4af5a025369d7e 73-80,82-94
+  s_d821dfac88c7b1::t_53246d789e2e78 168-169
+  s_d821dfac88c7b1::t_3a106e52ddc8b4 291
+  s_d821dfac88c7b1::t_9f82c3528d5722 250-252,273-290,292-297
+  s_029f60daf1f8ff::t_d374123945cf7e 59-61
+  s_029f60daf1f8ff::t_6fef344c2625ca 8
+  s_e980ef08c343ed::t_65d7df273ad436 470,544,559,562,577,652,914,920,926,938,947
+  s_d821dfac88c7b1::t_7d90edecf02579 185
+  s_029f60daf1f8ff::t_dc37dd4d129933 205-212,219-220
+  s_029f60daf1f8ff::t_55a19bf3652559 298-313,316-321,323-334,351-352
+  s_d821dfac88c7b1::t_2982f9ce43280b 22,24
+  s_e980ef08c343ed::t_9c766009cca0ea 4
+  s_d821dfac88c7b1::t_f16bef1918549b 314-315
+  s_d821dfac88c7b1::t_d5efccbefcdfb2 51
+  s_d821dfac88c7b1::t_c4eb48ce030558 187
+  s_e980ef08c343ed::t_3496e35f9ff659 541-543
+  s_e980ef08c343ed::t_2e9457175442a5 545-547,556-558
+  s_e980ef08c343ed::t_c18d5bd3e9a2f3 560-561
+  s_e980ef08c343ed::t_c4681db59b584e 563-565,574-576
+  s_e980ef08c343ed::t_cb399cc66ad653 578-580
+  s_e980ef08c343ed::t_e4e0040016d7b9 649-651
+  s_e980ef08c343ed::t_dd40e4d6205918 653
+  s_e980ef08c343ed::t_8f57387c0e8c54 655-657
+  s_e980ef08c343ed::t_c2fb27c5d1a008 880-882
+  s_e980ef08c343ed::t_f7e2f453bc7312 884-886
+  s_e980ef08c343ed::t_48c81900024b80 911-913
+  s_e980ef08c343ed::t_0c58c53b934fd1 916-919
+  s_e980ef08c343ed::t_c76fbc754a9a25 922-925
+  s_e980ef08c343ed::t_3c493fbbdff806 935-937
+  s_e980ef08c343ed::t_fb946e7ad1e102 939-941,944-946
+  s_e980ef08c343ed::t_0cb0815ae7d89e 948-950
+backend/services/news/sources/vn/thoibaotaichinhvietnam.py
+  s_8015a40243ff0a::t_c550319d5de6e0 1
+  s_608cb25c8aa9e5::t_cc5a5f9d1b58ba 2-53,58-66,69-132,134-135,138,140-141,143-148,151-174,176-180,183,193-194,196,199,202,209,223
+  s_8015a40243ff0a::t_36ecde5fa1421f 54-57,67-68
+  s_8015a40243ff0a::t_6c53af393cab94 175
+  s_8015a40243ff0a::t_488f4a3c50bd54 181-182,184-192,195,197-198,200-201,203-208,210-222,224-229
+  s_8015a40243ff0a::t_86e54be14ece24 133,136-137,139,142,149-150
+backend/services/csv_io.py
+  s_d821dfac88c7b1::t_365227b3112a13 12-17
+frontend/src/components/SummaryCards.tsx
+  s_d821dfac88c7b1::t_06b7fb1898a4ec 2
+backend/services/news/dictionaries/sentiment.py
+  s_e3f998bbf396a8::t_8656d48792212d 12-14
+  s_e3f998bbf396a8::t_1853688cda3fe9 25-28
+backend/services/smart_import.py
+  s_d821dfac88c7b1::t_2b5ae46c89e065 13-18
+frontend/src/components/ui/MiniSparkline.tsx
+  s_d821dfac88c7b1::t_72f824769f188b 13
+  s_d821dfac88c7b1::t_3d0e31216c5dee 23
+backend/tests/test_api_crud.py
+  s_d821dfac88c7b1::t_658cd778b8887b 8
+backend/services/news/sources/vn/vietstock.py
+  s_608cb25c8aa9e5::t_2594908acc6c84 21,24-25
+  s_8015a40243ff0a::t_0bc5c89d3ca23a 123-139,142,149-150
+  s_608cb25c8aa9e5::t_fb8ff8474f2351 1-20,22-23,26-122,140-141,143-148,151-160
+backend/services/news/sources/__init__.py
+  s_608cb25c8aa9e5::t_373180d4047048 3-7,11-12,14-15,22-23,25-26
+backend/tests/test_services_financial.py
+  s_d821dfac88c7b1::t_74991870262e54 10
+backend/api/assets.py
+  s_d821dfac88c7b1::t_eeff31c1e6b293 9
+backend/services/portfolio.py
+  s_d821dfac88c7b1::t_ac53268a6354c4 9
+frontend/src/pages/Analytics.tsx
+  s_d821dfac88c7b1::t_f321c3bb879811 3
+frontend/src/pages/Transactions.tsx
+  s_d821dfac88c7b1::t_52eeea53cbe30a 405-406,410-438,446
+  s_d821dfac88c7b1::t_033ea113d6a199 156
+  s_d821dfac88c7b1::t_121872759ed519 407-409
+  s_f38eed03898d1b::t_b380d42a976dab 2,23,29-30
+  s_d821dfac88c7b1::t_13b78db6f76469 144
+  s_d821dfac88c7b1::t_aaf1cd430612e4 50-53,59,104-108,110-127
+  s_d821dfac88c7b1::t_87b7176482edc0 280-282
+  s_d821dfac88c7b1::t_c243526ab47507 47-49,58,60,77-83
+  s_d821dfac88c7b1::t_11b86dbfd33b39 128-143,145
+  s_d821dfac88c7b1::t_a9e3669af14046 277-278,312,317-321,327-331
+  s_d821dfac88c7b1::t_ae31d9964e6592 109
+  s_d821dfac88c7b1::t_aa65d404875c63 336-341
+  s_d821dfac88c7b1::t_96842f83763c44 54-57
+  s_d821dfac88c7b1::t_8dc661f2fbad4b 146-151
+  s_d821dfac88c7b1::t_60d0238ec62b66 152-155,157-172
+  s_d821dfac88c7b1::t_1c2bae636907ba 61-76
+  s_d821dfac88c7b1::t_54d28bc01edcbe 194-204,209,211,213-214,223-224
+  s_d821dfac88c7b1::t_02873778fdb730 333
+  s_d821dfac88c7b1::t_46971a33174521 334-335
+  s_f38eed03898d1b::t_19f7b01d550fce 262-276
+  s_d821dfac88c7b1::t_933d17ed70c9da 3-4,192-193,332
+  s_d821dfac88c7b1::t_5f37a3bce563c3 173-191
+  s_f38eed03898d1b::t_a7df6a1a0ad9d5 279
+  s_d821dfac88c7b1::t_f1550144f783b8 5
+frontend/src/lib/storage.ts
+  s_d821dfac88c7b1::t_dcb21d4fa7f6b7 2
+backend/services/news/sources/intl/investing.py
+  s_608cb25c8aa9e5::t_fc734389debaf4 1-102
+backend/api/transactions.py
+  s_d821dfac88c7b1::t_db76a1368a958c 62-64
+  s_d821dfac88c7b1::t_f5e4381c4ec8d1 115
+  s_d821dfac88c7b1::t_73a70bc55ead53 12
+  s_d821dfac88c7b1::t_7bc6ba1c3fc41d 1
+  s_d821dfac88c7b1::t_d31c31f28c25af 11,13-18,26,28,34,43,49-54,65-66,68-88,97-102,111-114,116-117,126-127,144,152,154-157
+  s_d821dfac88c7b1::t_8faa76fa0d1892 105
+  s_d821dfac88c7b1::t_3f76221d78b657 9,55-61,67
+  s_d821dfac88c7b1::t_6284105bda0156 128-130,141-143
+  s_d821dfac88c7b1::t_ae9d81d39d5333 145-147,149-151
+  s_d821dfac88c7b1::t_a2aec6177de821 153
+  s_d821dfac88c7b1::t_3f5aa3766c3a91 158-160
+backend/services/batch_ai.py
+  s_e3f998bbf396a8::t_8a8ebc83255a7a 14-18
+frontend/src/pages/Compare.tsx
+  s_3b42aa3b4a9c1c::t_1a8ea0fd5843ad 3
+  s_f38eed03898d1b::t_72c180b4747d6c 2
+  s_3b42aa3b4a9c1c::t_0e9c89c6657b56 15
+  s_3b42aa3b4a9c1c::t_25bf012da92590 19
+  s_f38eed03898d1b::t_05c8d72d98020f 1
+frontend/src/components/InfoTooltip.tsx
+  s_d821dfac88c7b1::t_8abb912af443f5 39-47,79,82-84,90
+  s_d821dfac88c7b1::t_bf5905d099e2b3 89
+  s_d821dfac88c7b1::t_a0e4a8af9cae60 118,135,137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "39ed9213f248345da09bcb505f08665b873030da",
+  "prompts": {},
+  "sessions": {
+    "s_029f60daf1f8ff": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "c435fdef-e5eb-4048-896c-d886f04816bc",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_3b42aa3b4a9c1c": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "1ef47796-73e2-4d4c-8d7e-8d5557bd2937",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_608cb25c8aa9e5": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "0cb1f5c3-5c14-46c8-9ef7-9bd7f0f7a28b",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_8015a40243ff0a": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "8ccf2860-7c22-4e73-a3da-eb43c599bc6d",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_d821dfac88c7b1": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "fa7c12ec-e9bd-4445-af98-2322d086b8b4",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_e3f998bbf396a8": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "f4113e18-3e53-4bab-9b54-8d78a33469d5",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_e980ef08c343ed": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "7cd68150-ba26-4818-876d-8ac513e6591f",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_f38eed03898d1b": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "4dcfed46-574d-44e1-a561-ba7da272dc22",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
