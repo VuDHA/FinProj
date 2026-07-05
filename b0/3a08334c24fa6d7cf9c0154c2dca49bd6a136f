@@ -1,0 +1,19 @@
+backend/api/transactions.py
+  s_d7c0c61fa4de1e::t_ff8397325fde90 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b03a08334c24fa6d7cf9c0154c2dca49bd6a136f",
+  "prompts": {},
+  "sessions": {
+    "s_d7c0c61fa4de1e": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "9db3b16e-d22d-415b-9f34-6b85201ab1c4",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
