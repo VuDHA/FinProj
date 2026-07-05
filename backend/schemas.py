@@ -149,6 +149,23 @@ class FundDetail(BaseModel):
     vsd_fee_id: Optional[str] = None
 
 
+class StockDetail(BaseModel):
+    symbol: str
+    name: str
+    exchange: str
+    type: str
+    sector: Optional[str] = None
+    industry: Optional[str] = None
+    market_cap: Optional[float] = None
+    price: float
+    change: float
+    change_percent: float
+    date: datetime.date
+    pe: Optional[float] = None
+    pb: Optional[float] = None
+    dividend_yield: Optional[float] = None
+
+
 class PortfolioItem(BaseModel):
     asset_id: int
     symbol: str
@@ -513,6 +530,27 @@ class AiSummaryResponse(BaseModel):
     personalized: bool = False
 
 
+class ArticleSummarizeRequest(BaseModel):
+    url: str
+    title: Optional[str] = None
+    language: Optional[str] = "vi"
+
+
+class ArticleSummarizeResponse(BaseModel):
+    summary: str
+    tags: List[str]
+    source_url: str
+    title: Optional[str] = None
+    used_ai: bool = False
+    partial: bool = False
+
+
+class ArticleSummarizeTextRequest(BaseModel):
+    content_text: str
+    title: Optional[str] = None
+    language: Optional[str] = "vi"
+
+
 class CompareMetrics(BaseModel):
     symbol: str
     total_return: Optional[float] = None
@@ -546,6 +584,10 @@ class AnalyticsAIInsightResponse(AIInsightResponse):
 
 
 class MarketAIInsightResponse(AIInsightResponse):
+    pass
+
+
+class SymbolAIInsightResponse(AIInsightResponse):
     pass
 
 

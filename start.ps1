@@ -98,6 +98,29 @@ function Get-FrontendPort {
     return 5173
 }
 
+function Get-LanIp {
+    # Prefer the interface used for the default route (active WiFi/Ethernet connection)
+    $defaultRoute = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Select-Object -First 1
+    if ($defaultRoute) {
+        $ip = (Get-NetIPAddress -AddressFamily IPv4 -InterfaceIndex $defaultRoute.InterfaceIndex | Where-Object {
+            $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*"
+        } | Select-Object -First 1).IPAddress
+        if ($ip) { return $ip }
+    }
+    # Fallback: any DHCP/manual non-loopback IPv4 address
+    $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+        $_.IPAddress -notlike "127.*" -and
+        $_.IPAddress -notlike "169.254.*" -and
+        ($_.PrefixOrigin -eq "Dhcp" -or $_.PrefixOrigin -eq "Manual")
+    } | Select-Object -First 1).IPAddress
+    if (-not $ip) {
+        $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+            $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*"
+        } | Select-Object -First 1).IPAddress
+    }
+    return $ip
+}
+
 function Test-BackendHealth {
     try {
         $client = New-Object System.Net.Sockets.TcpClient
@@ -360,8 +383,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $nodeModules = Join-Path $FrontendDir "node_modules"
-if (-not (Test-Path $nodeModules)) {
-    Write-Info "Cài đặt thư viện frontend..."
+$packageLock = Join-Path $nodeModules ".package-lock.json"
+$packageJson = Join-Path $FrontendDir "package.json"
+$needsNpmInstall = -not (Test-Path $nodeModules) -or -not (Test-Path $packageLock) -or ((Get-Item $packageJson -ErrorAction SilentlyContinue).LastWriteTime -gt (Get-Item $packageLock -ErrorAction SilentlyContinue).LastWriteTime)
+if ($needsNpmInstall) {
+    Write-Info "Cài đặt / cập nhật thư viện frontend..."
     Show-Progress 60 "cài đặt frontend"
     & npm install --prefix $FrontendDir
     if ($LASTEXITCODE -ne 0) {
@@ -377,12 +403,18 @@ $backendProc = Start-Process -FilePath $venvPython -ArgumentList (Join-Path $Bac
 
 # --- Start frontend ---
 $frontendPort = Get-FrontendPort
-Write-Info "Khởi động frontend UI trên http://localhost:$frontendPort ..."
+$lanIp = Get-LanIp
+if ($lanIp) {
+    $env:VITE_LAN_URL = "http://${lanIp}:$frontendPort"
+}
+$lanHint = if ($lanIp) { " (LAN: http://${lanIp}:$frontendPort)" } else { "" }
+Write-Info "Khởi động frontend UI trên http://localhost:$frontendPort$lanHint ..."
 $viteBin = Join-Path $FrontendDir "node_modules\.bin\vite.cmd"
+$viteArgs = "--port $frontendPort --host"
 if (Test-Path $viteBin) {
-    $frontendProc = Start-Process -FilePath $viteBin -ArgumentList "--port $frontendPort" -WorkingDirectory $FrontendDir -NoNewWindow -PassThru
+    $frontendProc = Start-Process -FilePath $viteBin -ArgumentList $viteArgs -WorkingDirectory $FrontendDir -NoNewWindow -PassThru
 } else {
-    $frontendProc = Start-Process -FilePath "cmd" -ArgumentList "/c cd /d `"$FrontendDir`" && npm run dev -- --port $frontendPort" -WorkingDirectory $FrontendDir -NoNewWindow -PassThru
+    $frontendProc = Start-Process -FilePath "cmd" -ArgumentList "/c cd /d `"$FrontendDir`" && npm run dev -- --port $frontendPort --host" -WorkingDirectory $FrontendDir -NoNewWindow -PassThru
 }
 
 # --- Health check ---
@@ -406,7 +438,11 @@ Start-Process "http://localhost:$frontendPort"
 Write-Host ""
 Write-Host "$GR  [>>] Ứng dụng đang chạy$RST"
 Write-Host "$DIM      Backend :$RST $CY http://localhost:8000$RST"
-Write-Host "$DIM      Frontend:$RST $CY http://localhost:$frontendPort$RST"
+Write-Host "$DIM      Frontend (PC):$RST $CY http://localhost:$frontendPort$RST"
+if ($lanIp) {
+    Write-Host "$DIM      Frontend (LAN):$RST $CY http://${lanIp}:$frontendPort$RST"
+    Write-Host "$DIM      Mobile / QR   :$RST $CY http://${lanIp}:$frontendPort$RST"
+}
 Write-Host ""
 Write-Host "$YL  [Nhấn phím bất kỳ để dừng cả hai server]$RST"
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

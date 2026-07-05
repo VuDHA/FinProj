@@ -9,8 +9,10 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ExternalLink,
   Filter,
   Flame,
+  Loader2,
   Minus,
   Newspaper,
   RefreshCw,
@@ -27,6 +29,7 @@ import {
   addWatchlist,
   aiSummary,
   type AiSummaryResponse,
+  type Article,
   getAiStatus,
   getAlerts,
   getDailyBrief,
@@ -39,7 +42,11 @@ import {
   refreshNewsStream,
   type RefreshProgress,
   removeWatchlist,
+  summarizeText,
+  type ArticleSummarizeResponse,
+  type ArticleSummarizeTextRequest,
 } from "../api/news";
+import { ArticleSummarizeModal } from "../components/ArticleSummarizeModal";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { FintechCard } from "../components/ui/FintechCard";
@@ -218,19 +225,31 @@ function Pagination({
   );
 }
 
-function ArticleRow({ article }: { article: any }) {
+function ArticleRow({
+  article,
+  region,
+  onSummarize,
+  onViewFreeSource,
+}: {
+  article: Article;
+  region: Region;
+  onSummarize: (article: Article) => void;
+  onViewFreeSource: (article: Article) => void;
+}) {
   return (
-    <a
-      href={article.url}
-      target="_blank"
-      rel="noreferrer"
-      className="block p-4 rounded-xl border border-fintech-border bg-white/60 hover:bg-white transition-colors"
-    >
+    <div className="p-4 rounded-xl border border-fintech-border bg-white/60 hover:bg-white transition-colors">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <h4 className="font-display font-semibold text-slate-900 leading-snug mb-1">
-            {article.title}
-          </h4>
+          <a
+            href={article.url}
+            target="_blank"
+            rel="noreferrer"
+            className="block"
+          >
+            <h4 className="font-display font-semibold text-slate-900 leading-snug mb-1 hover:text-indigo-700 transition-colors">
+              {article.title}
+            </h4>
+          </a>
           {article.summary && (
             <p className="text-sm text-slate-500 line-clamp-2 mb-2">{article.summary}</p>
           )}
@@ -267,9 +286,28 @@ function ArticleRow({ article }: { article: any }) {
         <div className="flex flex-col items-end gap-1.5">
           <SentimentBadge label={article.sentiment_label} score={article.sentiment_score} />
           <ImpactBadge label={article.impact_label} score={article.impact_score} />
+          {region === "global" ? (
+            <button
+              onClick={() => onViewFreeSource(article)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+              title={labels.news.viewFreeSource || "Xem nguồn miễn phí"}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              {labels.news.viewFreeSource || "Nguồn mở"}
+            </button>
+          ) : (
+            <button
+              onClick={() => onSummarize(article)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+              title={labels.news.summarize || "Tóm tắt"}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {labels.news.summarize || "Tóm tắt"}
+            </button>
+          )}
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 
@@ -297,6 +335,39 @@ export function News() {
   const [newName, setNewName] = usePersistentState("news.watchlistName", "");
   const [aiSummaryOpen, setAiSummaryOpen] = useState(false);
   const [aiSummaryData, setAiSummaryData] = useState<AiSummaryResponse | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [articleSummaryOpen, setArticleSummaryOpen] = useState(false);
+
+  const handleSummarize = (article: Article) => {
+    setSelectedArticle(article);
+    setArticleSummaryOpen(true);
+  };
+
+  const handleCloseArticleSummary = () => {
+    setArticleSummaryOpen(false);
+    setSelectedArticle(null);
+  };
+
+  const handleViewFreeSource = (article: Article) => {
+    const archiveUrl = `https://archive.is/${encodeURIComponent(article.url)}`;
+    window.open(archiveUrl, "_blank", "noreferrer");
+  };
+
+  const [manualContent, setManualContent] = useState("");
+  const [manualTitle, setManualTitle] = useState("");
+  const manualSummary = useMutation<ArticleSummarizeResponse, Error, ArticleSummarizeTextRequest>({
+    mutationFn: (payload) => summarizeText(payload),
+  });
+
+  const handleManualSummarize = () => {
+    const content = manualContent.trim();
+    if (!content) return;
+    manualSummary.mutate({
+      content_text: content,
+      title: manualTitle.trim() || undefined,
+      language: "vi",
+    });
+  };
 
   const minImpact = useMemo(() => {
     if (impactFilter === "high") return 0.7;
@@ -636,7 +707,13 @@ export function News() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2 space-y-3">
                 {brief.data.top_articles.slice(0, 3).map((article) => (
-                  <ArticleRow key={article.id} article={article} />
+                  <ArticleRow
+                    key={article.id}
+                    article={article}
+                    region={region}
+                    onSummarize={handleSummarize}
+                    onViewFreeSource={handleViewFreeSource}
+                  />
                 ))}
               </div>
               <div>
@@ -831,7 +908,13 @@ export function News() {
           feed.data?.items?.length ? (
             <div className="space-y-3">
               {feed.data.items.map((article) => (
-                <ArticleRow key={article.id} article={article} />
+                <ArticleRow
+                  key={article.id}
+                  article={article}
+                  region={region}
+                  onSummarize={handleSummarize}
+                  onViewFreeSource={handleViewFreeSource}
+                />
               ))}
               <Pagination
                 page={feedPage}
@@ -847,7 +930,13 @@ export function News() {
           allNews.data?.items?.length ? (
             <div className="space-y-3">
               {allNews.data.items.map((article) => (
-                <ArticleRow key={article.id} article={article} />
+                <ArticleRow
+                  key={article.id}
+                  article={article}
+                  region={region}
+                  onSummarize={handleSummarize}
+                  onViewFreeSource={handleViewFreeSource}
+                />
               ))}
               <Pagination
                 page={page}
@@ -992,6 +1081,88 @@ export function News() {
           )
         ) : null}
       </FintechCard>
+
+      <FintechCard delay={0.15}>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-accent-violet to-accent-blue">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <h3 className="font-semibold text-slate-900">
+            {labels.news.manualSummarizeTitle || "Tóm tắt nội dung dán thủ công"}
+          </h3>
+        </div>
+        <p className="text-sm text-slate-500 mb-3">
+          {labels.news.manualSummarizeHint ||
+            "Dán tiêu đề và nội dung bài viết từ nguồn mở (archive.is, v.v.) để tóm tắt."}
+        </p>
+        <input
+          type="text"
+          className="input-fintech mb-3"
+          placeholder={labels.news.manualTitlePlaceholder || "Tiêu đề (tùy chọn)"}
+          value={manualTitle}
+          onChange={(e) => setManualTitle(e.target.value)}
+        />
+        <textarea
+          value={manualContent}
+          onChange={(e) => setManualContent(e.target.value)}
+          placeholder={labels.news.manualSummarizePlaceholder || "Dán nội dung bài viết vào đây..."}
+          className="w-full min-h-[140px] rounded-xl border border-fintech-border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent-violet/50 bg-white/80"
+        />
+        <div className="flex justify-end mt-3">
+          <button
+            onClick={handleManualSummarize}
+            disabled={!manualContent.trim() || manualSummary.isPending}
+            className="btn-primary"
+          >
+            {manualSummary.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {labels.common.loading || "Đang tải..."}
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                {labels.news.manualSummarize || "Tóm tắt"}
+              </>
+            )}
+          </button>
+        </div>
+        {manualSummary.error && (
+          <div className="mt-3 rounded-xl border border-rose-100 bg-rose-50/80 p-3 text-sm text-rose-700">
+            {manualSummary.error.message || labels.news.summarizeError}
+          </div>
+        )}
+        {manualSummary.data && (
+          <div className="mt-4 space-y-4">
+            {manualSummary.data.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {manualSummary.data.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/60">
+              <h4 className="text-sm font-semibold text-indigo-900 mb-2">
+                {labels.news.articleSummary || "Tóm tắt bài viết"}
+              </h4>
+              <div className="text-sm text-indigo-900 leading-relaxed">
+                <MarkdownRenderer content={manualSummary.data.summary} />
+              </div>
+            </div>
+          </div>
+        )}
+      </FintechCard>
+
+      <ArticleSummarizeModal
+        open={articleSummaryOpen}
+        onClose={handleCloseArticleSummary}
+        article={selectedArticle}
+      />
     </div>
   );
 }

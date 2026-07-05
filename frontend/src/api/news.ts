@@ -82,6 +82,27 @@ export interface AiSummaryResponse {
   personalized: boolean;
 }
 
+export interface ArticleSummarizeRequest {
+  url: string;
+  title?: string;
+  language?: string;
+}
+
+export interface ArticleSummarizeTextRequest {
+  content_text: string;
+  title?: string;
+  language?: string;
+}
+
+export interface ArticleSummarizeResponse {
+  summary: string;
+  tags: string[];
+  source_url: string;
+  title: string | null;
+  used_ai: boolean;
+  partial: boolean;
+}
+
 export interface AiStatus {
   busy: boolean;
   queue_length: number;
@@ -118,6 +139,16 @@ export async function getSources(): Promise<NewsSource[]> {
 
 export async function aiSummary(payload: AiSummaryRequest): Promise<AiSummaryResponse> {
   const { data } = await API.post("/news/ai-summary", payload);
+  return data;
+}
+
+export async function summarizeArticle(payload: ArticleSummarizeRequest): Promise<ArticleSummarizeResponse> {
+  const { data } = await API.post("/news/summarize", payload, { timeout: 90000 });
+  return data;
+}
+
+export async function summarizeText(payload: ArticleSummarizeTextRequest): Promise<ArticleSummarizeResponse> {
+  const { data } = await API.post("/news/summarize-text", payload, { timeout: 90000 });
   return data;
 }
 

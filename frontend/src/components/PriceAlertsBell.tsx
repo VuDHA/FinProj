@@ -6,6 +6,7 @@ import { getNotifications, resolveAlert, type PriceAlertNotification } from "../
 import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
 import { formatCurrency } from "../lib/utils";
+import { Value } from "./Value";
 
 export function PriceAlertsBell() {
   const qc = useQueryClient();
@@ -101,9 +102,10 @@ export function PriceAlertsBell() {
                     <Check className="w-3.5 h-3.5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900">{n.message}</p>
+                    <p className="text-sm font-medium text-slate-900 truncate">{n.message}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      {labels.priceAlerts.currentPrice}: {formatCurrency(n.current_price)}
+                      {labels.priceAlerts.currentPrice}:{" "}
+                      <Value value={n.current_price} formatter={formatCurrency} className="value-text" />
                     </p>
                   </div>
                   <button

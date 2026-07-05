@@ -100,7 +100,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   data-tour={item.tour}
                   className={`nav-item ${active ? "nav-item-active" : ""}`}
                 >
-                  <Icon className={`w-5 h-5 ${active ? "text-accent-cyan" : "text-slate-500"}`} />
+                  <Icon className={`w-5 h-5 ${active ? "text-accent-blue" : "text-slate-500"}`} />
                   <span>{item.label}</span>
                   {active && (
                     <motion.div
@@ -118,7 +118,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="mt-auto pt-8 px-2 hidden md:block">
           <button
             onClick={() => setShowTour(true)}
-            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-slate-100/80 hover:text-slate-800"
+            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-accent-blue/[0.06] hover:text-accent-blue"
           >
             <HelpCircle className="w-4 h-4" />
             {labels.onboarding.startTour}
@@ -128,7 +128,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </button>
           <button
             onClick={() => setShowHelp(true)}
-            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-slate-100/80 hover:text-slate-800 mt-1"
+            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-accent-blue/[0.06] hover:text-accent-blue mt-1"
           >
             <BookOpen className="w-4 h-4" />
             {labels.guide.title}
@@ -136,7 +136,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <InfoTooltip content={labels.tooltips.helpButton} />
             </span>
           </button>
-          <div className="rounded-xl border border-fintech-border bg-white/50 p-3 mt-2">
+          <div className="rounded-xl border border-fintech-border bg-surface-card/80 p-3 mt-2">
             <p className="text-xs text-slate-500 mb-1">Phiên bản</p>
             <p className="text-sm font-mono font-medium text-slate-700">v2.0 Fintech</p>
           </div>
@@ -158,7 +158,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-end mb-4 md:hidden">
           <button
             onClick={() => setShowHelp(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-accent-blue bg-accent-blue/[0.08] hover:bg-accent-blue/15 transition-colors"
           >
             <HelpCircle className="w-4 h-4" />
             {labels.guide.title}

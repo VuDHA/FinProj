@@ -5,6 +5,7 @@ from services.ai_insights.compare import CompareInsightService
 from services.ai_insights.market import MarketInsightService
 from services.ai_insights.portfolio import PortfolioInsightService
 from services.ai_insights.rebalance import RebalanceInsightService
+from services.ai_insights.symbol import SymbolAIInsightService
 
 __all__ = [
     "AnalyticsInsightService",
@@ -12,4 +13,5 @@ __all__ = [
     "MarketInsightService",
     "PortfolioInsightService",
     "RebalanceInsightService",
+    "SymbolAIInsightService",
 ]

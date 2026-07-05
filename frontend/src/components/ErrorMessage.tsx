@@ -15,7 +15,7 @@ export function ErrorMessage({ error, retry }: { error: Error | null; retry?: ()
         {retry && (
           <button
             onClick={retry}
-            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-accent-rose/30 bg-white/60 hover:bg-accent-rose/10 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-accent-rose/30 bg-surface-elevated/70 hover:bg-accent-rose/10 transition-colors"
           >
             {labels.common.retry}
           </button>

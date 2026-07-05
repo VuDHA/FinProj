@@ -108,7 +108,7 @@ class MarketDataService:
         snapshot = self.session.exec(
             select(PriceSnapshot)
             .where(PriceSnapshot.asset_id == asset.id, PriceSnapshot.date <= date)
-            .order_by(PriceSnapshot.date.desc())
+            .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
         ).first()
         if snapshot and snapshot.price > 0:
             return snapshot.price
@@ -124,7 +124,7 @@ class MarketDataService:
         snapshot = self.session.exec(
             select(PriceSnapshot)
             .where(PriceSnapshot.asset_id == asset.id, PriceSnapshot.date >= date)
-            .order_by(PriceSnapshot.date.asc())
+            .order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
         ).first()
         if snapshot and snapshot.price > 0:
             return snapshot.price
@@ -301,7 +301,7 @@ class MarketDataService:
                 PriceSnapshot.asset_id == asset.id,
                 PriceSnapshot.date >= start,
                 PriceSnapshot.date <= end,
-            ).order_by(PriceSnapshot.date.asc())
+            ).order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
         ).all()
         existing_map = {s.date: s for s in snapshots}
 
@@ -336,7 +336,7 @@ class MarketDataService:
                 PriceSnapshot.asset_id == asset.id,
                 PriceSnapshot.date >= start,
                 PriceSnapshot.date <= end,
-            ).order_by(PriceSnapshot.date.asc())
+            ).order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
         ).all()
         existing_map = {s.date: s for s in snapshots}
 
@@ -371,6 +371,63 @@ class MarketDataService:
             except Exception as e:
                 print(f"[market_data] fund_detail {symbol} via {source.code} error: {e}")
         return None
+
+    def fetch_stock_detail(self, symbol: str) -> Optional[dict]:
+        symbol = symbol.upper()
+        listing = self.fetch_all_stocks()
+        stock = next((s for s in listing if s.get("symbol", "").upper() == symbol), None)
+        if not stock:
+            return None
+
+        try:
+            quote = self.fetch_quotes([symbol], asset_type="STOCK")[0]
+        except Exception as e:
+            print(f"[market_data] stock_detail quote {symbol} error: {e}")
+            quote = None
+
+        result = {
+            "symbol": symbol,
+            "name": stock.get("name", symbol),
+            "exchange": stock.get("exchange", ""),
+            "type": "STOCK",
+            "sector": None,
+            "industry": None,
+            "market_cap": None,
+            "price": quote.get("price", 0.0) if quote else 0.0,
+            "change": quote.get("change", 0.0) if quote else 0.0,
+            "change_percent": quote.get("change_percent", 0.0) if quote else 0.0,
+            "date": quote.get("date") if quote else _today(),
+            "pe": None,
+            "pb": None,
+            "dividend_yield": None,
+        }
+
+        # Try to enrich with VNDirect finfo data.
+        def _to_float(v):
+            if v is None:
+                return None
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return None
+
+        try:
+            url = f"https://finfo-api.vndirect.com.vn/v4/stocks?sort=code:asc&q=code:{symbol}"
+            r = requests.get(url, timeout=10)
+            if r.status_code == 200:
+                data = r.json().get("data", [])
+                if data:
+                    info = data[0]
+                    result["sector"] = info.get("sector") or None
+                    result["industry"] = info.get("industry") or None
+                    result["market_cap"] = _to_float(info.get("marketCap"))
+                    result["pe"] = _to_float(info.get("pe"))
+                    result["pb"] = _to_float(info.get("pb"))
+                    result["dividend_yield"] = _to_float(info.get("dividendYield"))
+        except Exception as e:
+            print(f"[market_data] stock_detail vndirect {symbol} error: {e}")
+
+        return result
 
     # ------------------------------------------------------------------
     # Benchmark indexes

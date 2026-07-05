@@ -17,6 +17,8 @@ import { SectionHeader } from "./ui/SectionHeader";
 import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
 import { formatCurrency } from "../lib/utils";
+import { Value } from "./Value";
+import { FormattedNumberInput } from "./FormattedNumberInput";
 
 export function PriceAlertsSection() {
   const qc = useQueryClient();
@@ -126,14 +128,14 @@ export function PriceAlertsSection() {
           <option value="PERCENT">{labels.priceAlerts.percent}</option>
         </select>
         <div className="flex gap-2">
-          <input
-            type="number"
+          <FormattedNumberInput
+            mode={form.value_type === "PERCENT" ? "percent" : "currency"}
+            decimals={form.value_type === "PERCENT" ? 2 : 0}
             min={0}
-            step={form.value_type === "PERCENT" ? 1 : 1000}
             placeholder={form.value_type === "PERCENT" ? "%" : labels.priceAlerts.value}
             className="input-fintech flex-1"
             value={form.value || ""}
-            onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
+            onChange={(value) => setForm({ ...form, value: Number(value) })}
           />
           <button
             onClick={handleSubmit}
@@ -162,9 +164,10 @@ export function PriceAlertsSection() {
               {n.type === "STOP_LOSS" ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-900">{n.message}</p>
+              <p className="text-sm font-medium text-slate-900 truncate">{n.message}</p>
               <p className="text-xs text-slate-500 mt-0.5">
-                {labels.priceAlerts.currentPrice}: {formatCurrency(n.current_price)}
+                {labels.priceAlerts.currentPrice}:{" "}
+                <Value value={n.current_price} formatter={formatCurrency} className="value-text" />
               </p>
             </div>
             <button
@@ -199,7 +202,7 @@ export function PriceAlertsSection() {
                 {alert.symbol} — {alert.value_type === "PERCENT" ? `${alert.value}%` : formatCurrency(alert.value)}
               </span>
               {alert.value_type === "PERCENT" && alert.reference_price && (
-                <span className="text-xs text-slate-500 hidden sm:inline">
+                <span className="text-xs text-slate-500 hidden sm:inline value-text">
                   ({labels.priceAlerts.referencePrice}: {formatCurrency(alert.reference_price)})
                 </span>
               )}

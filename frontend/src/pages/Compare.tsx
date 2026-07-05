@@ -591,14 +591,14 @@ export function Compare() {
                       const meta = symbolMap.get(q.symbol);
                       return (
                         <tr key={q.symbol} className="border-b border-slate-100">
-                          <td className="py-2 px-3 text-slate-500">
+                          <td className="py-2 px-3 text-slate-500 whitespace-nowrap">
                             {meta?.type === "FUND"
                               ? labels.assetTypes.FUND
                               : labels.assetTypes.STOCK}
                           </td>
-                          <td className="py-2 px-3 font-semibold">{q.symbol}</td>
-                          <td className="py-2 px-3">{meta?.name || q.symbol}</td>
-                          <td className="py-2 px-3 text-right">
+                          <td className="py-2 px-3 font-semibold whitespace-nowrap">{q.symbol}</td>
+                          <td className="py-2 px-3 max-w-[140px] truncate">{meta?.name || q.symbol}</td>
+                          <td className="py-2 px-3 value-cell" title={formatCurrency(q.price || 0)}>
                             {formatCurrency(q.price || 0)}
                           </td>
                           <td className="py-2 px-3 text-right">

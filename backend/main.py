@@ -1,4 +1,5 @@
 import logging
+import socket
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -64,9 +65,24 @@ app.include_router(news.router, prefix=settings.API_PREFIX)
 app.include_router(settings_router, prefix=settings.API_PREFIX)
 
 
+def get_lan_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.settimeout(0.5)
+            s.connect(("8.8.8.8", 53))
+            return s.getsockname()[0]
+    except Exception:
+        return None
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/v1/lan-ip")
+def lan_ip():
+    return {"ip": get_lan_ip()}
 
 
 if __name__ == "__main__":

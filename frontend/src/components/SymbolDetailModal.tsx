@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -8,10 +8,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { RefreshCw, X, Calendar, TrendingUp, TrendingDown } from "lucide-react";
+import { RefreshCw, X, Calendar, TrendingUp, TrendingDown, BarChart3, Info, Sparkles } from "lucide-react";
 import API from "../api/client";
+import { getFundDetail, getStockDetail, getSymbolAIInsight } from "../api/symbol";
 import { formatCurrency, formatPercent, formatNumber } from "../lib/utils";
 import { labels } from "../i18n/vi";
+import { AiInsightCard } from "./AiInsightCard";
 
 interface SymbolDetailModalProps {
   symbol: string;
@@ -31,6 +33,23 @@ interface FundDetail {
   nav: number;
   nav_update_at?: string;
   vsd_fee_id?: string;
+}
+
+interface StockDetail {
+  symbol: string;
+  name: string;
+  exchange: string;
+  type: string;
+  sector?: string;
+  industry?: string;
+  market_cap?: number;
+  price: number;
+  change: number;
+  change_percent: number;
+  date: string;
+  pe?: number;
+  pb?: number;
+  dividend_yield?: number;
 }
 
 interface HistoryPoint {
@@ -141,12 +160,20 @@ function CompactStat({
         ? "text-accent-emerald"
         : "text-accent-rose";
   return (
-    <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100">
+    <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 min-w-0 overflow-hidden">
       <p className="text-xs text-slate-500 mb-1">{label}</p>
-      <p className={`text-base font-semibold font-mono ${colorClass}`}>{value}</p>
+      <p className={`value-text text-sm md:text-base font-semibold ${colorClass}`} title={value}>{value}</p>
     </div>
   );
 }
+
+type Tab = "overview" | "info" | "ai";
+
+const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+  { key: "overview", label: labels.symbolDetail.overview, icon: <BarChart3 size={16} /> },
+  { key: "info", label: labels.symbolDetail.info, icon: <Info size={16} /> },
+  { key: "ai", label: labels.symbolDetail.aiAnalysis, icon: <Sparkles size={16} /> },
+];
 
 export default function SymbolDetailModal({
   symbol,
@@ -156,6 +183,7 @@ export default function SymbolDetailModal({
   onClose,
 }: SymbolDetailModalProps) {
   const [fundDetail, setFundDetail] = useState<FundDetail | null>(null);
+  const [stockDetail, setStockDetail] = useState<StockDetail | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +191,11 @@ export default function SymbolDetailModal({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [aiInsight, setAiInsight] = useState<{ overall: string; details: string; suggestions: string[]; used_ollama?: boolean } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiGenerated, setAiGenerated] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -185,20 +218,27 @@ export default function SymbolDetailModal({
     if (!start || !end) return;
     setLoading(true);
     setError(null);
+    setAiGenerated(false);
+    setAiInsight(null);
+    setAiError(null);
 
     const detailPromise =
       type === "FUND"
-        ? API.get(`/prices/fund-detail/${encodeURIComponent(symbol)}`)
-        : Promise.resolve({ data: null });
+        ? getFundDetail(symbol)
+        : getStockDetail(symbol);
 
     const historyPromise = API.get(`/prices/market-history/${encodeURIComponent(symbol)}`, {
       params: { type, start, end },
     });
 
     Promise.all([detailPromise, historyPromise])
-      .then(([detailRes, historyRes]) => {
+      .then(([detail, historyRes]) => {
         if (cancelled) return;
-        setFundDetail(detailRes.data);
+        if (type === "FUND") {
+          setFundDetail(detail as FundDetail);
+        } else {
+          setStockDetail(detail as StockDetail);
+        }
         setHistory(historyRes.data || []);
       })
       .catch((err) => {
@@ -213,6 +253,28 @@ export default function SymbolDetailModal({
       cancelled = true;
     };
   }, [symbol, type, start, end, refreshKey]);
+
+  const generateAIInsight = async () => {
+    if (aiLoading || !start || !end) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const data = await getSymbolAIInsight(symbol, type, start, end);
+      setAiInsight(data);
+      setAiGenerated(true);
+    } catch (err: any) {
+      setAiError(err?.response?.data?.detail || err.message || labels.common.error);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "ai" && !aiGenerated && !aiLoading && !error) {
+      generateAIInsight();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, aiGenerated, aiLoading, error]);
 
   const chartData = useMemo(
     () =>
@@ -248,8 +310,8 @@ export default function SymbolDetailModal({
             <div className="flex items-center gap-2 mb-1">
               <span
                 className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${type === "FUND"
-                    ? "bg-accent-violet/10 text-accent-violet ring-1 ring-inset ring-accent-violet/20"
-                    : "bg-accent-blue/10 text-accent-blue ring-1 ring-inset ring-accent-blue/20"
+                  ? "bg-accent-violet/10 text-accent-violet ring-1 ring-inset ring-accent-violet/20"
+                  : "bg-accent-blue/10 text-accent-blue ring-1 ring-inset ring-accent-blue/20"
                   }`}
               >
                 {type === "FUND" ? labels.assetTypes.FUND : labels.assetTypes.STOCK}
@@ -274,8 +336,8 @@ export default function SymbolDetailModal({
                   key={preset}
                   onClick={() => setRange(preset)}
                   className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${range === preset
-                      ? "bg-slate-900 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
                 >
                   {PRESET_LABELS[preset]}
@@ -315,188 +377,299 @@ export default function SymbolDetailModal({
             </div>
           </div>
 
+          <div className="flex gap-2 border-b border-slate-100">
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.key
+                  ? "text-slate-900 border-slate-900"
+                  : "text-slate-500 border-transparent hover:text-slate-700"
+                  }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           {loading ? (
             <div className="text-slate-500 py-8 text-center">{labels.common.loading}</div>
           ) : error ? (
             <div className="text-rose-500 py-8 text-center">{error}</div>
           ) : (
-            <>
-              <div className="glass-card p-5">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">
-                      {labels.symbolDetail.price}
-                    </p>
-                    <p className="text-3xl font-bold text-slate-900 font-mono tracking-tight">
-                      {stats ? formatCurrency(stats.last) : "—"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-5">
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.change}</p>
-                      <p
-                        className={`text-lg font-semibold font-mono flex items-center gap-1 ${positive ? "text-accent-emerald" : "text-accent-rose"
-                          }`}
-                      >
-                        {positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                        {stats ? formatCurrency(stats.last - stats.first) : "—"}
-                      </p>
+            <div className="space-y-6">
+              {activeTab === "overview" && (
+                <>
+                  <div className="glass-card p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                      <div className="min-w-0 overflow-hidden">
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">
+                          {labels.symbolDetail.price}
+                        </p>
+                        <p className="value-text text-2xl md:text-3xl font-bold text-slate-900 tracking-tight" title={stats ? formatCurrency(stats.last) : undefined}>
+                          {stats ? formatCurrency(stats.last) : "—"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 md:gap-5 min-w-0">
+                        <div className="min-w-0 overflow-hidden">
+                          <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.change}</p>
+                          <p
+                            className={`value-text text-base md:text-lg font-semibold flex items-center gap-1 ${positive ? "text-accent-emerald" : "text-accent-rose"
+                              }`}
+                            title={stats ? formatCurrency(stats.last - stats.first) : undefined}
+                          >
+                            {positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                            {stats ? formatCurrency(stats.last - stats.first) : "—"}
+                          </p>
+                        </div>
+                        <div className="min-w-0 overflow-hidden">
+                          <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.changePercent}</p>
+                          <p
+                            className={`value-text text-base md:text-lg font-semibold ${positive ? "text-accent-emerald" : "text-accent-rose"
+                              }`}
+                          >
+                            {stats ? formatPercent(stats.totalReturn) : "—"}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">{labels.symbolDetail.changePercent}</p>
-                      <p
-                        className={`text-lg font-semibold font-mono ${positive ? "text-accent-emerald" : "text-accent-rose"
-                          }`}
-                      >
-                        {stats ? formatPercent(stats.totalReturn) : "—"}
-                      </p>
-                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <CompactStat label={labels.symbolDetail.high} value={stats ? formatCurrency(stats.max) : "—"} />
-                <CompactStat label={labels.symbolDetail.low} value={stats ? formatCurrency(stats.min) : "—"} />
-                <CompactStat label={labels.symbolDetail.avg} value={stats ? formatCurrency(stats.avg) : "—"} />
-                <CompactStat
-                  label={labels.symbolDetail.annualized}
-                  value={stats ? formatPercent(stats.annualized) : "—"}
-                  positive={stats ? stats.annualized >= 0 : undefined}
-                />
-                <CompactStat
-                  label={labels.symbolDetail.volatility}
-                  value={stats ? formatPercent(stats.volatility) : "—"}
-                />
-                <CompactStat label={labels.symbolDetail.exchange} value={exchange} />
-                <CompactStat
-                  label={labels.symbolDetail.sessions}
-                  value={stats ? `${stats.days} ${labels.symbolDetail.sessions}` : "—"}
-                />
-              </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <CompactStat label={labels.symbolDetail.high} value={stats ? formatCurrency(stats.max) : "—"} />
+                    <CompactStat label={labels.symbolDetail.low} value={stats ? formatCurrency(stats.min) : "—"} />
+                    <CompactStat label={labels.symbolDetail.avg} value={stats ? formatCurrency(stats.avg) : "—"} />
+                    <CompactStat
+                      label={labels.symbolDetail.annualized}
+                      value={stats ? formatPercent(stats.annualized) : "—"}
+                      positive={stats ? stats.annualized >= 0 : undefined}
+                    />
+                    <CompactStat
+                      label={labels.symbolDetail.volatility}
+                      value={stats ? formatPercent(stats.volatility) : "—"}
+                    />
+                    <CompactStat label={labels.symbolDetail.exchange} value={exchange} />
+                    <CompactStat
+                      label={labels.symbolDetail.sessions}
+                      value={stats ? `${stats.days} ${labels.symbolDetail.sessions}` : "—"}
+                    />
+                  </div>
 
-              {fundDetail && (
+                  <div className="h-80">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-semibold text-slate-700">{labels.symbolDetail.priceHistory}</p>
+                      <span className="text-xs text-slate-400">
+                        {stats ? `${stats.days} ${labels.symbolDetail.sessions}` : ""}
+                      </span>
+                    </div>
+                    {chartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                          <defs>
+                            <linearGradient id={`detailGradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop
+                                offset="0%"
+                                stopColor={positive ? "#10b981" : "#f43f5e"}
+                                stopOpacity={0.3}
+                              />
+                              <stop
+                                offset="100%"
+                                stopColor={positive ? "#10b981" : "#f43f5e"}
+                                stopOpacity={0}
+                              />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" vertical={false} />
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fontSize: 12, fill: "#64748b" }}
+                            tickFormatter={chartTickFormatter}
+                            axisLine={false}
+                            tickLine={false}
+                            dy={8}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 12, fill: "#64748b" }}
+                            tickFormatter={formatAxisPrice}
+                            width={70}
+                            axisLine={false}
+                            tickLine={false}
+                            dx={-4}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: "rgba(255, 255, 255, 0.95)",
+                              border: "1px solid rgba(15, 23, 42, 0.08)",
+                              borderRadius: "12px",
+                              color: "#1e293b",
+                              boxShadow: "0 4px 24px rgba(15, 23, 42, 0.08)",
+                            }}
+                            formatter={(value: number) => [formatCurrency(value), labels.symbolDetail.price]}
+                            labelFormatter={(date: string) =>
+                              `Ngày ${new Date(date).toLocaleDateString("vi-VN")}`
+                            }
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="price"
+                            stroke={positive ? "#10b981" : "#f43f5e"}
+                            strokeWidth={2.5}
+                            fill={`url(#detailGradient-${symbol})`}
+                            dot={false}
+                            activeDot={{ r: 5, strokeWidth: 0 }}
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-slate-500 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                        {labels.symbolDetail.noData}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {activeTab === "info" && (
                 <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 space-y-3">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    Thông tin quỹ
+                    {type === "FUND" ? labels.symbolDetail.fundInfo : labels.symbolDetail.stockInfo}
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    {fundDetail.fund_type && (
-                      <div className="flex justify-between md:justify-start md:gap-2">
-                        <span className="text-slate-500">Loại quỹ:</span>
-                        <span className="font-medium text-slate-900">{fundDetail.fund_type}</span>
-                      </div>
-                    )}
-                    {fundDetail.owner && (
-                      <div className="flex justify-between md:justify-start md:gap-2">
-                        <span className="text-slate-500">Công ty quản lý:</span>
-                        <span className="font-medium text-slate-900">{fundDetail.owner}</span>
-                      </div>
-                    )}
-                    {fundDetail.management_fee !== undefined && (
-                      <div className="flex justify-between md:justify-start md:gap-2">
-                        <span className="text-slate-500">Phí quản lý:</span>
-                        <span className="font-medium text-slate-900">{fundDetail.management_fee}%</span>
-                      </div>
-                    )}
-                    {fundDetail.inception_date && (
-                      <div className="flex justify-between md:justify-start md:gap-2">
-                        <span className="text-slate-500">Ngày thành lập:</span>
-                        <span className="font-medium text-slate-900">
-                          {new Date(fundDetail.inception_date).toLocaleDateString("vi-VN")}
-                        </span>
-                      </div>
-                    )}
-                    {fundDetail.vsd_fee_id && (
-                      <div className="flex justify-between md:justify-start md:gap-2">
-                        <span className="text-slate-500">Mã VSD:</span>
-                        <span className="font-medium text-slate-900">{fundDetail.vsd_fee_id}</span>
-                      </div>
-                    )}
-                    {fundDetail.nav_update_at && (
-                      <div className="flex justify-between md:justify-start md:gap-2">
-                        <span className="text-slate-500">Cập nhật NAV:</span>
-                        <span className="font-medium text-slate-900">
-                          {new Date(fundDetail.nav_update_at).toLocaleDateString("vi-VN")}
-                        </span>
-                      </div>
+                    {type === "FUND" && fundDetail ? (
+                      <>
+                        {fundDetail.fund_type && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.fundType}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{fundDetail.fund_type}</span>
+                          </div>
+                        )}
+                        {fundDetail.owner && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.owner}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{fundDetail.owner}</span>
+                          </div>
+                        )}
+                        {fundDetail.management_fee !== undefined && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.managementFee}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{fundDetail.management_fee}%</span>
+                          </div>
+                        )}
+                        {fundDetail.inception_date && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.inceptionDate}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">
+                              {new Date(fundDetail.inception_date).toLocaleDateString("vi-VN")}
+                            </span>
+                          </div>
+                        )}
+                        {fundDetail.vsd_fee_id && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.vsdFeeId}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{fundDetail.vsd_fee_id}</span>
+                          </div>
+                        )}
+                        {fundDetail.nav_update_at && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.navUpdateAt}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">
+                              {new Date(fundDetail.nav_update_at).toLocaleDateString("vi-VN")}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between md:justify-start md:gap-2">
+                          <span className="text-slate-500">{labels.symbolDetail.nav}:</span>
+                          <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{formatCurrency(fundDetail.nav)}</span>
+                        </div>
+                      </>
+                    ) : stockDetail ? (
+                      <>
+                        <div className="flex justify-between md:justify-start md:gap-2">
+                          <span className="text-slate-500">{labels.symbolDetail.exchange}:</span>
+                          <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{stockDetail.exchange}</span>
+                        </div>
+                        {stockDetail.sector && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.sector}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{stockDetail.sector}</span>
+                          </div>
+                        )}
+                        {stockDetail.industry && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.industry}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{stockDetail.industry}</span>
+                          </div>
+                        )}
+                        {stockDetail.market_cap !== undefined && stockDetail.market_cap > 0 && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.marketCap}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{formatCurrency(stockDetail.market_cap)}</span>
+                          </div>
+                        )}
+                        {stockDetail.pe !== undefined && stockDetail.pe > 0 && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.pe}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{formatNumber(stockDetail.pe, 2)}</span>
+                          </div>
+                        )}
+                        {stockDetail.pb !== undefined && stockDetail.pb > 0 && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.pb}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{formatNumber(stockDetail.pb, 2)}</span>
+                          </div>
+                        )}
+                        {stockDetail.dividend_yield !== undefined && stockDetail.dividend_yield > 0 && (
+                          <div className="flex justify-between md:justify-start md:gap-2">
+                            <span className="text-slate-500">{labels.symbolDetail.dividendYield}:</span>
+                            <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{formatPercent(stockDetail.dividend_yield)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between md:justify-start md:gap-2">
+                          <span className="text-slate-500">{labels.symbolDetail.price}:</span>
+                          <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">{formatCurrency(stockDetail.price)}</span>
+                        </div>
+                        <div className="flex justify-between md:justify-start md:gap-2">
+                          <span className="text-slate-500">{labels.symbolDetail.changePercent}:</span>
+                          <span className={`font-medium flex-1 min-w-0 overflow-hidden truncate text-right md:text-left ${stockDetail.change_percent >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
+                            {formatPercent(stockDetail.change_percent)}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-slate-500">{labels.symbolDetail.noData}</div>
                     )}
                   </div>
                 </div>
               )}
 
-              <div className="h-80">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-slate-700">{labels.symbolDetail.priceHistory}</p>
-                  <span className="text-xs text-slate-400">
-                    {stats ? `${stats.days} ${labels.symbolDetail.sessions}` : ""}
-                  </span>
+              {activeTab === "ai" && (
+                <div className="space-y-4">
+                  {!aiGenerated && !aiLoading && (
+                    <div className="flex justify-center">
+                      <button
+                        onClick={generateAIInsight}
+                        disabled={aiLoading}
+                        className="btn-primary inline-flex items-center gap-2"
+                      >
+                        <Sparkles size={16} />
+                        {labels.symbolDetail.aiGenerate}
+                      </button>
+                    </div>
+                  )}
+                  <AiInsightCard
+                    data={aiInsight}
+                    loading={aiLoading}
+                    error={aiError}
+                    onClose={() => {
+                      setAiInsight(null);
+                      setAiGenerated(false);
+                      setAiError(null);
+                    }}
+                  />
                 </div>
-                {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-                      <defs>
-                        <linearGradient id={`detailGradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
-                          <stop
-                            offset="0%"
-                            stopColor={positive ? "#10b981" : "#f43f5e"}
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor={positive ? "#10b981" : "#f43f5e"}
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12, fill: "#64748b" }}
-                        tickFormatter={chartTickFormatter}
-                        axisLine={false}
-                        tickLine={false}
-                        dy={8}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 12, fill: "#64748b" }}
-                        tickFormatter={formatAxisPrice}
-                        width={70}
-                        axisLine={false}
-                        tickLine={false}
-                        dx={-4}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          background: "rgba(255, 255, 255, 0.95)",
-                          border: "1px solid rgba(15, 23, 42, 0.08)",
-                          borderRadius: "12px",
-                          color: "#1e293b",
-                          boxShadow: "0 4px 24px rgba(15, 23, 42, 0.08)",
-                        }}
-                        formatter={(value: number) => [formatCurrency(value), labels.symbolDetail.price]}
-                        labelFormatter={(date: string) =>
-                          `Ngày ${new Date(date).toLocaleDateString("vi-VN")}`
-                        }
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="price"
-                        stroke={positive ? "#10b981" : "#f43f5e"}
-                        strokeWidth={2.5}
-                        fill={`url(#detailGradient-${symbol})`}
-                        dot={false}
-                        activeDot={{ r: 5, strokeWidth: 0 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-slate-500 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                    {labels.symbolDetail.noData}
-                  </div>
-                )}
-              </div>
-            </>
+              )}
+            </div>
           )}
         </div>
       </div>

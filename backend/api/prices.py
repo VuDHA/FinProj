@@ -7,9 +7,9 @@ from sqlmodel import Session, select
 
 from database import get_session
 from models import Asset, PriceSnapshot
-from schemas import BenchmarkPoint, FundDetail, MarketAIInsightResponse, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote
+from schemas import BenchmarkPoint, FundDetail, MarketAIInsightResponse, MarketSymbol, PriceHistoryPoint, PriceSnapshotRead, Quote, StockDetail, SymbolAIInsightResponse
 from .ai_utils import handle_ai_insight_error
-from services.ai_insights import MarketInsightService
+from services.ai_insights import MarketInsightService, SymbolAIInsightService
 from services.asset_type_config import is_market_price_type
 from services.gold_fx import get_gold_fx
 from services.market_data import MarketDataService
@@ -204,6 +204,71 @@ def get_fund_detail(symbol: str, session: Session = Depends(get_session)):
     return data
 
 
+@router.get("/stock-detail/{symbol}", response_model=StockDetail)
+def get_stock_detail(symbol: str, session: Session = Depends(get_session)):
+    service = MarketDataService(session)
+    data = service.fetch_stock_detail(symbol)
+    if not data:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    return data
+
+
+@router.get("/symbol-ai-insight/{symbol}", response_model=SymbolAIInsightResponse)
+@handle_ai_insight_error
+def get_symbol_ai_insight(
+    symbol: str,
+    type: str,
+    start: datetime.date,
+    end: datetime.date,
+    session: Session = Depends(get_session),
+):
+    service = MarketDataService(session)
+    detail = service.fetch_fund_detail(symbol) if type == "FUND" else service.fetch_stock_detail(symbol)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Symbol not found")
+
+    history_map = service.fetch_market_history_with_backfill(symbol, type, start, end)
+    history = [{"date": d.isoformat(), "price": p} for d, p in sorted(history_map.items())]
+
+    # Compute stats compatible with SymbolAIInsightService expectations.
+    stats = None
+    if history:
+        prices = [p for _, p in sorted(history_map.items())]
+        first = prices[0]
+        last = prices[-1]
+        max_price = max(prices)
+        min_price = min(prices)
+        avg = sum(prices) / len(prices)
+        days = len(prices)
+        total_return = ((last - first) / first * 100) if first else 0.0
+        years = max(days / 252, 1 / 252)
+        annualized = ((last / first) ** (1 / years) - 1) * 100 if first else 0.0
+        daily_returns = [(prices[i] - prices[i - 1]) / prices[i - 1] for i in range(1, len(prices))]
+        volatility = (
+            (sum(r * r for r in daily_returns) / len(daily_returns)) ** 0.5 * (252 ** 0.5) * 100
+            if daily_returns
+            else 0.0
+        )
+        stats = {
+            "total_return": total_return,
+            "annualized_return": annualized,
+            "volatility": volatility,
+            "max": max_price,
+            "min": min_price,
+            "avg": avg,
+            "days": days,
+        }
+
+    return SymbolAIInsightService().generate(
+        symbol=detail.get("symbol", symbol),
+        name=detail.get("name", symbol),
+        symbol_type=type,
+        detail=detail,
+        history=history,
+        stats=stats,
+    )
+
+
 @router.get("/market-history/{symbol}", response_model=List[PriceHistoryPoint])
 def get_market_history(
     symbol: str,
@@ -292,5 +357,5 @@ def get_prices(asset_id: int, session: Session = Depends(get_session)):
     return session.exec(
         select(PriceSnapshot)
         .where(PriceSnapshot.asset_id == asset_id)
-        .order_by(PriceSnapshot.date.desc())
+        .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
     ).all()

@@ -158,7 +158,7 @@ class AnalyticsService:
                     PriceSnapshot.asset_id == asset.id,
                     PriceSnapshot.date <= date,
                 )
-                .order_by(PriceSnapshot.date.desc())
+                .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
             ).first()
             if not snapshot or snapshot.price <= 0:
                 snapshot = self.session.exec(
@@ -167,7 +167,7 @@ class AnalyticsService:
                         PriceSnapshot.asset_id == asset.id,
                         PriceSnapshot.date >= date,
                     )
-                    .order_by(PriceSnapshot.date.asc())
+                    .order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
                 ).first()
             price = snapshot.price if snapshot and snapshot.price > 0 else 0.0
             value = qty * price
@@ -267,7 +267,7 @@ class AnalyticsService:
                     snapshot = self.session.exec(
                         select(PriceSnapshot)
                         .where(PriceSnapshot.asset_id == asset.id, PriceSnapshot.date <= date)
-                        .order_by(PriceSnapshot.date.desc())
+                        .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
                     ).first()
                     price = snapshot.price if snapshot and snapshot.price > 0 else 0.0
                 total += qty * price

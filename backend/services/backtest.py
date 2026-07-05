@@ -30,7 +30,7 @@ class BacktestService:
                 PriceSnapshot.date >= start,
                 PriceSnapshot.date <= end,
             )
-            .order_by(PriceSnapshot.date.asc())
+            .order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
         ).all()
         return {s.date: s.price for s in snapshots}
 

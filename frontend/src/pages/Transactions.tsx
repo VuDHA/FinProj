@@ -6,6 +6,7 @@ import { Link, useLocation } from "react-router-dom";
 import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
+import { FormattedNumberInput } from "../components/FormattedNumberInput";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { FintechCard } from "../components/ui/FintechCard";
@@ -216,6 +217,9 @@ export function Transactions() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
+      qc.invalidateQueries({ queryKey: ["analytics"] });
+      qc.invalidateQueries({ queryKey: ["analytics-risk"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-history"] });
       setForm({
         asset_id: "",
         type: "BUY",
@@ -271,6 +275,9 @@ export function Transactions() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
+      qc.invalidateQueries({ queryKey: ["analytics"] });
+      qc.invalidateQueries({ queryKey: ["analytics-risk"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-history"] });
       setEditTarget(null);
       setEditErrors({});
       showToast("Đã cập nhật giao dịch", "success");
@@ -285,6 +292,9 @@ export function Transactions() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions"] });
       qc.invalidateQueries({ queryKey: ["portfolio"] });
+      qc.invalidateQueries({ queryKey: ["analytics"] });
+      qc.invalidateQueries({ queryKey: ["analytics-risk"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-history"] });
       showToast("Đã xóa giao dịch", "success");
       setDeleteTarget(null);
     },
@@ -582,13 +592,14 @@ export function Transactions() {
                   </button>
                 </div>
                 <div className="relative mt-1">
-                  <input
-                    type="number"
+                  <FormattedNumberInput
+                    mode="currency"
+                    decimals={2}
                     placeholder={labels.transactions.price}
                     className={`input-fintech pr-10 ${errors.price ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                     value={form.price}
                     disabled={form.price_mode === "market"}
-                    onChange={(e) => handleChange("price", e.target.value)}
+                    onChange={(value) => handleChange("price", value)}
                     aria-invalid={!!errors.price}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -601,12 +612,13 @@ export function Transactions() {
                 </div>
               </div>
               <div className="relative">
-                <input
-                  type="number"
+                <FormattedNumberInput
+                  mode="currency"
+                  decimals={2}
                   placeholder={labels.transactions.fee}
                   className={`input-fintech pr-10 ${errors.fee ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                   value={form.fee}
-                  onChange={(e) => handleChange("fee", e.target.value)}
+                  onChange={(value) => handleChange("fee", value)}
                   aria-invalid={!!errors.fee}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -712,19 +724,19 @@ export function Transactions() {
                         <tr key={tx.id}>
                           <td className="font-mono text-slate-500">{tx.date}</td>
                           <td>
-                            <div className="font-display font-semibold text-slate-900">
+                            <div className="font-display font-semibold text-slate-900 whitespace-nowrap">
                               {asset ? asset.symbol : tx.asset_id}
                             </div>
-                            <span className="text-xs text-slate-500">{asset ? asset.name : "-"}</span>
+                            <span className="text-xs text-slate-500 max-w-[120px] truncate block">{asset ? asset.name : "-"}</span>
                           </td>
                           <td>
                             <span className={transactionTypeBadgeClass(tx.type)}>
                               {transactionTypeLabel(tx.type)}
                             </span>
                           </td>
-                          <td className="text-right font-mono">{tx.quantity}</td>
-                          <td className="text-right font-mono">{formatCurrency(tx.price)}</td>
-                          <td className="text-right font-mono">{formatCurrency(tx.fee)}</td>
+                          <td className="value-cell" title={String(tx.quantity)}>{tx.quantity}</td>
+                          <td className="value-cell" title={formatCurrency(tx.price)}>{formatCurrency(tx.price)}</td>
+                          <td className="value-cell" title={formatCurrency(tx.fee)}>{formatCurrency(tx.fee)}</td>
                           <td className="text-right">
                             <div className="inline-flex items-center gap-1">
                               <button
@@ -812,12 +824,13 @@ export function Transactions() {
                   </span>
                 </div>
                 <div className="relative">
-                  <input
-                    type="number"
+                  <FormattedNumberInput
+                    mode="currency"
+                    decimals={2}
                     placeholder={labels.transactions.amount}
                     className={`input-fintech pr-10 ${incomeErrors.amount ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                     value={incomeForm.amount}
-                    onChange={(e) => handleIncomeChange("amount", e.target.value)}
+                    onChange={(value) => handleIncomeChange("amount", value)}
                     aria-invalid={!!incomeErrors.amount}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -915,17 +928,17 @@ export function Transactions() {
                           <tr key={inc.id}>
                             <td className="font-mono text-slate-500">{inc.date}</td>
                             <td>
-                              <div className="font-display font-semibold text-slate-900">
+                              <div className="font-display font-semibold text-slate-900 whitespace-nowrap">
                                 {asset ? asset.symbol : inc.asset_id}
                               </div>
-                              <span className="text-xs text-slate-500">{asset ? asset.name : "-"}</span>
+                              <span className="text-xs text-slate-500 max-w-[120px] truncate block">{asset ? asset.name : "-"}</span>
                             </td>
                             <td>
                               <span className="badge-gain">
                                 {inc.type === "DIVIDEND" ? labels.transactions.dividend : labels.transactions.interest}
                               </span>
                             </td>
-                            <td className="text-right font-mono">{formatCurrency(inc.amount)}</td>
+                            <td className="value-cell" title={formatCurrency(inc.amount)}>{formatCurrency(inc.amount)}</td>
                             <td className="text-right">
                               <button
                                 onClick={() => setDeleteTarget({ id: inc.id, label: asset ? `${asset.symbol} — ${inc.date}` : String(inc.id), type: "income" })}
@@ -1008,13 +1021,14 @@ export function Transactions() {
                     {labels.transactions.manualPrice}
                   </button>
                 </div>
-                <input
-                  type="number"
+                <FormattedNumberInput
+                  mode="currency"
+                  decimals={2}
                   placeholder={labels.transactions.price}
                   className={`input-fintech pr-10 ${editErrors.price ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                   value={editForm.price}
                   disabled={editForm.price_mode === "market"}
-                  onChange={(e) => handleEditChange("price", e.target.value)}
+                  onChange={(value) => handleEditChange("price", value)}
                 />
                 {editForm.price_mode === "market" && editMarketPricePreview.isLoading && (
                   <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-slate-400">{labels.common.loading}</span>
@@ -1022,12 +1036,13 @@ export function Transactions() {
                 {editErrors.price && <p className="text-xs text-rose-500 mt-1">{editErrors.price}</p>}
               </div>
               <div className="relative">
-                <input
-                  type="number"
+                <FormattedNumberInput
+                  mode="currency"
+                  decimals={2}
                   placeholder={labels.transactions.fee}
                   className={`input-fintech pr-10 ${editErrors.fee ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                   value={editForm.fee}
-                  onChange={(e) => handleEditChange("fee", e.target.value)}
+                  onChange={(value) => handleEditChange("fee", value)}
                 />
                 {editErrors.fee && <p className="text-xs text-rose-500 mt-1">{editErrors.fee}</p>}
               </div>

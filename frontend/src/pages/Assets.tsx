@@ -6,6 +6,7 @@ import API from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { FintechCard } from "../components/ui/FintechCard";
+import { FormattedNumberInput } from "../components/FormattedNumberInput";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { SourceSelect } from "../components/SourceSelect";
@@ -309,12 +310,13 @@ export function Assets() {
       case "value":
         return (
           <div key="value" className="relative">
-            <input
-              type="number"
+            <FormattedNumberInput
+              mode="currency"
+              decimals={2}
               placeholder={labels.assets.value}
               className={`input-fintech pr-10 ${errors.manual_value ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
               value={form.manual_value}
-              onChange={(e) => handleChange("manual_value", e.target.value)}
+              onChange={(value) => handleChange("manual_value", value)}
               aria-invalid={!!errors.manual_value}
             />
             {errors.manual_value && <p className="text-xs text-rose-500 mt-1">{errors.manual_value}</p>}
@@ -428,15 +430,15 @@ export function Assets() {
               <tbody>
                 {filteredAssets.map((asset: any) => (
                   <tr key={asset.id}>
-                    <td className="font-display font-semibold text-slate-900">{asset.symbol}</td>
-                    <td className="text-slate-700">{asset.name}</td>
+                    <td className="font-display font-semibold text-slate-900 whitespace-nowrap">{asset.symbol}</td>
+                    <td className="text-slate-700 max-w-[140px] truncate">{asset.name}</td>
                     <td>
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${typeBadgeClass(asset.type)}`}>
                         {typeLabel(asset.type)}
                       </span>
                     </td>
-                    <td className="text-slate-500">{asset.exchange || "-"}</td>
-                    <td className="text-slate-500">
+                    <td className="text-slate-500 whitespace-nowrap">{asset.exchange || "-"}</td>
+                    <td className="text-slate-500 max-w-[120px] truncate">
                       {asset.source ? (
                         <span className="inline-flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-accent-violet" />
@@ -542,12 +544,13 @@ export function Assets() {
               </div>
               {typeConfig[editTarget.type]?.marketPrice === false && (
                 <div>
-                  <input
-                    type="number"
+                  <FormattedNumberInput
+                    mode="currency"
+                    decimals={2}
                     placeholder={labels.assets.manualValue}
                     className={`input-fintech ${editErrors.manual_value ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                     value={editForm.manual_value}
-                    onChange={(e) => handleEditChange("manual_value", e.target.value)}
+                    onChange={(value) => handleEditChange("manual_value", value)}
                   />
                   {editErrors.manual_value && <p className="text-xs text-rose-500 mt-1">{editErrors.manual_value}</p>}
                 </div>

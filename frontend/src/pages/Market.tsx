@@ -1,47 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { Bot, LineChart as LineChartIcon, RefreshCw } from "lucide-react";
+import { Bot, RefreshCw } from "lucide-react";
 import { usePersistentState } from "../hooks/usePersistentState";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import API from "../api/client";
 import { getMarketInsight } from "../api/ai";
 import { AiGenerateButton } from "../components/AiGenerateButton";
 import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { FormattedNumberInput } from "../components/FormattedNumberInput";
 import { InfoTooltip } from "../components/InfoTooltip";
 import SymbolDetailModal from "../components/SymbolDetailModal";
-import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
-import { MiniSparkline } from "../components/ui/MiniSparkline";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
+import { formatCurrency, formatNumber } from "../lib/utils";
 
 
 export function Market() {
-  const today = new Date().toISOString().split("T")[0];
-  const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-
   const WATCHLIST_SYMBOLS =
     "VCB,VHM,VIC,FPT,GAS,HPG,MBB,MSN,MWG,PLX,SSI,TCB,VIB,VPB,E1VFVN30,FUEVFVND,FUESSVFL";
-
-  const [assetId, setAssetId] = usePersistentState("market.assetId", "");
-  const [start, setStart] = usePersistentState("market.start", oneMonthAgo);
-  const [end, setEnd] = usePersistentState("market.end", today);
 
   const [activeTab, setActiveTab] = usePersistentState<"STOCK" | "FUND">("market.activeTab", "STOCK");
   const [search, setSearch] = usePersistentState("market.search", "");
   const [fundType, setFundType] = usePersistentState("market.fundType", "all");
+  const [exchangeFilter, setExchangeFilter] = usePersistentState("market.exchangeFilter", "all");
+  const [changeFilter, setChangeFilter] = usePersistentState("market.changeFilter", "all");
+  const [minPrice, setMinPrice] = usePersistentState("market.minPrice", "");
+  const [maxPrice, setMaxPrice] = usePersistentState("market.maxPrice", "");
+  const [sortBy, setSortBy] = usePersistentState("market.sortBy", "symbol");
   const [page, setPage] = usePersistentState("market.page", 1);
   const [selectedSymbol, setSelectedSymbol] = usePersistentState<{
     symbol: string;
@@ -50,26 +38,6 @@ export function Market() {
     exchange: string;
   } | null>("market.selectedSymbol", null);
   const PAGE_SIZE = 20;
-
-  const assets = useQuery({
-    queryKey: ["assets"],
-    queryFn: async () => {
-      const { data } = await API.get("/assets/");
-      return data;
-    },
-  });
-
-  const history = useQuery({
-    queryKey: ["price-history", assetId, start, end],
-    queryFn: async () => {
-      if (!assetId) return [];
-      const { data } = await API.get(`/prices/history/${assetId}`, {
-        params: { start, end },
-      });
-      return data as Array<{ date: string; price: number }>;
-    },
-    enabled: !!assetId,
-  });
 
   const goldFx = useQuery({
     queryKey: ["gold-fx"],
@@ -114,10 +82,23 @@ export function Market() {
     return Array.from(types).sort();
   }, [allSymbols.data]);
 
+  const exchanges = useMemo(() => {
+    const exs = new Set<string>();
+    allSymbols.data?.forEach((item) => {
+      if (item.type === activeTab && item.exchange) {
+        exs.add(item.exchange);
+      }
+    });
+    return Array.from(exs).sort();
+  }, [allSymbols.data, activeTab]);
+
   const filteredSymbols =
     allSymbols.data?.filter((item) => {
       if (item.type !== activeTab) return false;
       if (activeTab === "FUND" && fundType && fundType !== "all" && item.fund_type !== fundType) {
+        return false;
+      }
+      if (exchangeFilter && exchangeFilter !== "all" && item.exchange !== exchangeFilter) {
         return false;
       }
       const q = search.trim().toLowerCase();
@@ -148,37 +129,83 @@ export function Market() {
 
   const quoteMap = Object.fromEntries(pageQuotes.data?.map((q) => [q.symbol, q]) || []);
 
+  const quotesReady = !!pageQuotes.data;
+
+  const displaySymbols = useMemo(() => {
+    const min = parseFloat(minPrice);
+    const max = parseFloat(maxPrice);
+    const filterByPrice = !isNaN(min) || !isNaN(max);
+    const filterByChange = changeFilter !== "all";
+
+    let list = [...pageSymbols];
+
+    if (quotesReady && (filterByPrice || filterByChange)) {
+      list = list.filter((item) => {
+        const q = quoteMap[item.symbol];
+        if (!q) return false;
+        if (filterByChange) {
+          if (changeFilter === "up" && q.change_percent <= 0) return false;
+          if (changeFilter === "down" && q.change_percent >= 0) return false;
+        }
+        if (!isNaN(min) && q.price < min) return false;
+        if (!isNaN(max) && q.price > max) return false;
+        return true;
+      });
+    }
+
+    if (sortBy === "changePercent") {
+      list.sort((a, b) => {
+        const ca = quoteMap[a.symbol]?.change_percent ?? -Infinity;
+        const cb = quoteMap[b.symbol]?.change_percent ?? -Infinity;
+        if (cb !== ca) return cb - ca;
+        return a.symbol.localeCompare(b.symbol);
+      });
+    } else if (sortBy === "name") {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === "exchange") {
+      list.sort((a, b) => a.exchange.localeCompare(b.exchange) || a.symbol.localeCompare(b.symbol));
+    } else {
+      list.sort((a, b) => a.symbol.localeCompare(b.symbol));
+    }
+    return list;
+  }, [pageSymbols, sortBy, quoteMap, changeFilter, minPrice, maxPrice, quotesReady]);
+
   const portfolio = useQuery({
     queryKey: ["portfolio"],
     queryFn: async () => (await API.get("/portfolio/")).data,
   });
 
-  const selectedAsset = assets.data?.find((a: any) => a.id === Number(assetId));
-
   const stockFundItems =
     portfolio.data?.items?.filter((item: any) => ["STOCK", "FUND", "ETF"].includes(item.type)) || [];
   const stockFundTotal = stockFundItems.reduce((sum: number, item: any) => sum + (item.current_value || 0), 0);
-  const latest = history.data?.[history.data.length - 1];
-  const previous = history.data?.[history.data.length - 2] ?? latest;
-
-  const change = latest && previous ? latest.price - previous.price : 0;
-  const changePercent = previous && previous.price ? (change / previous.price) * 100 : 0;
-  const high = history.data?.length ? Math.max(...history.data.map((d) => d.price)) : 0;
-  const low = history.data?.length ? Math.min(...history.data.map((d) => d.price)) : 0;
-
-  const miniSparkline = history.data?.length
-    ? history.data.map((d) => d.price)
-    : [];
 
   const marketInsight = useAiInsight({
     taskName: "market_insight",
     fetcher: getMarketInsight,
   });
 
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    fundType !== "all" ||
+    exchangeFilter !== "all" ||
+    changeFilter !== "all" ||
+    minPrice !== "" ||
+    maxPrice !== "" ||
+    sortBy !== "symbol";
+
+  const clearFilters = () => {
+    setSearch("");
+    setFundType("all");
+    setExchangeFilter("all");
+    setChangeFilter("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setSortBy("symbol");
+    setPage(1);
+  };
+
   return (
     <div className="space-y-6">
-      {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
-      {history.isError && <ErrorMessage error={history.error} retry={() => history.refetch()} />}
       {goldFx.isError && <ErrorMessage error={goldFx.error} retry={() => goldFx.refetch()} />}
       {marketWatchlist.isError && <ErrorMessage error={marketWatchlist.error} retry={() => marketWatchlist.refetch()} />}
       {allSymbols.isError && <ErrorMessage error={allSymbols.error} retry={() => allSymbols.refetch()} />}
@@ -193,7 +220,7 @@ export function Market() {
             {labels.market.watchlist}
             <InfoTooltip content={labels.tooltips.marketWatchlist} />
           </h3>
-          <span className="text-sm font-mono text-slate-600">
+          <span className="value-text text-sm text-slate-600 min-w-0" title={portfolio.isLoading ? "" : formatCurrency(stockFundTotal)}>
             {labels.market.totalValue}: {portfolio.isLoading ? "..." : formatCurrency(stockFundTotal)}
           </span>
         </div>
@@ -240,9 +267,9 @@ export function Market() {
                     <td className="text-xs text-slate-500">
                       {labels.assetTypes[item.type as keyof typeof labels.assetTypes] ?? item.type}
                     </td>
-                    <td className="text-right font-mono">{formatNumber(item.quantity, 4)}</td>
-                    <td className="text-right font-mono">{formatCurrency(item.latest_price)}</td>
-                    <td className="text-right font-mono text-slate-900">{formatCurrency(item.current_value)}</td>
+                    <td className="value-cell" title={formatNumber(item.quantity, 4)}>{formatNumber(item.quantity, 4)}</td>
+                    <td className="value-cell" title={formatCurrency(item.latest_price)}>{formatCurrency(item.latest_price)}</td>
+                    <td className="value-cell text-slate-900" title={formatCurrency(item.current_value)}>{formatCurrency(item.current_value)}</td>
                     <td className="text-right">
                       <TrendBadge value={(item.pnl / (item.current_value - item.pnl || 1)) * 100} />
                     </td>
@@ -275,140 +302,6 @@ export function Market() {
           onClose={marketInsight.clear}
         />
       </FintechCard>
-
-      <FintechCard delay={0.1}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
-              {labels.market.selectAsset}
-              <InfoTooltip content={labels.tooltips.marketSelectAsset} />
-            </label>
-            <select className="input-fintech" value={assetId} onChange={(e) => setAssetId(e.target.value)}>
-              <option value="">{labels.market.selectAsset}</option>
-              {assets.data?.map((a: any) => (
-                <option key={a.id} value={a.id}>
-                  {a.symbol} — {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
-              {labels.market.startDate}
-              <InfoTooltip content={labels.tooltips.marketDateRange} />
-            </label>
-            <input
-              type="date"
-              className="input-fintech"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wider">
-              {labels.market.endDate}
-              <InfoTooltip content={labels.tooltips.marketDateRange} />
-            </label>
-            <input
-              type="date"
-              className="input-fintech"
-              value={end}
-              onChange={(e) => setEnd(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={() => history.refetch()}
-            disabled={!assetId || history.isFetching}
-            className="btn-primary"
-          >
-            <LineChartIcon className="w-4 h-4" />
-            {history.isFetching ? labels.market.loading : labels.market.load}
-          </button>
-        </div>
-      </FintechCard>
-
-      {selectedAsset && latest && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <FintechCard delay={0.15}>
-            <div className="card-title mb-1 inline-flex items-center">
-              {labels.market.currentPrice}
-              <InfoTooltip content={labels.tooltips.transactionPrice} />
-            </div>
-            <div className="metric-value">
-              <AnimatedNumber value={latest.price} formatter={formatCurrency} />
-            </div>
-            <div className="mt-2">
-              <TrendBadge value={changePercent} />
-            </div>
-          </FintechCard>
-          <FintechCard delay={0.2}>
-            <div className="card-title mb-1 inline-flex items-center">
-              {labels.market.change}
-              <InfoTooltip content={labels.tooltips.marketWatchlist} />
-            </div>
-            <div className={`metric-value ${changePercent >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
-              {formatCurrency(change)}
-            </div>
-            <div className="mt-2 text-xs text-slate-500">{labels.market.vsPrevious}</div>
-          </FintechCard>
-          <FintechCard delay={0.25}>
-            <div className="card-title mb-1 inline-flex items-center">
-              {labels.market.high}
-              <InfoTooltip content={labels.tooltips.marketWatchlist} />
-            </div>
-            <div className="metric-value text-accent-cyan">{formatCurrency(high)}</div>
-          </FintechCard>
-          <FintechCard delay={0.3}>
-            <div className="card-title mb-1 inline-flex items-center">
-              {labels.market.low}
-              <InfoTooltip content={labels.tooltips.marketWatchlist} />
-            </div>
-            <div className="metric-value text-accent-amber">{formatCurrency(low)}</div>
-          </FintechCard>
-        </div>
-      )}
-
-      {history.data && history.data.length > 0 && (
-        <FintechCard delay={0.35}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="card-title inline-flex items-center">
-              {selectedAsset?.symbol} — {labels.market.priceHistory}
-              <InfoTooltip content={labels.tooltips.marketDateRange} />
-            </h3>
-            <MiniSparkline data={miniSparkline} color={changePercent >= 0 ? "emerald" : "rose"} width={140} height={36} />
-          </div>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={history.data}>
-                <defs>
-                  <linearGradient id="marketGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={changePercent >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={changePercent >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
-                <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [formatCurrency(v as number), labels.market.priceHistory]} />
-                <Area
-                  type="monotone"
-                  dataKey="price"
-                  stroke={changePercent >= 0 ? "#34D399" : "#FB7185"}
-                  strokeWidth={2.5}
-                  fill="url(#marketGradient)"
-                  dot={false}
-                  activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2 }}
-                  animationDuration={1200}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </FintechCard>
-      )}
-
-      {history.data && history.data.length === 0 && !history.isFetching && assetId && (
-        <div className="text-slate-500">{labels.market.noData}</div>
-      )}
 
       {/* <FintechCard delay={0.12}>
         <div className="flex items-center justify-between mb-4">
@@ -477,6 +370,10 @@ export function Market() {
                   onClick={() => {
                     setActiveTab(tab);
                     setFundType("all");
+                    setExchangeFilter("all");
+                    setChangeFilter("all");
+                    setMinPrice("");
+                    setMaxPrice("");
                     setPage(1);
                   }}
                   className={`flex-1 md:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === tab
@@ -498,6 +395,23 @@ export function Market() {
                 setPage(1);
               }}
             />
+            {exchanges.length > 0 && (
+              <select
+                className="input-fintech md:w-44"
+                value={exchangeFilter}
+                onChange={(e) => {
+                  setExchangeFilter(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">{labels.market.allExchanges}</option>
+                {exchanges.map((ex) => (
+                  <option key={ex} value={ex}>
+                    {ex}
+                  </option>
+                ))}
+              </select>
+            )}
             {activeTab === "FUND" && fundTypes.length > 0 && (
               <select
                 className="input-fintech md:w-56"
@@ -515,6 +429,16 @@ export function Market() {
                 ))}
               </select>
             )}
+            <select
+              className="input-fintech md:w-48"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="symbol">{labels.market.sortBySymbol}</option>
+              <option value="name">{labels.market.sortByName}</option>
+              <option value="exchange">{labels.market.sortByExchange}</option>
+              <option value="changePercent">{labels.market.sortByChangePercent}</option>
+            </select>
             <div className="flex items-center gap-2">
               <InfoTooltip content={labels.tooltips.refreshPrices} />
               <button
@@ -525,12 +449,62 @@ export function Market() {
                 <RefreshCw className={`w-4 h-4 ${pageQuotes.isFetching ? "animate-spin" : ""}`} />
                 {labels.market.loadPrice}
               </button>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="btn-secondary text-slate-600"
+                >
+                  {labels.market.clearFilters}
+                </button>
+              )}
             </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-3 mb-4">
+            <select
+              className="input-fintech md:w-48"
+              value={changeFilter}
+              onChange={(e) => setChangeFilter(e.target.value)}
+              disabled={!quotesReady}
+            >
+              <option value="all">{labels.market.allChanges}</option>
+              <option value="up">{labels.market.gainers}</option>
+              <option value="down">{labels.market.losers}</option>
+            </select>
+            <FormattedNumberInput
+              mode="currency"
+              decimals={0}
+              min={0}
+              className="input-fintech md:w-48"
+              placeholder={labels.market.minPrice}
+              value={minPrice}
+              onChange={(value) => {
+                setMinPrice(value);
+                setPage(1);
+              }}
+              disabled={!quotesReady}
+            />
+            <FormattedNumberInput
+              mode="currency"
+              decimals={0}
+              min={0}
+              className="input-fintech md:w-48"
+              placeholder={labels.market.maxPrice}
+              value={maxPrice}
+              onChange={(value) => {
+                setMaxPrice(value);
+                setPage(1);
+              }}
+              disabled={!quotesReady}
+            />
+            <span className="text-xs text-slate-500 self-center">
+              {labels.market.priceRangeHint}
+            </span>
           </div>
 
           {allSymbols.isLoading ? (
             <div className="text-slate-500 py-4">{labels.common.loading}</div>
-          ) : pageSymbols.length > 0 ? (
+          ) : displaySymbols.length > 0 ? (
             <div className="overflow-x-auto scrollbar-thin">
               <table className="table-fintech">
                 <thead>
@@ -562,7 +536,7 @@ export function Market() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageSymbols.map((item) => {
+                  {displaySymbols.map((item) => {
                     const q = quoteMap[item.symbol];
                     return (
                       <tr
@@ -570,21 +544,22 @@ export function Market() {
                         onClick={() => setSelectedSymbol(item)}
                         className="cursor-pointer hover:bg-slate-50 transition-colors"
                       >
-                        <td className="font-display font-semibold text-slate-900">{item.symbol}</td>
-                        <td className="text-sm text-slate-500 max-w-xs truncate">{item.name}</td>
-                        <td className="text-xs text-slate-500">{item.exchange}</td>
-                        <td className="text-right font-mono">{q ? formatCurrency(q.price) : "—"}</td>
+                        <td className="font-display font-semibold text-slate-900 whitespace-nowrap">{item.symbol}</td>
+                        <td className="text-sm text-slate-500 max-w-[120px] md:max-w-xs truncate">{item.name}</td>
+                        <td className="text-xs text-slate-500 whitespace-nowrap">{item.exchange}</td>
+                        <td className="value-cell" title={q ? formatCurrency(q.price) : ""}>{q ? formatCurrency(q.price) : "—"}</td>
                         <td
-                          className={`text-right font-mono ${q && q.change >= 0
+                          className={`value-cell ${q && q.change >= 0
                             ? "text-accent-emerald"
                             : q && q.change < 0
                               ? "text-accent-rose"
                               : ""
                             }`}
+                          title={q ? formatCurrency(q.change) : ""}
                         >
                           {q ? formatCurrency(q.change) : "—"}
                         </td>
-                        <td className="text-right">{q ? <TrendBadge value={q.change_percent} /> : "—"}</td>
+                        <td className="text-right whitespace-nowrap">{q ? <TrendBadge value={q.change_percent} /> : "—"}</td>
                       </tr>
                     );
                   })}
@@ -658,9 +633,9 @@ export function Market() {
                   <tbody>
                     {goldFx.data.gold?.map((item: any, idx: number) => (
                       <tr key={idx}>
-                        <td className="font-medium text-slate-900">{item.source}</td>
-                        <td className="text-right font-mono">{formatCurrency(item.buy)}</td>
-                        <td className="text-right font-mono">{formatCurrency(item.sell)}</td>
+                        <td className="font-medium text-slate-900 whitespace-nowrap">{item.source}</td>
+                        <td className="value-cell" title={formatCurrency(item.buy)}>{formatCurrency(item.buy)}</td>
+                        <td className="value-cell" title={formatCurrency(item.sell)}>{formatCurrency(item.sell)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -694,10 +669,10 @@ export function Market() {
                   <tbody>
                     {goldFx.data.fx?.slice(0, 10).map((item: any, idx: number) => (
                       <tr key={idx}>
-                        <td className="font-medium text-slate-900">{item.currency}</td>
-                        <td className="text-right font-mono">{formatCurrency(item.buy)}</td>
-                        <td className="text-right font-mono">{formatCurrency(item.transfer)}</td>
-                        <td className="text-right font-mono">{formatCurrency(item.sell)}</td>
+                        <td className="font-medium text-slate-900 whitespace-nowrap">{item.currency}</td>
+                        <td className="value-cell" title={formatCurrency(item.buy)}>{formatCurrency(item.buy)}</td>
+                        <td className="value-cell" title={formatCurrency(item.transfer)}>{formatCurrency(item.transfer)}</td>
+                        <td className="value-cell" title={formatCurrency(item.sell)}>{formatCurrency(item.sell)}</td>
                       </tr>
                     ))}
                   </tbody>

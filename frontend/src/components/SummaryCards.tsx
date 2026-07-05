@@ -115,18 +115,19 @@ export function SummaryCards({
       {cards.map((card, i) => {
         const Icon = card.icon;
         return (
-          <FintechCard key={card.label} delay={i * 0.08}>
+          <FintechCard key={card.label} delay={i * 0.08} className="min-w-0 group hover:scale-125 hover:z-50 transition-transform duration-200 will-change-transform">
             <div className="flex items-start justify-between">
-              <div className="space-y-1">
+              <div className="space-y-1 min-w-0 overflow-hidden group-hover:overflow-visible">
                 <span className="card-title inline-flex items-center">
                   {card.label}
                   <InfoTooltip content={card.tooltip} position="right" />
                 </span>
-                <div className="metric-value">
+                <div className="metric-value group-hover:overflow-visible">
                   <AnimatedNumber
                     value={card.value}
                     formatter={card.formatter}
                     duration={1400 + i * 200}
+                    className="block truncate group-hover:overflow-visible group-hover:text-clip"
                   />
                 </div>
                 {card.badge !== undefined && (

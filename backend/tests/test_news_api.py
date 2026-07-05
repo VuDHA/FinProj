@@ -1,4 +1,5 @@
 import datetime
+from unittest.mock import patch
 
 from models import Asset, NewsArticle, NewsSource, NewsSymbol, Watchlist
 from services.news.alerts import AlertService
@@ -104,3 +105,38 @@ def test_alerts(client, session):
     alerts = alert_response.json()
     assert len(alerts) >= 1
     assert alerts[0]["symbol"] == "HPG"
+
+
+def test_summarize_article(client, session):
+    url = "https://example.com/article"
+    scraped = {
+        "title": "Tin tức mới",
+        "summary": "Tóm tắt ngắn",
+        "content_text": "Nội dung chi tiết của bài báo.",
+        "url": url,
+    }
+    ai_result = {
+        "summary": "- Ý chính 1\n- Ý chính 2",
+        "tags": ["cổ phiếu", "thị trường"],
+        "source_url": url,
+        "title": "Tin tức mới",
+        "used_ai": True,
+    }
+
+    with patch("api.news.ArticleScraper") as mock_scraper_cls, patch(
+        "api.news.ArticleAIService"
+    ) as mock_ai_cls:
+        mock_scraper_cls.return_value.scrape.return_value = scraped
+        mock_ai_cls.return_value.summarize_and_tag.return_value = ai_result
+
+        response = client.post(
+            "/api/v1/news/summarize", json={"url": url, "title": "Tin tức", "language": "vi"}
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["summary"] == ai_result["summary"]
+    assert data["tags"] == ai_result["tags"]
+    assert data["source_url"] == url
+    assert data["title"] == "Tin tức mới"
+    assert data["used_ai"] is True

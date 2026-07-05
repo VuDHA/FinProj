@@ -116,23 +116,20 @@ def update_asset(asset_id: int, update: AssetUpdate, session: Session = Depends(
                     status_code=400,
                     detail=f"Asset type {asset.type} requires a positive manual value",
                 )
-            latest = session.exec(
-                select(PriceSnapshot)
-                .where(PriceSnapshot.asset_id == asset.id)
-                .order_by(PriceSnapshot.date.desc())
-            ).first()
-            today = datetime.date.today()
-            if latest and latest.date == today:
-                latest.price = float(update.manual_value)
-                session.add(latest)
-            else:
-                session.add(
-                    PriceSnapshot(
-                        asset_id=asset.id,
-                        date=today,
-                        price=float(update.manual_value),
-                    )
+            # For non-market assets, the manual value is the single source of truth.
+            # Replace any existing snapshots with a fresh snapshot for today so the
+            # dashboard cannot pick a stale market price snapshot over the manual value.
+            for snap in session.exec(
+                select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
+            ).all():
+                session.delete(snap)
+            session.add(
+                PriceSnapshot(
+                    asset_id=asset.id,
+                    date=datetime.date.today(),
+                    price=float(update.manual_value),
                 )
+            )
         # For market-priced assets manual_value is not used; ignore it.
 
     session.add(asset)

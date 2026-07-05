@@ -104,7 +104,7 @@ class PortfolioService:
             latest = self.session.exec(
                 select(PriceSnapshot)
                 .where(PriceSnapshot.asset_id == asset.id)
-                .order_by(PriceSnapshot.date.desc())
+                .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
             ).first()
             latest_price = latest.price if latest else avg_cost
 

@@ -3,31 +3,31 @@
 @tailwind utilities;
 
 :root {
-  --surface: #f8fafc;
-  --surface-elevated: #ffffff;
-  --surface-card: rgba(255, 255, 255, 0.7);
+  --surface: #f0f4f9;
+  --surface-elevated: #f8fbff;
+  --surface-card: rgba(245, 249, 255, 0.78);
   --accent-cyan: #22D3EE;
   --accent-blue: #3B82F6;
   --accent-violet: #8B5CF6;
   --accent-emerald: #34D399;
   --accent-rose: #FB7185;
   --accent-amber: #FBBF24;
-  --border-subtle: rgba(15, 23, 42, 0.08);
-  --glow-blue: rgba(59, 130, 246, 0.25);
+  --border-subtle: rgba(59, 130, 246, 0.14);
+  --glow-blue: rgba(59, 130, 246, 0.28);
 }
 
 body {
   @apply bg-surface text-slate-800 antialiased font-body;
-  background-image: radial-gradient(ellipse at top, rgba(59, 130, 246, 0.06), transparent 60%),
-    radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.04), transparent 50%),
-    linear-gradient(to bottom, var(--surface), #eef2f6);
+  background-image: radial-gradient(ellipse at top, rgba(59, 130, 246, 0.08), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(139, 92, 246, 0.06), transparent 50%),
+    linear-gradient(to bottom, var(--surface), #edf2ff);
   min-height: 100vh;
 }
 
 @layer components {
   .glass-card {
     @apply relative rounded-2xl border border-fintech-border bg-surface-card/80 backdrop-blur-xl shadow-xl;
-    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 
   .glass-card::before {
@@ -44,19 +44,23 @@ body {
   }
 
   .section-title {
-    @apply text-2xl font-display font-bold tracking-tight text-slate-900;
+    @apply text-xl md:text-2xl font-display font-bold tracking-tight;
+    background: linear-gradient(135deg, #1e293b 0%, #3B82F6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   .card-title {
-    @apply text-sm font-semibold tracking-wide text-slate-500 uppercase;
+    @apply text-xs md:text-sm font-semibold tracking-wide text-accent-blue/80 uppercase;
   }
 
   .metric-value {
-    @apply text-2xl font-mono font-semibold tracking-tight text-slate-900;
+    @apply text-sm md:text-lg lg:text-xl font-mono font-semibold tracking-tight text-slate-800 min-w-0 overflow-hidden;
   }
 
   .input-fintech {
-    @apply w-full rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-accent-blue/60 focus:ring-2 focus:ring-accent-blue/15;
+    @apply w-full rounded-xl border border-fintech-border bg-surface-elevated/70 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-accent-blue/60 focus:ring-2 focus:ring-accent-blue/15;
   }
 
   .btn-primary {
@@ -64,7 +68,7 @@ body {
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200/80 bg-white/60 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-white hover:text-slate-900 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-accent-blue/15 bg-accent-blue/[0.05] px-4 py-2.5 text-sm font-semibold text-accent-blue transition-all hover:bg-accent-blue/10 hover:text-accent-blue active:scale-[0.98];
   }
 
   .btn-danger {
@@ -76,19 +80,27 @@ body {
   }
 
   .table-fintech {
-    @apply w-full text-sm;
+    @apply w-full text-xs md:text-sm;
   }
 
   .table-fintech thead th {
-    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500;
+    @apply px-2 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold uppercase tracking-wider text-accent-blue/70;
   }
 
   .table-fintech tbody tr {
-    @apply border-t border-slate-200/60 transition-colors hover:bg-slate-100/50;
+    @apply border-t border-fintech-border transition-colors hover:bg-accent-blue/[0.04];
   }
 
   .table-fintech tbody td {
-    @apply px-4 py-3 text-slate-700;
+    @apply px-2 md:px-4 py-2 md:py-3 text-slate-700;
+  }
+
+  .value-cell {
+    @apply text-right font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[10px] md:text-xs;
+  }
+
+  .value-text {
+    @apply font-mono whitespace-nowrap overflow-hidden text-ellipsis text-[10px] md:text-xs;
   }
 
   .badge-gain {
@@ -100,16 +112,17 @@ body {
   }
 
   .nav-item {
-    @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-slate-100/80 hover:text-slate-800;
+    @apply relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-accent-blue/[0.06] hover:text-accent-blue;
   }
 
   .nav-item-active {
-    @apply bg-gradient-to-r from-accent-blue/10 to-transparent text-slate-900;
+    @apply bg-gradient-to-r from-accent-blue/15 to-transparent text-accent-blue;
   }
 
   .nav-item-active::before {
     content: "";
-    @apply absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-accent-blue shadow-[0_0_12px_rgba(59,130,246,0.6)];
+    @apply absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-accent-blue;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
   }
 }
 
@@ -133,11 +146,11 @@ body {
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.25);
+    background: rgba(59, 130, 246, 0.25);
     border-radius: 3px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.4);
+    background: rgba(59, 130, 246, 0.4);
   }
 }

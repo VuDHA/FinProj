@@ -707,14 +707,14 @@ export function Backtest() {
                       {result.trades.map((trade: any, idx: number) => (
                         <tr key={idx}>
                           <td className="font-mono text-slate-500">{trade.date}</td>
-                          <td className="font-display font-semibold text-slate-900">{trade.symbol}</td>
+                          <td className="font-display font-semibold text-slate-900 whitespace-nowrap">{trade.symbol}</td>
                           <td>
                             <span className={trade.action === "BUY" ? "badge-gain" : "badge-loss"}>
                               {trade.action === "BUY" ? labels.transactions.buy : labels.transactions.sell}
                             </span>
                           </td>
-                          <td className="text-right font-mono">{trade.quantity}</td>
-                          <td className="text-right font-mono">{formatCurrency(trade.price)}</td>
+                          <td className="value-cell" title={String(trade.quantity)}>{trade.quantity}</td>
+                          <td className="value-cell" title={formatCurrency(trade.price)}>{formatCurrency(trade.price)}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -30,7 +30,7 @@ def export_assets(session: Session) -> str:
         latest_snapshot = session.exec(
             select(PriceSnapshot)
             .where(PriceSnapshot.asset_id == a.id)
-            .order_by(PriceSnapshot.date.desc())
+            .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
         ).first()
         writer.writerow({
             "symbol": a.symbol,
@@ -200,7 +200,7 @@ def import_transactions_from_rows(session: Session, rows: List[Dict[str, Any]]) 
             snapshot = session.exec(
                 select(PriceSnapshot)
                 .where(PriceSnapshot.asset_id == asset.id)
-                .order_by(PriceSnapshot.date.desc())
+                .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
             ).first()
             if snapshot and snapshot.price > 0:
                 price = snapshot.price

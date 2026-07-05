@@ -18,6 +18,9 @@ from schemas import (
     AlertRead,
     ArticleListResponse,
     ArticleRead,
+    ArticleSummarizeRequest,
+    ArticleSummarizeResponse,
+    ArticleSummarizeTextRequest,
     DailyBriefResponse,
     NewsSourceRead,
     TrendingResponse,
@@ -27,8 +30,10 @@ from schemas import (
 )
 from services.news.ai import NewsAI
 from services.news.alerts import AlertService
+from services.news.article_ai import ArticleAIService
 from services.news.crawler import NewsCrawlerService
 from services.news.refresh_tracker import RefreshTracker
+from services.news.scraper import ArticleScraper, ArticleScraperError
 from services.news.dictionaries import impact_label, sentiment_label
 from services.news.feed import NewsFeedService
 from services.rag_context import RagContextService
@@ -253,6 +258,85 @@ def ai_summary(
         article_count=len(articles),
         used_ollama=local_settings.AI_PROVIDER == "ollama",
         personalized=bool(rag_context),
+    )
+
+
+@router.post("/summarize", response_model=ArticleSummarizeResponse)
+def summarize_article(
+    payload: ArticleSummarizeRequest,
+    session: Session = Depends(get_session),
+):
+    """Scrape a single article URL and return an AI summary with tags."""
+    try:
+        scraped = ArticleScraper().scrape(payload.url)
+    except ArticleScraperError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    rag = RagContextService(session)
+    language = payload.language or scraped.get("language") or "vi"
+    rag_context = rag.format_context(
+        rag.build_context(
+            title=scraped.get("title") or payload.title,
+            include_user_facts=True,
+            include_similar_articles=False,
+        ),
+        language=language,
+    )
+
+    article = {
+        "title": scraped.get("title") or payload.title,
+        "summary": scraped.get("summary"),
+        "content_text": scraped.get("content_text"),
+        "url": payload.url,
+        "language": language,
+    }
+    ai_service = ArticleAIService(language=language, rag_context=rag_context)
+    result = ai_service.summarize_and_tag(article)
+
+    return ArticleSummarizeResponse(
+        summary=result["summary"],
+        tags=result["tags"],
+        source_url=payload.url,
+        title=result["title"],
+        used_ai=result["used_ai"],
+        partial=bool(scraped.get("partial")),
+    )
+
+
+@router.post("/summarize-text", response_model=ArticleSummarizeResponse)
+def summarize_text(
+    payload: ArticleSummarizeTextRequest,
+    session: Session = Depends(get_session),
+):
+    """Summarize and tag manually provided article text."""
+    language = payload.language or "vi"
+    rag = RagContextService(session)
+    rag_context = rag.format_context(
+        rag.build_context(
+            title=payload.title,
+            include_user_facts=True,
+            include_similar_articles=False,
+        ),
+        language=language,
+    )
+
+    article = {
+        "title": payload.title or "",
+        "summary": payload.content_text[:1200],
+        "content_text": payload.content_text,
+        "url": "",
+        "language": language,
+    }
+    ai_service = ArticleAIService(language=language, rag_context=rag_context)
+    result = ai_service.summarize_and_tag(article)
+
+    return ArticleSummarizeResponse(
+        summary=result["summary"],
+        tags=result["tags"],
+        source_url="",
+        title=result["title"],
+        used_ai=result["used_ai"],
+        partial=False,
     )
 
 

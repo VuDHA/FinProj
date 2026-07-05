@@ -324,7 +324,7 @@ class SmartImportService:
                 snapshot = session.exec(
                     select(PriceSnapshot)
                     .where(PriceSnapshot.asset_id == asset.id)
-                    .order_by(PriceSnapshot.date.desc())
+                    .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
                 ).first()
                 if snapshot and snapshot.price > 0:
                     price = snapshot.price

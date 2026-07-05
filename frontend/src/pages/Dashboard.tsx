@@ -1,19 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   ArrowRight,
   Bell,
   Bot,
+  Check,
+  Copy,
   GitCompare,
   LineChart as LineChartIcon,
   Newspaper,
   Plus,
+  QrCode,
   Receipt,
   RefreshCw,
   Scale,
   TrendingUp,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Link } from "react-router-dom";
 import {
   Area,
@@ -39,6 +43,7 @@ import { InfoTooltip } from "../components/InfoTooltip";
 import { PriceAlertsSection } from "../components/PriceAlertsSection";
 import { SummaryCards } from "../components/SummaryCards";
 import { AnimatedNumber } from "../components/ui/AnimatedNumber";
+import { Value } from "../components/Value";
 import { FintechCard } from "../components/ui/FintechCard";
 import { MiniSparkline } from "../components/ui/MiniSparkline";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -103,6 +108,77 @@ function SectionLink({ to, children }: { to: string; children: React.ReactNode }
       {children}
       <ArrowRight className="w-3.5 h-3.5" />
     </Link>
+  );
+}
+
+function MobileQrCard() {
+  const [url, setUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const envUrl = import.meta.env.VITE_LAN_URL;
+    if (envUrl) {
+      setUrl(`${envUrl}${window.location.pathname}`);
+      return;
+    }
+    const port = window.location.port;
+    API.get("/lan-ip")
+      .then((res) => {
+        const ip = res.data?.ip;
+        if (ip) {
+          setUrl(`http://${ip}:${port}${window.location.pathname}`);
+        } else {
+          setUrl(window.location.href);
+        }
+      })
+      .catch(() => setUrl(window.location.href));
+  }, []);
+
+  const handleCopy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore
+    }
+  };
+
+  if (!url) return null;
+
+  return (
+    <FintechCard delay={0.4}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-accent-emerald/10 text-accent-emerald">
+            <QrCode className="w-4 h-4" />
+          </div>
+          <h3 className="card-title">{labels.dashboard.mobileAccess}</h3>
+        </div>
+        <InfoTooltip content={labels.tooltips.dashboardQrMobile} />
+      </div>
+      <div className="flex flex-col items-center gap-3">
+        <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-sm">
+          <QRCodeSVG value={url} size={128} level="M" includeMargin={false} />
+        </div>
+        <div className="w-full">
+          <div className="text-xs text-slate-500 mb-1">{labels.dashboard.scanQrToOpen}</div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 text-xs font-mono text-slate-700 truncate bg-slate-50 px-2 py-1.5 rounded">
+              {url}
+            </div>
+            <button
+              onClick={handleCopy}
+              className="p-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              title={labels.common.copyLink}
+            >
+              {copied ? <Check className="w-4 h-4 text-accent-emerald" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </div>
+    </FintechCard>
   );
 }
 
@@ -463,10 +539,10 @@ export function Dashboard() {
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="min-w-0 overflow-hidden">
                     <div className="text-xs text-slate-500 mb-0.5">{labels.summary.pnl}</div>
                     <div className={`font-mono font-semibold ${data.total_pnl >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
-                      <AnimatedNumber value={data.total_pnl} formatter={formatCurrency} />
+                      <AnimatedNumber value={data.total_pnl} formatter={formatCurrency} className="block truncate" title={formatCurrency(data.total_pnl)} />
                     </div>
                   </div>
                   <TrendBadge value={data.total_pnl_percent} />
@@ -490,16 +566,16 @@ export function Dashboard() {
                   {topLoser && <TrendBadge value={topLoser.pnl_percent} />}
                 </div>
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-                  <div>
+                  <div className="min-w-0 overflow-hidden">
                     <div className="text-xs text-slate-500 mb-0.5">{labels.summary.totalValue}</div>
                     <div className="font-mono font-semibold text-accent-cyan">
-                      <AnimatedNumber value={data.total_value} formatter={formatCurrency} />
+                      <AnimatedNumber value={data.total_value} formatter={formatCurrency} className="block truncate" title={formatCurrency(data.total_value)} />
                     </div>
                   </div>
-                  <div>
+                  <div className="min-w-0 overflow-hidden">
                     <div className="text-xs text-slate-500 mb-0.5">{labels.summary.stableValue}</div>
                     <div className="font-mono font-semibold text-accent-violet">
-                      <AnimatedNumber value={data.stable_value || 0} formatter={formatCurrency} />
+                      <AnimatedNumber value={data.stable_value || 0} formatter={formatCurrency} className="block truncate" title={formatCurrency(data.stable_value || 0)} />
                     </div>
                   </div>
                 </div>
@@ -591,8 +667,8 @@ export function Dashboard() {
                 <div className="pt-2 border-t border-slate-100">
                   <div className="text-xs text-slate-500">
                     {labels.rebalance.estimatedValue}:{" "}
-                    <span className="font-mono font-semibold text-slate-900">
-                      <AnimatedNumber value={rebalance.data?.total_value || 0} formatter={formatCurrency} />
+                    <span className="value-text font-semibold text-slate-900">
+                      <AnimatedNumber value={rebalance.data?.total_value || 0} formatter={formatCurrency} className="block truncate" title={formatCurrency(rebalance.data?.total_value || 0)} />
                     </span>
                   </div>
                 </div>
@@ -633,9 +709,9 @@ export function Dashboard() {
                 <div className="space-y-2">
                   {goldListItems.slice(0, 5).map((g: any) => (
                     <div key={g.source} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="font-display font-semibold text-slate-900 text-sm">{g.source}</div>
-                        <div className="text-xs text-slate-500">{formatCurrency(g.buy)}</div>
+                      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                        <div className="font-display font-semibold text-slate-900 text-sm whitespace-nowrap">{g.source}</div>
+                        <Value value={g.buy} formatter={formatCurrency} className="value-text text-xs text-slate-500" />
                       </div>
                       <div className="flex items-center gap-2">
                         <MiniSparkline
@@ -645,9 +721,7 @@ export function Dashboard() {
                           height={24}
                           showArea={false}
                         />
-                        <span className="text-xs font-mono font-semibold text-slate-700">
-                          {formatCurrency(g.sell - g.buy)}
-                        </span>
+                        <Value value={g.sell - g.buy} formatter={formatCurrency} className="value-text text-xs font-semibold text-slate-700" />
                       </div>
                     </div>
                   ))}
@@ -659,8 +733,8 @@ export function Dashboard() {
               <div className="space-y-2">
                 {marketListItems.map((q: any) => (
                   <div key={q.symbol} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="font-display font-semibold text-slate-900 text-sm">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                      <div className="font-display font-semibold text-slate-900 text-sm whitespace-nowrap">
                         {q.symbol}
                         {q.isPortfolio && (
                           <span className="ml-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold bg-accent-blue/10 text-accent-blue ring-1 ring-inset ring-accent-blue/20">
@@ -668,7 +742,7 @@ export function Dashboard() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500">{formatCurrency(q.price)}</div>
+                      <Value value={q.price} formatter={formatCurrency} className="value-text text-xs text-slate-500" />
                     </div>
                     <div className="flex items-center gap-2">
                       <MiniSparkline
@@ -953,6 +1027,8 @@ export function Dashboard() {
               </div>
             )}
           </FintechCard>
+
+          <MobileQrCard />
 
         </div>
       </div>

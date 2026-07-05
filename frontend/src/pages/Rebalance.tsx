@@ -142,13 +142,13 @@ export function Rebalance() {
                       {typeLabel(type)}
                     </td>
                     <td className="text-right">
-                      <div className="font-mono text-slate-700">{formatCurrency(currentValue)}</div>
+                      <div className="value-cell text-slate-700" title={formatCurrency(currentValue)}>{formatCurrency(currentValue)}</div>
                       <div className="text-xs text-slate-500">{formatPercent(currentPercent)}</div>
                     </td>
                     <td className="text-right">
                       <input
                         type="number"
-                        className="input-fintech w-24 text-right"
+                        className="input-fintech w-20 md:w-24 text-right"
                         value={getTarget(type)}
                         onChange={(e) => setTargetMap({ ...targetMap, [type]: e.target.value })}
                       />
@@ -217,17 +217,17 @@ export function Rebalance() {
                 {data.trades.map((trade: any) => (
                   <tr key={`${trade.symbol}-${trade.action}`}>
                     <td>
-                      <div className="font-display font-semibold text-slate-900">{trade.symbol}</div>
-                      <span className="text-xs text-slate-500">{trade.name}</span>
+                      <div className="font-display font-semibold text-slate-900 whitespace-nowrap">{trade.symbol}</div>
+                      <span className="text-xs text-slate-500 max-w-[120px] truncate block">{trade.name}</span>
                     </td>
                     <td>
                       <span className={trade.action === "BUY" ? "badge-gain" : "badge-loss"}>
                         {trade.action === "BUY" ? labels.rebalance.buy : labels.rebalance.sell}
                       </span>
                     </td>
-                    <td className="text-right font-mono">{trade.quantity.toFixed(4)}</td>
-                    <td className="text-right font-mono">{formatCurrency(trade.estimated_price)}</td>
-                    <td className="text-right font-mono">{formatCurrency(trade.estimated_value)}</td>
+                    <td className="value-cell" title={trade.quantity.toFixed(4)}>{trade.quantity.toFixed(4)}</td>
+                    <td className="value-cell" title={formatCurrency(trade.estimated_price)}>{formatCurrency(trade.estimated_price)}</td>
+                    <td className="value-cell" title={formatCurrency(trade.estimated_value)}>{formatCurrency(trade.estimated_value)}</td>
                   </tr>
                 ))}
               </tbody>

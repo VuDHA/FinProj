@@ -10,9 +10,9 @@ export default {
       },
       colors: {
         surface: {
-          DEFAULT: "#f8fafc",
-          elevated: "#ffffff",
-          card: "#ffffff",
+          DEFAULT: "#f0f4f9",
+          elevated: "#f8fbff",
+          card: "#f5f9ff",
         },
         accent: {
           cyan: "#22D3EE",
@@ -23,8 +23,8 @@ export default {
           amber: "#FBBF24",
         },
         fintech: {
-          border: "rgba(15, 23, 42, 0.08)",
-          glow: "rgba(59, 130, 246, 0.25)",
+          border: "rgba(59, 130, 246, 0.14)",
+          glow: "rgba(59, 130, 246, 0.28)",
         },
       },
       animation: {

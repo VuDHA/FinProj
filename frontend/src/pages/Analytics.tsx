@@ -27,8 +27,8 @@ import { AiInsightCard } from "../components/AiInsightCard";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { InfoTooltip } from "../components/InfoTooltip";
-import { AnimatedNumber } from "../components/ui/AnimatedNumber";
 import { FintechCard } from "../components/ui/FintechCard";
+import { MetricCard } from "../components/ui/MetricCard";
 import { MiniSparkline } from "../components/ui/MiniSparkline";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
@@ -428,41 +428,40 @@ export function Analytics() {
           </FintechCard>
 
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <FintechCard delay={0.1}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.totalPnl}
-                <InfoTooltip content={labels.tooltips.pnl} />
-              </div>
-              <div className={`metric-value ${totalPnl >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
-                <AnimatedNumber value={totalPnl} formatter={formatCurrency} />
-              </div>
+            <MetricCard
+              label={labels.analytics.totalPnl}
+              tooltip={labels.tooltips.pnl}
+              value={totalPnl}
+              formatter={formatCurrency}
+              valueClassName={totalPnl >= 0 ? "text-accent-emerald" : "text-accent-rose"}
+              delay={0.1}
+            >
               <div className="mt-2">
                 <TrendBadge value={totalPnlPercent} />
               </div>
-            </FintechCard>
+            </MetricCard>
             {data.stable_value > 0 && (
-              <FintechCard delay={0.12}>
-                <div className="card-title mb-1 inline-flex items-center">
-                  <Landmark className="w-4 h-4 mr-1.5 text-accent-violet" />
-                  {labels.summary.stableValue}
-                  <InfoTooltip content={labels.tooltips.stableValue} />
-                </div>
-                <div className="metric-value text-accent-violet">
-                  <AnimatedNumber value={data.stable_value} formatter={formatCurrency} />
-                </div>
-                {/* <div className="mt-2 text-xs text-slate-500">
-                  {labels.summary.totalValue}: {formatCurrency(data.total_value)}
-                </div> */}
-              </FintechCard>
+              <MetricCard
+                label={
+                  <>
+                    <Landmark className="w-4 h-4 mr-1.5 text-accent-violet" />
+                    {labels.summary.stableValue}
+                  </>
+                }
+                tooltip={labels.tooltips.stableValue}
+                value={data.stable_value}
+                formatter={formatCurrency}
+                valueClassName="text-accent-violet"
+                delay={0.12}
+              />
             )}
-            <FintechCard delay={0.15}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.topGainer}
-                <InfoTooltip content={labels.tooltips.analyticsTopGainer} />
-              </div>
-              <div className="metric-value text-accent-cyan">
-                {data.top_performers[0]?.symbol ?? "-"}
-              </div>
+            <MetricCard
+              label={labels.analytics.topGainer}
+              tooltip={labels.tooltips.analyticsTopGainer}
+              value={data.top_performers[0]?.symbol ?? "-"}
+              valueClassName="text-accent-cyan"
+              delay={0.15}
+            >
               <div className="mt-2">
                 {data.top_performers[0] ? (
                   <TrendBadge value={data.top_performers[0].pnl_percent} />
@@ -470,15 +469,14 @@ export function Analytics() {
                   <span className="text-xs text-slate-500">-</span>
                 )}
               </div>
-            </FintechCard>
-            <FintechCard delay={0.2}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.topLoser}
-                <InfoTooltip content={labels.tooltips.analyticsTopLoser} />
-              </div>
-              <div className="metric-value text-accent-rose">
-                {data.bottom_performers[0]?.symbol ?? "-"}
-              </div>
+            </MetricCard>
+            <MetricCard
+              label={labels.analytics.topLoser}
+              tooltip={labels.tooltips.analyticsTopLoser}
+              value={data.bottom_performers[0]?.symbol ?? "-"}
+              valueClassName="text-accent-rose"
+              delay={0.2}
+            >
               <div className="mt-2">
                 {data.bottom_performers[0] ? (
                   <TrendBadge value={data.bottom_performers[0].pnl_percent} />
@@ -486,19 +484,19 @@ export function Analytics() {
                   <span className="text-xs text-slate-500">-</span>
                 )}
               </div>
-            </FintechCard>
-            <FintechCard delay={0.22}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.totalIncome}
-                <InfoTooltip content={labels.tooltips.analyticsTotalIncome} />
-              </div>
-              <div className="metric-value text-accent-emerald">
-                <AnimatedNumber value={data.total_income || 0} formatter={formatCurrency} />
-              </div>
+            </MetricCard>
+            <MetricCard
+              label={labels.analytics.totalIncome}
+              tooltip={labels.tooltips.analyticsTotalIncome}
+              value={data.total_income || 0}
+              formatter={formatCurrency}
+              valueClassName="text-accent-emerald"
+              delay={0.22}
+            >
               <div className="mt-2 text-xs text-slate-500">
                 {(data.income || []).map((inc: any) => `${inc.type}: ${formatCurrency(inc.total)}`).join(" | ")}
               </div>
-            </FintechCard>
+            </MetricCard>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -710,8 +708,8 @@ export function Analytics() {
                     <tbody>
                       {pagedAssets.map((item) => (
                         <tr key={item.asset_id}>
-                          <td className="font-display font-semibold text-slate-900">{item.symbol}</td>
-                          <td className="text-slate-700">{item.name}</td>
+                          <td className="font-display font-semibold text-slate-900 whitespace-nowrap">{item.symbol}</td>
+                          <td className="text-slate-700 max-w-[140px] truncate">{item.name}</td>
                           <td>
                             <span
                               className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${typeBadgeClass(
@@ -721,17 +719,18 @@ export function Analytics() {
                               {labels.assetTypes[item.type as keyof typeof labels.assetTypes] || item.type}
                             </span>
                           </td>
-                          <td className="text-right font-mono">{formatNumber(item.quantity)}</td>
-                          <td className="text-right font-mono">{formatCurrency(item.latest_price)}</td>
-                          <td className="text-right font-mono">{formatCurrency(item.current_value)}</td>
-                          <td className="text-right font-mono">{formatCurrency(item.cost)}</td>
+                          <td className="value-cell" title={formatNumber(item.quantity)}>{formatNumber(item.quantity)}</td>
+                          <td className="value-cell" title={formatCurrency(item.latest_price)}>{formatCurrency(item.latest_price)}</td>
+                          <td className="value-cell" title={formatCurrency(item.current_value)}>{formatCurrency(item.current_value)}</td>
+                          <td className="value-cell" title={formatCurrency(item.cost)}>{formatCurrency(item.cost)}</td>
                           <td
-                            className={`text-right font-mono ${!isMarketType(item.type)
+                            className={`value-cell ${!isMarketType(item.type)
                               ? "text-slate-400"
                               : item.pnl >= 0
                                 ? "text-accent-emerald"
                                 : "text-accent-rose"
                               }`}
+                            title={isMarketType(item.type) ? formatCurrency(item.pnl) : ""}
                           >
                             {isMarketType(item.type) ? formatCurrency(item.pnl) : "-"}
                           </td>
@@ -781,42 +780,34 @@ export function Analytics() {
           </FintechCard>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <FintechCard delay={0.42}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.volatility}
-                <InfoTooltip content={labels.tooltips.analyticsVolatility} />
-              </div>
-              <div className="metric-value text-accent-blue">
-                {risk.data?.volatility != null ? `${(risk.data.volatility * 100).toFixed(2)}%` : "—"}
-              </div>
-            </FintechCard>
-            <FintechCard delay={0.44}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.sharpeRatio}
-                <InfoTooltip content={labels.tooltips.analyticsSharpeRatio} />
-              </div>
-              <div className="metric-value text-accent-violet">
-                {risk.data?.sharpe_ratio != null ? risk.data.sharpe_ratio.toFixed(2) : "—"}
-              </div>
-            </FintechCard>
-            <FintechCard delay={0.46}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.maxDrawdown}
-                <InfoTooltip content={labels.tooltips.analyticsMaxDrawdown} />
-              </div>
-              <div className="metric-value text-accent-rose">
-                {risk.data?.max_drawdown_percent != null ? `${risk.data.max_drawdown_percent.toFixed(2)}%` : "—"}
-              </div>
-            </FintechCard>
-            <FintechCard delay={0.48}>
-              <div className="card-title mb-1 inline-flex items-center">
-                {labels.analytics.beta}
-                <InfoTooltip content={labels.tooltips.analyticsBeta} />
-              </div>
-              <div className="metric-value text-accent-cyan">
-                {risk.data?.beta != null ? risk.data.beta.toFixed(2) : "—"}
-              </div>
-            </FintechCard>
+            <MetricCard
+              label={labels.analytics.volatility}
+              tooltip={labels.tooltips.analyticsVolatility}
+              value={risk.data?.volatility != null ? `${(risk.data.volatility * 100).toFixed(2)}%` : "—"}
+              valueClassName="text-accent-blue"
+              delay={0.42}
+            />
+            <MetricCard
+              label={labels.analytics.sharpeRatio}
+              tooltip={labels.tooltips.analyticsSharpeRatio}
+              value={risk.data?.sharpe_ratio != null ? risk.data.sharpe_ratio.toFixed(2) : "—"}
+              valueClassName="text-accent-violet"
+              delay={0.44}
+            />
+            <MetricCard
+              label={labels.analytics.maxDrawdown}
+              tooltip={labels.tooltips.analyticsMaxDrawdown}
+              value={risk.data?.max_drawdown_percent != null ? `${risk.data.max_drawdown_percent.toFixed(2)}%` : "—"}
+              valueClassName="text-accent-rose"
+              delay={0.46}
+            />
+            <MetricCard
+              label={labels.analytics.beta}
+              tooltip={labels.tooltips.analyticsBeta}
+              value={risk.data?.beta != null ? risk.data.beta.toFixed(2) : "—"}
+              valueClassName="text-accent-cyan"
+              delay={0.48}
+            />
           </div>
 
           <FintechCard delay={0.45}>

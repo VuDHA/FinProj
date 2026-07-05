@@ -5,6 +5,7 @@ interface AnimatedNumberProps {
   formatter?: (n: number) => string;
   duration?: number;
   className?: string;
+  title?: string;
 }
 
 export function AnimatedNumber({
@@ -12,6 +13,7 @@ export function AnimatedNumber({
   formatter = (n) => n.toLocaleString("vi-VN"),
   duration = 1200,
   className = "",
+  title,
 }: AnimatedNumberProps) {
   const [display, setDisplay] = useState(0);
   const startRef = useRef<number | null>(null);
@@ -39,5 +41,9 @@ export function AnimatedNumber({
     return () => cancelAnimationFrame(raf);
   }, [value, duration]);
 
-  return <span className={className}>{formatter(display)}</span>;
+  return (
+    <span className={className} title={title}>
+      {formatter(display)}
+    </span>
+  );
 }

@@ -109,6 +109,17 @@ class BatchAIService:
         """
         return self._generate_with_fallback(prompt, max_tokens, task_name)
 
+    def generate_text(
+        self,
+        prompt: str,
+        max_tokens: int = 2048,
+        task_name: str = "generate_text",
+    ) -> str:
+        """Generate plain text using the configured AI provider."""
+        return self._generate_with_fallback(
+            prompt, max_tokens, task_name, response_mime_type="text/plain"
+        )
+
     @staticmethod
     def _extract_json(text: str) -> Optional[str]:
         """Find the first JSON object or array in a string."""

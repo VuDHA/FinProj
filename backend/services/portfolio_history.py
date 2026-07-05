@@ -53,7 +53,7 @@ class PortfolioHistoryService:
             snaps = self.session.exec(
                 select(PriceSnapshot)
                 .where(PriceSnapshot.asset_id == asset.id)
-                .order_by(PriceSnapshot.date.asc())
+                .order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
             ).all()
             asset_snapshots[asset.id] = {s.date: s.price for s in snaps}
 
