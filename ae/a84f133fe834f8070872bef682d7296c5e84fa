@@ -1,0 +1,213 @@
+frontend/src/pages/Assets.tsx
+  s_056723af10cefc::t_761f2f13739927 9
+frontend/src/pages/Analytics.tsx
+  s_056723af10cefc::t_f68db7c7eb3a69 31
+backend/services/news/scraper.py
+  s_779a9ad79e3b37::t_4819e2eeced4ef 1,3,23-27,30-31,33-42,44,46,82-88,91-92,95-99,103-116,128,139-147,154-155,158-200,227-232,246-252,279
+  s_7bc587e02e094c::t_892fdc334ffaf2 2,4-22,28-29,32,43,45,47-81,89-90,93-94,100-102,117-126,135-138,148-153,156-157,226,233-245,253-278,280-293
+  s_779a9ad79e3b37::t_6a6d7553735779 127,129-134
+  s_779a9ad79e3b37::t_a0a64a2ee639f8 201-225
+frontend/package.json
+  s_4e15362f9c5bfb::t_b9adfd5c9561a9 18
+frontend/src/vite-env.d.ts
+  s_4e15362f9c5bfb::t_36a9433911c94e 2-5
+backend/services/news/article_ai.py
+  s_7bc587e02e094c::t_4e83582f20178d 1-2,4,6-32,35-40,42-60,62-72,79-131,133-165
+  s_7bc587e02e094c::t_7b4588fde1b4bc 132
+  s_7bc587e02e094c::t_5e3cac21bf18e5 3
+  s_7bc587e02e094c::t_e77cb6ee6d659c 73-78
+  s_7bc587e02e094c::t_25403f7d0c5453 61
+  s_7bc587e02e094c::t_103b12c223a2b6 33
+  s_768755cea9db9c::t_9fc08c33e6d294 34,41
+  s_7bc587e02e094c::t_ce71006fc6086c 5
+start.ps1
+  s_4e15362f9c5bfb::t_98d730bc855a6a 441-442,445
+  s_4e15362f9c5bfb::t_ee2584b003dd82 406,413,415,417
+  s_4e15362f9c5bfb::t_2cd6be1f805858 386-390
+  s_4e15362f9c5bfb::t_28a0ece85a9296 408,410
+  s_4e15362f9c5bfb::t_6bf432f5003609 443-444
+  s_b42aaccce97650::t_bba9ed927a02ab 102-110
+  s_4e15362f9c5bfb::t_c68283c781bc6f 101,111-123
+  s_4e15362f9c5bfb::t_13dec51e57c37f 407,409,411
+frontend/src/components/ArticleSummarizeModal.tsx
+  s_7bc587e02e094c::t_946e6ce5d531fc 65
+  s_779a9ad79e3b37::t_7183c6c56578d8 137-142
+  s_7bc587e02e094c::t_64b27c965eff52 90
+  s_699b72f122c06c::t_98bbff9ed866af 4-10,23-24,40-46,48,79,93-110
+  s_7bc587e02e094c::t_9fd8d7dcdd5ae6 1,21-22,26-31
+  s_7bc587e02e094c::t_d3a61c52b240a2 38-39
+  s_7bc587e02e094c::t_d7900237e0bcc6 2-3,11-20,25,32-37,47,49-64,66-78,80-89,91-92,111-136,143-160
+frontend/src/components/FormattedNumberInput.tsx
+  s_d7c0c61fa4de1e::t_6b2a470ef0ca3a 2-10,15-17,22,27,29,46,48-58,63-64,67-68,77,80,87-90,92-101
+  s_d7c0c61fa4de1e::t_a83789927492c2 74
+  s_d7c0c61fa4de1e::t_fa2d1bb0538ed8 1,12,18-21,23-26,28,30-45,47,59-62,65-66,69-73,75-76,78-79,81-86,91
+  s_d7c0c61fa4de1e::t_0354142db2c682 11,13-14
+frontend/src/pages/Transactions.tsx
+  s_3562eeb070f969::t_420c4edf9baaa8 9
+backend/api/news.py
+  s_7bc587e02e094c::t_0ede7452aa9634 21-23,33,36
+backend/tests/test_news_api.py
+  s_7bc587e02e094c::t_790f30d11b77e9 2
+frontend/src/components/SymbolDetailModal.tsx
+  s_d7c0c61fa4de1e::t_5567d54be19d0a 1
+  s_d7c0c61fa4de1e::t_59c3b55111e633 11,13,16
+  s_056723af10cefc::t_f515f49d57d1f2 227,239,259,266,273,278,313
+  s_d7c0c61fa4de1e::t_778544b15a6eb2 163,165,170-177,186,194-198,221-223,228,235,237-238,240-241,257-258,260-265,267-272,274-277,314,339-340
+  s_d7c0c61fa4de1e::t_f67d8a4431ad1d 38-54
+frontend/tailwind.config.js
+  s_056723af10cefc::t_50c438e8419baa 13-15,26-27
+frontend/src/components/ui/FintechCard.tsx
+  s_056723af10cefc::t_0de726d597f783 24
+frontend/src/pages/Market.tsx
+  s_056723af10cefc::t_adefa7b97ba826 169
+  s_056723af10cefc::t_116b0e9da20511 91-94,101-103
+  s_d7c0c61fa4de1e::t_1eed8fa08f7fbf 137-139,144-145,150-152,157-158
+  s_3562eeb070f969::t_e2174ccc45cf55 3
+  s_056723af10cefc::t_571584118d40ea 87
+  s_056723af10cefc::t_d442fa7169f181 10,18
+  s_056723af10cefc::t_ab1d3d8732639b 85-86
+  s_056723af10cefc::t_0133d5577c8c4c 28-32
+  s_056723af10cefc::t_caeeb39913b96b 170-172
+  s_056723af10cefc::t_022601fce87c1b 88-90
+  s_056723af10cefc::t_5bc801363f1688 168
+  s_056723af10cefc::t_3f87ce328f3958 132-136,140-143,146-149,153-156,159-167
+frontend/src/api/symbol.ts
+  s_d7c0c61fa4de1e::t_0ab383fe89a7b7 1-60
+frontend/src/components/Value.tsx
+  s_056723af10cefc::t_69cb4d7ef68ca2 1-20
+frontend/src/components/ui/AnimatedNumber.tsx
+  s_056723af10cefc::t_be5dcfb3a43a4d 8,16
+  s_056723af10cefc::t_4bc618e66b6eff 44-48
+frontend/src/index.css
+  s_056723af10cefc::t_e22619bcb95baa 6-8,15-16
+  s_056723af10cefc::t_907e777176d591 59
+  s_056723af10cefc::t_a559b4ab9a3727 47,55,83,87,95-98,100-102
+  s_056723af10cefc::t_e5a8e3bd45834f 149,154
+  s_056723af10cefc::t_71c81324dbf937 99,103
+  s_056723af10cefc::t_dfb77b669d20da 124-125
+  s_056723af10cefc::t_a892f83621a2fd 21-23,30,48-51,63,71,91,115,119,156
+frontend/src/components/ErrorMessage.tsx
+  s_056723af10cefc::t_fe52bb8c2e1248 18
+backend/main.py
+  s_b42aaccce97650::t_cbe93f305c13e3 2
+backend/services/ai_insights/symbol.py
+  s_d7c0c61fa4de1e::t_5d1f2000fbcc36 1-98
+frontend/src/pages/News.tsx
+  s_7bc587e02e094c::t_ca6b87ca140d42 49
+  s_768755cea9db9c::t_95469e12de065a 32,45-47
+  s_768755cea9db9c::t_1397282eb3e36b 12,15
+frontend/src/pages/Dashboard.tsx
+  s_b42aaccce97650::t_08e3412b44d63b 8,14,20
+  s_4e15362f9c5bfb::t_618e4c420f276f 2
+  s_4e15362f9c5bfb::t_0d39b085368c90 9,46
+backend/api/prices.py
+  s_d7c0c61fa4de1e::t_ffa85b9f84ee0a 10,12
+frontend/vite.config.ts
+  s_4e15362f9c5bfb::t_1f0a3e7953ae98 7,9
+frontend/src/components/ui/MetricCard.tsx
+  s_056723af10cefc::t_6a78b4b0e69aaa 1-53
+backend/services/csv_io.py
+  s_5aff32c4f36735::t_c0591fec7716d9 33,203
+backend/services/portfolio_history.py
+  s_5aff32c4f36735::t_de4f5a7702eb51 56
+backend/services/smart_import.py
+  s_5aff32c4f36735::t_049fb67722e3d1 327
+frontend/package-lock.json
+  s_3a6fc3ed7ead74::t_6d41596975f0e2 17,2705-2713
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aea84f133fe834f8070872bef682d7296c5e84fa",
+  "prompts": {},
+  "sessions": {
+    "s_056723af10cefc": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "70906365-889a-413d-9356-aa81ddf39a5e",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_3562eeb070f969": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "cf4853f3-f749-4f2c-a1da-410b583cfbd8",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_3a6fc3ed7ead74": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "cba925e7-1213-4e85-9416-ca261db25842",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_4e15362f9c5bfb": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "fd84dbf3-5c6f-480d-a616-1b2d7df192d3",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_5aff32c4f36735": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "4b0a2ea7-a06e-4e3c-839c-2c2eaf0a40a9",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_699b72f122c06c": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "ebca544d-d081-49c5-a866-d8e14f1b5542",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_768755cea9db9c": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "8b15473a-de74-415d-8eec-9e1cdc93c669",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_779a9ad79e3b37": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "70dd09c6-97fc-467e-90a6-f1e11b4335b5",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_7bc587e02e094c": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "5eaaba71-d6aa-456e-92b7-01d41d5f0510",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_b42aaccce97650": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "e95b8d53-1966-4495-b49a-1450e64b2321",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_d7c0c61fa4de1e": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "9db3b16e-d22d-415b-9f34-6b85201ab1c4",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
