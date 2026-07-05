@@ -22,6 +22,7 @@ import { HelpModal } from "./HelpModal";
 import { InfoTooltip } from "./InfoTooltip";
 import { OnboardingTour, TourStep } from "./OnboardingTour";
 import { PriceAlertsBell } from "./PriceAlertsBell";
+import { ThemeSelector } from "./ThemeSelector";
 
 const nav = [
   { path: "/", label: labels.nav.dashboard, icon: BarChart3, tour: "dashboard" },
@@ -68,17 +69,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row font-body">
-      <aside className="w-full md:w-64 md:min-h-screen flex-shrink-0 border-b md:border-b-0 md:border-r border-fintech-border bg-surface-elevated/80 backdrop-blur-xl p-4">
+      <aside className="w-full md:w-64 md:min-h-screen flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-fintech-border bg-surface-elevated/80 backdrop-blur-xl p-4">
         <div className="flex items-center gap-3 mb-8 px-2">
           <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-accent-blue to-accent-violet shadow-lg shadow-accent-blue/30">
-            <Wallet className="w-5 h-5 text-white" />
+            <Wallet className="w-5 h-5 text-theme-inverse" />
             <div className="absolute inset-0 rounded-xl bg-accent-cyan/20 blur-md" />
           </div>
           <div>
-            <h1 className="font-display font-bold text-lg text-slate-900 tracking-tight">
+            <h1 className="font-display font-bold text-lg text-theme tracking-tight">
               {labels.app.shortTitle}
             </h1>
-            <p className="text-[10px] font-medium uppercase tracking-widest text-slate-500">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-theme-muted">
               {labels.app.subtitle}
             </p>
           </div>
@@ -100,7 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   data-tour={item.tour}
                   className={`nav-item ${active ? "nav-item-active" : ""}`}
                 >
-                  <Icon className={`w-5 h-5 ${active ? "text-accent-blue" : "text-slate-500"}`} />
+                  <Icon className={`w-5 h-5 ${active ? "text-accent-blue" : "text-theme-muted"}`} />
                   <span>{item.label}</span>
                   {active && (
                     <motion.div
@@ -115,10 +116,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
+        <div className="px-2 mt-4 md:mt-0">
+          <ThemeSelector />
+        </div>
+
         <div className="mt-auto pt-8 px-2 hidden md:block">
           <button
             onClick={() => setShowTour(true)}
-            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-accent-blue/[0.06] hover:text-accent-blue"
+            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-theme-muted transition-all hover:bg-accent-blue/[0.06] hover:text-accent-blue"
           >
             <HelpCircle className="w-4 h-4" />
             {labels.onboarding.startTour}
@@ -128,7 +133,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </button>
           <button
             onClick={() => setShowHelp(true)}
-            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all hover:bg-accent-blue/[0.06] hover:text-accent-blue mt-1"
+            className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-theme-muted transition-all hover:bg-accent-blue/[0.06] hover:text-accent-blue mt-1"
           >
             <BookOpen className="w-4 h-4" />
             {labels.guide.title}
@@ -137,8 +142,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </span>
           </button>
           <div className="rounded-xl border border-fintech-border bg-surface-card/80 p-3 mt-2">
-            <p className="text-xs text-slate-500 mb-1">Phiên bản</p>
-            <p className="text-sm font-mono font-medium text-slate-700">v2.0 Fintech</p>
+            <p className="text-xs text-theme-muted mb-1">Phiên bản</p>
+            <p className="text-sm font-mono font-medium text-theme-muted">v2.0 Fintech</p>
           </div>
         </div>
       </aside>

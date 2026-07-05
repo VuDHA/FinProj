@@ -24,15 +24,15 @@ import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { TrendBadge } from "../components/ui/TrendBadge";
 import { useAiQueue } from "../contexts/AiQueueContext";
+import { useTheme } from "../contexts/ThemeContext";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
-
-const COLORS = ["#22D3EE", "#34D399", "#FBBF24", "#FB7185", "#8B5CF6", "#3B82F6"];
 
 export function Backtest() {
   const today = new Date().toISOString().split("T")[0];
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const { isBusy, runAi } = useAiQueue();
+  const { theme } = useTheme();
 
   type Position = { symbol: string; price: string; quantity: string; ratio: string };
   const [form, setForm] = usePersistentState<{
@@ -324,7 +324,7 @@ export function Backtest() {
                     }));
                   }}
                   disabled={form.positions.length === 0}
-                  className="text-xs text-indigo-600 hover:text-indigo-700 disabled:text-slate-400"
+                  className="text-xs text-accent-blue hover:text-accent-violet disabled:text-slate-400"
                 >
                   {labels.backtest.equalize}
                 </button>
@@ -425,7 +425,7 @@ export function Backtest() {
                   positions: [...prev.positions, { symbol: "", price: "", quantity: "", ratio: "" }],
                 }))
               }
-              className="mt-3 text-sm text-indigo-600 hover:text-indigo-700"
+              className="mt-3 text-sm text-accent-blue hover:text-accent-violet"
             >
               + {labels.backtest.addAsset}
             </button>
@@ -447,7 +447,7 @@ export function Backtest() {
                         stroke="none"
                       >
                         {allocationPieData.map((_, i) => (
-                          <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                          <Cell key={`cell-${i}`} fill={theme.chartColors[i % theme.chartColors.length]} />
                         ))}
                       </Pie>
                       <Tooltip
@@ -469,7 +469,7 @@ export function Backtest() {
                   <div key={entry.name} className="flex items-center gap-1.5 text-xs text-slate-500">
                     <span
                       className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                      style={{ backgroundColor: theme.chartColors[i % theme.chartColors.length] }}
                     />
                     {entry.name} {hasRatios ? `${entry.value}%` : formatCurrency(entry.value)}
                   </div>
@@ -509,14 +509,14 @@ export function Backtest() {
                 <button
                   type="button"
                   onClick={() => setStressMode(false)}
-                  className={`text-xs px-2.5 py-1 rounded-md ${!stressMode ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:text-slate-700"}`}
+                  className={`text-xs px-2.5 py-1 rounded-md ${!stressMode ? "bg-accent-blue/10 text-accent-blue" : "text-slate-500 hover:text-slate-700"}`}
                 >
                   Tạo kịch bản
                 </button>
                 <button
                   type="button"
                   onClick={() => setStressMode(true)}
-                  className={`text-xs px-2.5 py-1 rounded-md ${stressMode ? "bg-indigo-100 text-indigo-700" : "text-slate-500 hover:text-slate-700"}`}
+                  className={`text-xs px-2.5 py-1 rounded-md ${stressMode ? "bg-accent-blue/10 text-accent-blue" : "text-slate-500 hover:text-slate-700"}`}
                 >
                   Stress / What-if
                 </button>
@@ -613,7 +613,7 @@ export function Backtest() {
 
             {result.warnings && result.warnings.length > 0 && (
               <FintechCard delay={0.12}>
-                <h3 className="card-title mb-2 text-amber-300">{labels.backtest.warnings}</h3>
+                <h3 className="card-title mb-2 text-accent-amber">{labels.backtest.warnings}</h3>
                 <ul className="list-disc list-inside text-sm text-slate-300 space-y-1">
                   {result.warnings.map((warning: string, idx: number) => (
                     <li key={idx}>{warning}</li>
@@ -630,11 +630,11 @@ export function Backtest() {
                 </h3>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: result.total_return >= 0 ? "#34D399" : "#FB7185" }} />
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: result.total_return >= 0 ? "var(--accent-emerald)" : "var(--accent-rose)" }} />
                     {labels.backtest.equityCurve}
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span className="w-2 h-2 rounded-full bg-accent-amber" />
                     {labels.dashboard.benchmark}
                   </div>
                   <TrendBadge value={result.total_return_percent} />
@@ -646,13 +646,13 @@ export function Backtest() {
                     <AreaChart data={chartData}>
                       <defs>
                         <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={result.total_return >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0.3} />
-                          <stop offset="100%" stopColor={result.total_return >= 0 ? "#34D399" : "#FB7185"} stopOpacity={0} />
+                          <stop offset="0%" stopColor={result.total_return >= 0 ? "var(--accent-emerald)" : "var(--accent-rose)"} stopOpacity={0.3} />
+                          <stop offset="100%" stopColor={result.total_return >= 0 ? "var(--accent-emerald)" : "var(--accent-rose)"} stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tickFormatter={(v: number) => formatCurrency(v)} tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--fintech-border)" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={(v: number) => formatCurrency(v)} tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip
                         contentStyle={chartTooltipStyle}
                         formatter={(v: number, name: string) => [
@@ -663,17 +663,17 @@ export function Backtest() {
                       <Area
                         type="monotone"
                         dataKey="portfolio"
-                        stroke={result.total_return >= 0 ? "#34D399" : "#FB7185"}
+                        stroke={result.total_return >= 0 ? "var(--accent-emerald)" : "var(--accent-rose)"}
                         strokeWidth={2.5}
                         fill="url(#equityGradient)"
                         dot={false}
-                        activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2 }}
+                        activeDot={{ r: 5, stroke: "var(--text-inverse)", strokeWidth: 2 }}
                         animationDuration={1500}
                       />
                       <Line
                         type="monotone"
                         dataKey="benchmark"
-                        stroke="#FBBF24"
+                        stroke="var(--accent-amber)"
                         strokeWidth={2}
                         dot={false}
                         animationDuration={1500}

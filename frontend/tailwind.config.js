@@ -10,21 +10,31 @@ export default {
       },
       colors: {
         surface: {
-          DEFAULT: "#f0f4f9",
-          elevated: "#f8fbff",
-          card: "#f5f9ff",
+          DEFAULT: "rgb(var(--surface-rgb) / <alpha-value>)",
+          elevated: "rgb(var(--surface-elevated-rgb) / <alpha-value>)",
+          card: "rgb(var(--surface-card-rgb) / <alpha-value>)",
         },
         accent: {
-          cyan: "#22D3EE",
-          blue: "#3B82F6",
-          violet: "#8B5CF6",
-          emerald: "#34D399",
-          rose: "#FB7185",
-          amber: "#FBBF24",
+          cyan: "rgb(var(--accent-cyan-rgb) / <alpha-value>)",
+          blue: "rgb(var(--accent-blue-rgb) / <alpha-value>)",
+          violet: "rgb(var(--accent-violet-rgb) / <alpha-value>)",
+          emerald: "rgb(var(--accent-emerald-rgb) / <alpha-value>)",
+          rose: "rgb(var(--accent-rose-rgb) / <alpha-value>)",
+          amber: "rgb(var(--accent-amber-rgb) / <alpha-value>)",
         },
         fintech: {
-          border: "rgba(59, 130, 246, 0.14)",
-          glow: "rgba(59, 130, 246, 0.28)",
+          border: "rgb(var(--fintech-border-rgb) / <alpha-value>)",
+          glow: "rgb(var(--fintech-glow-rgb) / <alpha-value>)",
+        },
+        theme: {
+          DEFAULT: "rgb(var(--text-primary-rgb) / <alpha-value>)",
+          muted: "rgb(var(--text-muted-rgb) / <alpha-value>)",
+          inverse: "rgb(var(--text-inverse-rgb) / <alpha-value>)",
+          bg: {
+            DEFAULT: "rgb(var(--bg-primary-rgb) / <alpha-value>)",
+            muted: "rgb(var(--bg-secondary-rgb) / <alpha-value>)",
+          },
+          border: "rgb(var(--border-base-rgb) / <alpha-value>)",
         },
       },
       animation: {

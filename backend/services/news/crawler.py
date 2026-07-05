@@ -128,7 +128,7 @@ class NewsCrawlerService:
         if adapter is None:
             print(f"[news:crawler] unknown source: {code}")
             if progress is not None:
-                progress.add_error(f"unknown source: {code}")
+                progress.add_error(f"Không rõ nguồn: {code}")
             return 0
 
         source = self._get_or_create_source(adapter)
@@ -136,7 +136,7 @@ class NewsCrawlerService:
             return 0
 
         if progress is not None:
-            progress.update(current_source=code, message=f"Fetching {code}...")
+            progress.update(current_source=code, message=f"Đang lấy tin từ {code}...")
 
         try:
             raw_articles = adapter.fetch()
@@ -159,7 +159,7 @@ class NewsCrawlerService:
         if progress is not None:
             progress.update(
                 processed=progress.processed + len(raw_articles),
-                message=f"Processing {len(new_articles)} new articles from {code}...",
+                message=f"Đang xử lý {len(new_articles)} tin mới từ {code}...",
             )
 
         processed = self.processor.process_many(new_articles)
@@ -184,7 +184,7 @@ class NewsCrawlerService:
             progress.update(
                 new_articles=progress.new_articles + new_count,
                 results={**progress.results, code: new_count},
-                message=f"{code}: +{new_count} new articles",
+                message=f"{code}: +{new_count} tin mới",
             )
         return new_count
 

@@ -408,10 +408,30 @@ export function News() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<Error | null>(null);
 
+  useEffect(() => {
+    if (!isRefreshing && refreshProgress) {
+      const id = setTimeout(() => setRefreshProgress(null), 2000);
+      return () => clearTimeout(id);
+    }
+  }, [isRefreshing, refreshProgress]);
+
   const handleRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
-    setRefreshProgress(null);
+    setRefreshProgress({
+      id: "",
+      source_code: null,
+      status: "running",
+      total_sources: 0,
+      current_source_index: 0,
+      current_source: "",
+      processed: 0,
+      new_articles: 0,
+      errors: [],
+      results: {},
+      alerts_generated: 0,
+      message: labels.news.refreshing,
+    });
     setRefreshError(null);
 
     const controller = new AbortController();
@@ -442,7 +462,6 @@ export function News() {
     } finally {
       clearTimeout(timeoutId);
       setIsRefreshing(false);
-      setRefreshProgress(null);
     }
   };
 
@@ -642,7 +661,7 @@ export function News() {
         </div>
       </SectionHeader>
 
-      {isRefreshing && refreshProgress && (
+      {refreshProgress && (
         <div className="w-full space-y-1">
           <div className="flex items-center justify-between text-xs text-slate-600">
             <span className="inline-flex items-center gap-1.5">
@@ -650,7 +669,9 @@ export function News() {
               {refreshProgress.message || labels.news.refreshing}
             </span>
             <span>
-              {refreshProgress.current_source_index}/{refreshProgress.total_sources}
+              {refreshProgress.total_sources > 0
+                ? `${labels.news.source} ${refreshProgress.current_source_index}/${refreshProgress.total_sources}`
+                : ""}
             </span>
           </div>
           <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
@@ -665,9 +686,7 @@ export function News() {
             />
           </div>
           <p className="text-xs text-slate-500">
-            {labels.news.refreshProgress
-              ? `${labels.news.refreshProgress}: ${refreshProgress.new_articles} tin mới`
-              : `${refreshProgress.new_articles} tin mới`}
+            {refreshProgress.new_articles} tin mới
           </p>
         </div>
       )}

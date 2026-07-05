@@ -35,6 +35,7 @@ import { TrendBadge } from "../components/ui/TrendBadge";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
+import { useTheme } from "../contexts/ThemeContext";
 import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
 
 const MAX_SYMBOLS = 8;
@@ -97,17 +98,6 @@ function buildSymbolMap(symbols: CompareSymbol[]) {
   return map;
 }
 
-const COLORS = [
-  "#6366f1",
-  "#ec4899",
-  "#06b6d4",
-  "#f59e0b",
-  "#10b981",
-  "#8b5cf6",
-  "#ef4444",
-  "#14b8a6",
-];
-
 export function Compare() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -122,6 +112,7 @@ export function Compare() {
   const [chartFillSymbol, setChartFillSymbol] = useState<string>("");
   const [fillLoading, setFillLoading] = useState(false);
   const [fillResult, setFillResult] = useState<string | null>(null);
+  const { theme } = useTheme();
 
   const { start, end } = useMemo(
     () => getRangeDates(range, customStart, customEnd),
@@ -528,7 +519,7 @@ export function Compare() {
           <FintechCard delay={0.05}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="card-title inline-flex items-center gap-2">
-                <Bot className="w-4 h-4 text-indigo-500" />
+                <Bot className="w-4 h-4 text-accent-violet" />
                 Phân tích AI so sánh
               </h3>
               <AiGenerateButton
@@ -654,7 +645,7 @@ export function Compare() {
                 </div>
               </div>
               {fillResult && (
-                <p className={`text-sm mb-3 ${fillResult === labels.compare.fillError ? "text-accent-rose" : "text-emerald-600"}`}>
+                <p className={`text-sm mb-3 ${fillResult === labels.compare.fillError ? "text-accent-rose" : "text-accent-emerald"}`}>
                   {fillResult}
                 </p>
               )}
@@ -664,7 +655,7 @@ export function Compare() {
                 <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--fintech-border)" />
                       <XAxis
                         dataKey="date"
                         tick={{ fontSize: 12 }}
@@ -683,7 +674,7 @@ export function Compare() {
                           type="monotone"
                           dataKey={s.symbol}
                           name={s.symbol}
-                          stroke={COLORS[idx % COLORS.length]}
+                          stroke={theme.chartColors[idx % theme.chartColors.length]}
                           strokeWidth={2}
                           dot={false}
                           connectNulls={false}
@@ -724,7 +715,7 @@ export function Compare() {
                         </td>
                         <td className="py-2 px-3 text-right">
                           {m.annualized_return !== null && m.annualized_return !== undefined ? (
-                            <span className={m.annualized_return >= 0 ? "text-emerald-600" : "text-accent-rose"}>
+                            <span className={m.annualized_return >= 0 ? "text-accent-emerald" : "text-accent-rose"}>
                               {formatPercent(m.annualized_return)}
                             </span>
                           ) : (

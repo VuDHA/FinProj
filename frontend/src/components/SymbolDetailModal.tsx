@@ -11,7 +11,7 @@ import {
 import { RefreshCw, X, Calendar, TrendingUp, TrendingDown, BarChart3, Info, Sparkles } from "lucide-react";
 import API from "../api/client";
 import { getFundDetail, getStockDetail, getSymbolAIInsight } from "../api/symbol";
-import { formatCurrency, formatPercent, formatNumber } from "../lib/utils";
+import { chartTooltipStyle, formatCurrency, formatPercent, formatNumber } from "../lib/utils";
 import { labels } from "../i18n/vi";
 import { AiInsightCard } from "./AiInsightCard";
 
@@ -470,27 +470,27 @@ export default function SymbolDetailModal({
                             <linearGradient id={`detailGradient-${symbol}`} x1="0" y1="0" x2="0" y2="1">
                               <stop
                                 offset="0%"
-                                stopColor={positive ? "#10b981" : "#f43f5e"}
+                                stopColor={positive ? "var(--accent-emerald)" : "var(--accent-rose)"}
                                 stopOpacity={0.3}
                               />
                               <stop
                                 offset="100%"
-                                stopColor={positive ? "#10b981" : "#f43f5e"}
+                                stopColor={positive ? "var(--accent-emerald)" : "var(--accent-rose)"}
                                 stopOpacity={0}
                               />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" vertical={false} />
+                          <CartesianGrid strokeDasharray="4 4" stroke="var(--fintech-border)" vertical={false} />
                           <XAxis
                             dataKey="date"
-                            tick={{ fontSize: 12, fill: "#64748b" }}
+                            tick={{ fontSize: 12, fill: "var(--text-muted)" }}
                             tickFormatter={chartTickFormatter}
                             axisLine={false}
                             tickLine={false}
                             dy={8}
                           />
                           <YAxis
-                            tick={{ fontSize: 12, fill: "#64748b" }}
+                            tick={{ fontSize: 12, fill: "var(--text-muted)" }}
                             tickFormatter={formatAxisPrice}
                             width={70}
                             axisLine={false}
@@ -498,13 +498,7 @@ export default function SymbolDetailModal({
                             dx={-4}
                           />
                           <Tooltip
-                            contentStyle={{
-                              background: "rgba(255, 255, 255, 0.95)",
-                              border: "1px solid rgba(15, 23, 42, 0.08)",
-                              borderRadius: "12px",
-                              color: "#1e293b",
-                              boxShadow: "0 4px 24px rgba(15, 23, 42, 0.08)",
-                            }}
+                            contentStyle={chartTooltipStyle}
                             formatter={(value: number) => [formatCurrency(value), labels.symbolDetail.price]}
                             labelFormatter={(date: string) =>
                               `Ngày ${new Date(date).toLocaleDateString("vi-VN")}`
@@ -513,7 +507,7 @@ export default function SymbolDetailModal({
                           <Area
                             type="monotone"
                             dataKey="price"
-                            stroke={positive ? "#10b981" : "#f43f5e"}
+                            stroke={positive ? "var(--accent-emerald)" : "var(--accent-rose)"}
                             strokeWidth={2.5}
                             fill={`url(#detailGradient-${symbol})`}
                             dot={false}

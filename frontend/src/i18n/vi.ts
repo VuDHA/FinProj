@@ -68,6 +68,10 @@ export const labels = {
     currentAllocation: "Phân bổ hiện tại",
     mobileAccess: "Truy cập trên điện thoại",
     scanQrToOpen: "Quét mã QR để mở trang này trên điện thoại",
+    quickAdd: "Thêm nhanh",
+    quickAddHint: "Thêm tài sản hoặc ghi nhận giao dịch mà không rời khỏi Tổng quan.",
+    quickAddAssetTab: "Tài sản",
+    quickAddTransactionTab: "Giao dịch",
   },
   summary: {
     totalValue: "Giá trị hiện tại",

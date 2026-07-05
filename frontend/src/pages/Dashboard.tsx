@@ -50,19 +50,21 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { usePersistentState } from "../hooks/usePersistentState";
 import { TrendBadge } from "../components/ui/TrendBadge";
+import { QuickAddCard } from "../components/QuickAddCard";
+import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
 
 const TYPE_COLORS: Record<string, string> = {
-  STOCK: "#3B82F6",
-  FUND: "#A78BFA",
-  ETF: "#22D3EE",
-  GOLD: "#FBBF24",
-  CRYPTO: "#FB7185",
-  REAL_ESTATE: "#34D399",
-  LIFE_INSURANCE: "#6366F1",
+  STOCK: "var(--accent-blue)",
+  FUND: "var(--accent-violet)",
+  ETF: "var(--accent-cyan)",
+  GOLD: "var(--accent-amber)",
+  CRYPTO: "var(--accent-rose)",
+  REAL_ESTATE: "var(--accent-emerald)",
+  LIFE_INSURANCE: "var(--accent-violet)",
 };
 const WATCHLIST_SYMBOLS =
   "VCB,VHM,VIC,FPT,GAS,HPG,MBB,MSN,MWG,PLX,SSI,TCB,VIB,VPB,E1VFVN30,FUEVFVND,FUESSVFL";
@@ -185,6 +187,7 @@ function MobileQrCard() {
 export function Dashboard() {
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const { theme } = useTheme();
 
   const portfolio = useQuery({
     queryKey: ["portfolio"],
@@ -464,7 +467,7 @@ export function Dashboard() {
       <FintechCard delay={0.08}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="card-title inline-flex items-center gap-2">
-            <Bot className="w-4 h-4 text-indigo-500" />
+            <Bot className="w-4 h-4 text-accent-violet" />
             Phân tích AI danh mục
           </h3>
           <AiGenerateButton
@@ -626,7 +629,7 @@ export function Dashboard() {
                             className="h-full"
                             style={{
                               width: `${Math.max(0, Math.min(100, s.current_percent))}%`,
-                              backgroundColor: TYPE_COLORS[s.type] || "#64748b",
+                              backgroundColor: TYPE_COLORS[s.type] || "var(--text-muted)",
                             }}
                             title={`${labels.assetTypes[s.type as keyof typeof labels.assetTypes] ?? s.type}\nHiện tại: ${formatCurrency(s.current_value)} (${formatPercent(s.current_percent)})\nMục tiêu: ${formatCurrency(s.target_value)} (${formatPercent(s.target_percent)})`}
                           />
@@ -644,7 +647,7 @@ export function Dashboard() {
                             className="h-full opacity-70"
                             style={{
                               width: `${Math.max(0, Math.min(100, s.target_percent))}%`,
-                              backgroundColor: TYPE_COLORS[s.type] || "#64748b",
+                              backgroundColor: TYPE_COLORS[s.type] || "var(--text-muted)",
                             }}
                             title={`${labels.assetTypes[s.type as keyof typeof labels.assetTypes] ?? s.type}\nMục tiêu: ${formatCurrency(s.target_value)} (${formatPercent(s.target_percent)})`}
                           />
@@ -776,7 +779,7 @@ export function Dashboard() {
                 {unreadAlerts > 0 && (
                   <Link
                     to="/news"
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-medium"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-accent-amber/10 text-accent-amber text-[10px] font-medium"
                   >
                     <Bell className="w-3 h-3" />
                     {unreadAlerts}
@@ -833,7 +836,7 @@ export function Dashboard() {
                           </span>
                         )}
                         {tags[0] && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-medium">
+                          <span className="px-1.5 py-0.5 rounded-md bg-accent-blue/10 text-accent-blue font-medium">
                             {tags[0]}
                           </span>
                         )}
@@ -897,17 +900,17 @@ export function Dashboard() {
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={compareChartData} margin={{ top: 28, right: 8, bottom: 8, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--fintech-border)" />
                         <XAxis
                           dataKey="date"
-                          tick={{ fill: "#64748b", fontSize: 10 }}
+                          tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                           axisLine={false}
                           tickLine={false}
                           interval="preserveStartEnd"
                           minTickGap={24}
                         />
                         <YAxis
-                          tick={{ fill: "#64748b", fontSize: 10 }}
+                          tick={{ fill: "var(--text-muted)", fontSize: 10 }}
                           axisLine={false}
                           tickLine={false}
                           width={40}
@@ -925,25 +928,25 @@ export function Dashboard() {
                           verticalAlign="top"
                           align="right"
                           iconType="plainline"
-                          wrapperStyle={{ top: 0, right: 0, fontSize: 11, color: "#475569" }}
+                          wrapperStyle={{ top: 0, right: 0, fontSize: 11, color: "var(--text-muted)" }}
                         />
                         <Line
                           type="monotone"
                           dataKey="a"
-                          stroke="#6366F1"
+                          stroke={theme.chartColors[0]}
                           strokeWidth={2.5}
                           dot={false}
-                          activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+                          activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--text-inverse)" }}
                           connectNulls
                           name={compareA}
                         />
                         <Line
                           type="monotone"
                           dataKey="b"
-                          stroke="#EC4899"
+                          stroke={theme.chartColors[1]}
                           strokeWidth={2.5}
                           dot={false}
-                          activeDot={{ r: 4, strokeWidth: 2, stroke: "#fff" }}
+                          activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--text-inverse)" }}
                           connectNulls
                           name={compareB}
                         />
@@ -1028,6 +1031,8 @@ export function Dashboard() {
             )}
           </FintechCard>
 
+          <QuickAddCard />
+
           <MobileQrCard />
 
         </div>
@@ -1041,11 +1046,11 @@ export function Dashboard() {
           </h3>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="w-2 h-2 rounded-full bg-accent-blue" />
               {labels.dashboard.portfolioTrend}
             </div>
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              <span className="w-2 h-2 rounded-full bg-accent-amber" />
               {labels.dashboard.benchmark}
             </div>
             <TrendBadge value={data.total_pnl_percent} />
@@ -1059,15 +1064,15 @@ export function Dashboard() {
               <AreaChart data={trendData}>
                 <defs>
                   <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                    <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--accent-blue)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-                <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--fintech-border)" />
+                <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis
                   tickFormatter={(v) => formatCurrency(v)}
-                  tick={{ fill: "#64748b", fontSize: 11 }}
+                  tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
                   width={80}
@@ -1082,17 +1087,17 @@ export function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="portfolio"
-                  stroke="#3B82F6"
+                  stroke="var(--accent-blue)"
                   strokeWidth={2.5}
                   fill="url(#trendGradient)"
                   dot={false}
-                  activeDot={{ r: 5, fill: "#22D3EE", stroke: "#ffffff", strokeWidth: 2 }}
+                  activeDot={{ r: 5, fill: "var(--accent-cyan)", stroke: "var(--text-inverse)", strokeWidth: 2 }}
                   animationDuration={1500}
                 />
                 <Line
                   type="monotone"
                   dataKey="benchmark"
-                  stroke="#FBBF24"
+                  stroke="var(--accent-amber)"
                   strokeWidth={2}
                   dot={false}
                   animationDuration={1500}

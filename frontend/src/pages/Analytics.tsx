@@ -33,12 +33,11 @@ import { MiniSparkline } from "../components/ui/MiniSparkline";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { TrendBadge } from "../components/ui/TrendBadge";
+import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
 import { chartTooltipStyle, formatCurrency, formatNumber } from "../lib/utils";
-
-const PIE_COLORS = ["#34D399", "#60A5FA", "#FBBF24", "#A78BFA", "#FB7185", "#22D3EE", "#F472B6"];
 
 const typeColor: Record<string, string> = {
   STOCK: "bg-accent-blue/10 text-accent-blue ring-accent-blue/20",
@@ -77,6 +76,7 @@ export function Analytics() {
   const ASSETS_PER_PAGE = 10;
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const { theme } = useTheme();
 
   const analytics = useQuery({
     queryKey: ["analytics", filterType, customStart, customEnd],
@@ -286,7 +286,7 @@ export function Analytics() {
           <FintechCard delay={0.04}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="card-title inline-flex items-center gap-2">
-                <Bot className="w-4 h-4 text-indigo-500" />
+                <Bot className="w-4 h-4 text-accent-violet" />
                 Phân tích AI
               </h3>
               <AiGenerateButton
@@ -344,15 +344,15 @@ export function Analytics() {
                     <ComposedChart data={chartData}>
                       <defs>
                         <linearGradient id="portfolioValueGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
-                          <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                          <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="var(--accent-blue)" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-                      <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--fintech-border)" />
+                      <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis
                         tickFormatter={(v) => formatCurrency(v)}
-                        tick={{ fill: "#64748b", fontSize: 11 }}
+                        tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                         axisLine={false}
                         tickLine={false}
                         width={80}
@@ -368,11 +368,11 @@ export function Analytics() {
                         <Area
                           type="monotone"
                           dataKey="value"
-                          stroke="#3B82F6"
+                          stroke="var(--accent-blue)"
                           strokeWidth={2.5}
                           fill="url(#portfolioValueGradient)"
                           dot={false}
-                          activeDot={{ r: 5, fill: "#22D3EE", stroke: "#ffffff", strokeWidth: 2 }}
+                          activeDot={{ r: 5, fill: "var(--accent-cyan)", stroke: "var(--text-inverse)", strokeWidth: 2 }}
                           animationDuration={1200}
                         />
                       ) : (
@@ -381,7 +381,7 @@ export function Analytics() {
                             key={type}
                             type="monotone"
                             dataKey={type}
-                            stroke={PIE_COLORS[i % PIE_COLORS.length]}
+                            stroke={theme.chartColors[i % theme.chartColors.length]}
                             strokeWidth={2}
                             dot={false}
                             activeDot={{ r: 4 }}
@@ -416,7 +416,7 @@ export function Analytics() {
                       paddingAngle={2}
                     >
                       {(data.portfolio_value_by_type || []).map((_entry: any, i: number) => (
-                        <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        <Cell key={`cell-${i}`} fill={theme.chartColors[i % theme.chartColors.length]} />
                       ))}
                     </Pie>
                     <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => formatCurrency(v)} />

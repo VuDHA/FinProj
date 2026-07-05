@@ -6,6 +6,7 @@ import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persist
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AiQueueProvider } from "./contexts/AiQueueContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { checkStorageVersion, getLocalStorage } from "./lib/storage";
 import "./index.css";
@@ -37,11 +38,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       }}
     >
       <BrowserRouter>
-        <AiQueueProvider>
-          <ToastProvider>
-            <App />
-          </ToastProvider>
-        </AiQueueProvider>
+        <ThemeProvider>
+          <AiQueueProvider>
+            <ToastProvider>
+              <App />
+            </ToastProvider>
+          </AiQueueProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </PersistQueryClientProvider>
   </React.StrictMode>

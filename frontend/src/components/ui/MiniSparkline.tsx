@@ -15,12 +15,12 @@ interface MiniSparklineProps {
 }
 
 const colorMap = {
-  emerald: { stroke: "#34D399", fill: "rgba(52, 211, 153, 0.15)" },
-  rose: { stroke: "#FB7185", fill: "rgba(251, 113, 133, 0.15)" },
-  cyan: { stroke: "#22D3EE", fill: "rgba(34, 211, 238, 0.15)" },
-  blue: { stroke: "#3B82F6", fill: "rgba(59, 130, 246, 0.15)" },
-  amber: { stroke: "#FBBF24", fill: "rgba(251, 191, 36, 0.15)" },
-  violet: { stroke: "#A78BFA", fill: "rgba(167, 139, 250, 0.15)" },
+  emerald: { stroke: "var(--accent-emerald)" },
+  rose: { stroke: "var(--accent-rose)" },
+  cyan: { stroke: "var(--accent-cyan)" },
+  blue: { stroke: "var(--accent-blue)" },
+  amber: { stroke: "var(--accent-amber)" },
+  violet: { stroke: "var(--accent-violet)" },
 };
 
 export function MiniSparkline({
