@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from database import get_session
-from models import Asset, Transaction
+from models import Asset, PriceSnapshot, Transaction
 from schemas import TransactionCreate, TransactionRead, TransactionUpdate
 from services.market_data import MarketDataService
 from services.asset_type_config import is_market_price_type
@@ -86,6 +86,21 @@ def _resolve_transaction_price(
     return price
 
 
+def _update_stable_snapshot(session: Session, asset: Asset, price: float) -> None:
+    """Replace stale snapshots for a non-market asset with the given transaction price."""
+    for snap in session.exec(
+        select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
+    ).all():
+        session.delete(snap)
+    session.add(
+        PriceSnapshot(
+            asset_id=asset.id,
+            date=datetime.date.today(),
+            price=float(price),
+        )
+    )
+
+
 @router.post("/", response_model=TransactionRead)
 def create_transaction(
     transaction: TransactionCreate, session: Session = Depends(get_session)
@@ -118,6 +133,13 @@ def create_transaction(
 
     db_tx = Transaction(**transaction.model_dump())
     session.add(db_tx)
+
+    # For non-market assets, the transaction price is the latest valuation.
+    # Update the snapshot so the dashboard reflects the manual price instead of
+    # any stale market price from when the asset was created.
+    if not is_market_price_type(session, asset.type):
+        _update_stable_snapshot(session, asset, transaction.price)
+
     session.commit()
     session.refresh(db_tx)
     return db_tx
@@ -177,6 +199,11 @@ def update_transaction(
         _validate_sell_holding(session, asset.id, tx.date, tx.quantity, exclude_id=tx.id)
 
     session.add(tx)
+
+    # Keep the stable asset snapshot in sync with the latest transaction price.
+    if not is_market_price_type(session, asset.type):
+        _update_stable_snapshot(session, asset, tx.price)
+
     session.commit()
     session.refresh(tx)
     return tx
@@ -187,6 +214,23 @@ def delete_transaction(transaction_id: int, session: Session = Depends(get_sessi
     tx = session.get(Transaction, transaction_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
+    asset = session.get(Asset, tx.asset_id)
     session.delete(tx)
+    session.flush()
+
+    if asset and asset.is_active and not is_market_price_type(session, asset.type):
+        latest_tx = session.exec(
+            select(Transaction)
+            .where(Transaction.asset_id == asset.id)
+            .order_by(Transaction.date.desc(), Transaction.id.desc())
+        ).first()
+        if latest_tx:
+            _update_stable_snapshot(session, asset, latest_tx.price)
+        else:
+            for snap in session.exec(
+                select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
+            ).all():
+                session.delete(snap)
+
     session.commit()
     return {"ok": True}
