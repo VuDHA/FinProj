@@ -595,92 +595,119 @@ export function Market() {
       )}
 
       {goldFx.data && (
-        <FintechCard delay={0.4}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="card-title inline-flex items-center">
-              {labels.market.goldFx}
-              <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-            </h3>
-            <button
-              onClick={() => goldFx.refetch()}
-              className="btn-secondary"
-            >
-              <RefreshCw className={`w-4 h-4 ${goldFx.isFetching ? "animate-spin" : ""}`} />
-              {labels.settings.refresh}
-            </button>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-display font-semibold text-slate-900 mb-3">{labels.settings.gold}</h4>
-              <div className="overflow-x-auto scrollbar-thin">
-                <table className="table-fintech">
-                  <thead>
-                    <tr>
-                      <th>
-                        {labels.settings.source}
-                        <InfoTooltip content={labels.tooltips.sourceDefault} />
-                      </th>
-                      <th className="text-right">
-                        {labels.settings.buy}
-                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                      </th>
-                      <th className="text-right">
-                        {labels.settings.sell}
-                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {goldFx.data.gold?.map((item: any, idx: number) => (
-                      <tr key={idx}>
-                        <td className="font-medium text-slate-900 whitespace-nowrap">{item.source}</td>
-                        <td className="value-cell" title={formatCurrency(item.buy)}>{formatCurrency(item.buy)}</td>
-                        <td className="value-cell" title={formatCurrency(item.sell)}>{formatCurrency(item.sell)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        <div className="grid grid-cols-1 gap-6">
+          <FintechCard delay={0.4}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="card-title inline-flex items-center">
+                {labels.settings.gold}
+                <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+              </h3>
+              <button
+                onClick={() => goldFx.refetch()}
+                className="btn-secondary"
+              >
+                <RefreshCw className={`w-4 h-4 ${goldFx.isFetching ? "animate-spin" : ""}`} />
+                {labels.settings.refresh}
+              </button>
             </div>
-            <div>
-              <h4 className="font-display font-semibold text-slate-900 mb-3">{labels.settings.fx}</h4>
-              <div className="overflow-x-auto scrollbar-thin">
-                <table className="table-fintech">
-                  <thead>
-                    <tr>
-                      <th>
-                        {labels.settings.currency}
-                        <InfoTooltip content={labels.tooltips.assetCurrency} />
-                      </th>
-                      <th className="text-right">
-                        {labels.settings.buy}
-                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                      </th>
-                      <th className="text-right">
-                        {labels.settings.transfer}
-                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                      </th>
-                      <th className="text-right">
-                        {labels.settings.sell}
-                        <InfoTooltip content={labels.tooltips.settingsGoldFx} />
-                      </th>
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="table-fintech">
+                <thead>
+                  <tr>
+                    <th className="text-left">
+                      {labels.settings.source}
+                      <InfoTooltip content={labels.tooltips.sourceDefault} />
+                    </th>
+                    <th className="text-right">
+                      {labels.settings.buy}
+                      <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                    </th>
+                    <th className="text-right">
+                      {labels.settings.sell}
+                      <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                    </th>
+                    <th className="text-right">
+                      {labels.market.change}
+                      <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                    </th>
+                    <th className="text-right">
+                      {labels.market.marketChangePercent}
+                      <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {goldFx.data.gold?.map((item: any, idx: number) => (
+                    <tr key={idx}>
+                      <td className="font-medium text-slate-900 whitespace-nowrap">{item.source}</td>
+                      <td className="value-cell" title={formatCurrency(item.buy)}>{formatCurrency(item.buy)}</td>
+                      <td className="value-cell" title={formatCurrency(item.sell)}>{formatCurrency(item.sell)}</td>
+                      <td
+                        className={`value-cell ${Number.isFinite(item.change) && item.change >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}
+                        title={Number.isFinite(item.change) ? formatCurrency(item.change) : ""}
+                      >
+                        {Number.isFinite(item.change) ? formatCurrency(item.change) : "—"}
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        {Number.isFinite(item.change_percent) ? <TrendBadge value={item.change_percent} /> : "—"}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {goldFx.data.fx?.slice(0, 10).map((item: any, idx: number) => (
-                      <tr key={idx}>
-                        <td className="font-medium text-slate-900 whitespace-nowrap">{item.currency}</td>
-                        <td className="value-cell" title={formatCurrency(item.buy)}>{formatCurrency(item.buy)}</td>
-                        <td className="value-cell" title={formatCurrency(item.transfer)}>{formatCurrency(item.transfer)}</td>
-                        <td className="value-cell" title={formatCurrency(item.sell)}>{formatCurrency(item.sell)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </FintechCard>
+          </FintechCard>
+
+          <FintechCard delay={0.45}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="card-title inline-flex items-center">
+                {labels.settings.fx}
+                <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+              </h3>
+              <button
+                onClick={() => goldFx.refetch()}
+                className="btn-secondary"
+              >
+                <RefreshCw className={`w-4 h-4 ${goldFx.isFetching ? "animate-spin" : ""}`} />
+                {labels.settings.refresh}
+              </button>
+            </div>
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="table-fintech">
+                <thead>
+                  <tr>
+                    <th className="text-left">
+                      {labels.settings.currency}
+                      <InfoTooltip content={labels.tooltips.assetCurrency} />
+                    </th>
+                    <th className="text-right">
+                      {labels.settings.buy}
+                      <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                    </th>
+                    <th className="text-right">
+                      {labels.settings.transfer}
+                      <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                    </th>
+                    <th className="text-right">
+                      {labels.settings.sell}
+                      <InfoTooltip content={labels.tooltips.settingsGoldFx} />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {goldFx.data.fx?.slice(0, 10).map((item: any, idx: number) => (
+                    <tr key={idx}>
+                      <td className="font-medium text-slate-900 whitespace-nowrap">{item.currency}</td>
+                      <td className="value-cell" title={formatCurrency(item.buy)}>{formatCurrency(item.buy)}</td>
+                      <td className="value-cell" title={formatCurrency(item.transfer)}>{formatCurrency(item.transfer)}</td>
+                      <td className="value-cell" title={formatCurrency(item.sell)}>{formatCurrency(item.sell)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </FintechCard>
+        </div>
       )}
 
       {selectedSymbol && (

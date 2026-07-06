@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
@@ -21,8 +21,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { Link } from "react-router-dom";
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
   LineChart,
@@ -204,15 +204,66 @@ export function Dashboard() {
     },
   });
 
-  const benchmark = useQuery({
-    queryKey: ["portfolio-benchmark"],
+  const [trendPeriod, setTrendPeriod] = usePersistentState<
+    "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL" | "CUSTOM"
+  >("dashboard.trendPeriod", "6M");
+  const [trendCustomStart, setTrendCustomStart] = usePersistentState(
+    "dashboard.trendCustomStart",
+    ""
+  );
+  const [trendCustomEnd, setTrendCustomEnd] = usePersistentState(
+    "dashboard.trendCustomEnd",
+    ""
+  );
+
+  const trendDateRange = useMemo(() => {
+    const end = new Date().toISOString().split("T")[0];
+    if (trendPeriod === "CUSTOM") {
+      return {
+        start: trendCustomStart || end,
+        end: trendCustomEnd || end,
+      };
+    }
+    if (trendPeriod === "ALL") {
+      return { start: undefined as string | undefined, end };
+    }
+    const days =
+      {
+        "1W": 7,
+        "1M": 30,
+        "3M": 90,
+        "6M": 180,
+        "1Y": 365,
+      }[trendPeriod] || 180;
+    const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0];
+    return { start, end };
+  }, [trendPeriod, trendCustomStart, trendCustomEnd]);
+
+  const trendHistory = useQuery({
+    queryKey: ["portfolio-history-trend", trendDateRange.start, trendDateRange.end],
     queryFn: async () => {
-      const end = new Date().toISOString().split("T")[0];
-      const start = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      const { data } = await API.get("/prices/benchmark/VNINDEX", { params: { start, end } });
+      const params: Record<string, string> = { end: trendDateRange.end };
+      if (trendDateRange.start) params.start = trendDateRange.start;
+      const { data } = await API.get("/portfolio/history", { params });
+      return data as Array<{ date: string; value: number; cost: number }>;
+    },
+    placeholderData: keepPreviousData,
+    enabled: trendPeriod !== "CUSTOM" || Boolean(trendCustomStart && trendCustomEnd),
+  });
+
+  const trendBenchmarkStart = trendDateRange.start || trendHistory.data?.[0]?.date;
+  const trendBenchmark = useQuery({
+    queryKey: ["portfolio-benchmark-trend", trendBenchmarkStart, trendDateRange.end],
+    queryFn: async () => {
+      const params: Record<string, string> = { end: trendDateRange.end };
+      if (trendBenchmarkStart) params.start = trendBenchmarkStart;
+      const { data } = await API.get("/prices/benchmark/VNINDEX", { params });
       return data as Array<{ date: string; portfolio_value: number; benchmark_value: number }>;
     },
-    enabled: history.data && history.data.length > 1,
+    enabled: trendHistory.data && trendHistory.data.length > 1,
+    placeholderData: keepPreviousData,
   });
 
   const analytics = useQuery({
@@ -304,7 +355,8 @@ export function Dashboard() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["portfolio"] });
       qc.invalidateQueries({ queryKey: ["portfolio-history"] });
-      qc.invalidateQueries({ queryKey: ["portfolio-benchmark"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-history-trend"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-benchmark-trend"] });
       qc.invalidateQueries({ queryKey: ["prices"] });
       qc.invalidateQueries({ queryKey: ["market-watchlist"] });
       qc.invalidateQueries({ queryKey: ["price-alerts"] });
@@ -332,22 +384,58 @@ export function Dashboard() {
     items: [],
   };
 
-  const trendMap = new Map<string, { label: string; portfolio?: number; benchmark?: number }>();
-  for (const point of history.data || []) {
-    const date = new Date(point.date);
-    const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
-    const iso = point.date;
-    trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, portfolio: point.value });
-  }
-  for (const point of benchmark.data || []) {
-    const date = new Date(point.date);
-    const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
-    const iso = point.date;
-    trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, benchmark: point.benchmark_value });
-  }
-  const trendData = Array.from(trendMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([_, { label, portfolio, benchmark }]) => ({ date: label, portfolio, benchmark }));
+  const trendPercentData = useMemo(() => {
+    const trendMap = new Map<string, { label: string; portfolio?: number; benchmark?: number }>();
+    for (const point of trendHistory.data || []) {
+      const date = new Date(point.date);
+      const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+      const iso = point.date;
+      trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, portfolio: point.value });
+    }
+    for (const point of trendBenchmark.data || []) {
+      const date = new Date(point.date);
+      const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+      const iso = point.date;
+      trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, benchmark: point.benchmark_value });
+    }
+    const trendData = Array.from(trendMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([_, { label, portfolio, benchmark }]) => ({ date: label, portfolio, benchmark }));
+
+    let basePortfolio: number | null = null;
+    let baseBenchmark: number | null = null;
+    for (const d of trendData) {
+      if (d.portfolio != null && d.portfolio > 0 && d.benchmark != null && d.benchmark > 0) {
+        basePortfolio = d.portfolio;
+        baseBenchmark = d.benchmark;
+        break;
+      }
+    }
+    return trendData.map((d) => ({
+      date: d.date,
+      portfolio: basePortfolio ? ((d.portfolio ?? basePortfolio) / basePortfolio - 1) * 100 : null,
+      benchmark: baseBenchmark ? ((d.benchmark ?? baseBenchmark) / baseBenchmark - 1) * 100 : null,
+    }));
+  }, [trendHistory.data, trendBenchmark.data]);
+
+  const [displayTrendData, setDisplayTrendData] = useState<typeof trendPercentData>([]);
+  const [hasTrendData, setHasTrendData] = useState(false);
+  useEffect(() => {
+    if (trendHistory.isLoading || trendHistory.isFetching) return;
+    if (trendPercentData.length > 1) {
+      setDisplayTrendData(trendPercentData);
+      setHasTrendData(true);
+    } else if (trendPeriod !== "CUSTOM" || (trendCustomStart && trendCustomEnd)) {
+      setHasTrendData(false);
+    }
+  }, [
+    trendPercentData,
+    trendHistory.isLoading,
+    trendHistory.isFetching,
+    trendPeriod,
+    trendCustomStart,
+    trendCustomEnd,
+  ]);
 
   const portfolioMarketItems = (portfolio.data?.items || [])
     .filter((item: any) => item.type === marketTab)
@@ -370,7 +458,13 @@ export function Dashboard() {
 
   const marketListItems = [...portfolioMarketItems, ...watchlistMarketItems].slice(0, 5);
 
-  const goldListItems = (goldFx.data?.gold || []) as Array<{ source: string; buy: number; sell: number }>;
+  const goldListItems = (goldFx.data?.gold || []) as Array<{
+    source: string;
+    buy: number;
+    sell: number;
+    change?: number;
+    change_percent?: number;
+  }>;
 
   const compareChartData = useMemo(() => {
     const rawSeries: Record<string, Record<string, number>> = {};
@@ -434,7 +528,8 @@ export function Dashboard() {
     <div className="space-y-6">
       {portfolio.isError && <ErrorMessage error={portfolio.error} retry={() => portfolio.refetch()} />}
       {history.isError && <ErrorMessage error={history.error} retry={() => history.refetch()} />}
-      {benchmark.isError && <ErrorMessage error={benchmark.error} retry={() => benchmark.refetch()} />}
+      {trendHistory.isError && <ErrorMessage error={trendHistory.error} retry={() => trendHistory.refetch()} />}
+      {trendBenchmark.isError && <ErrorMessage error={trendBenchmark.error} retry={() => trendBenchmark.refetch()} />}
       {refresh.isError && <ErrorMessage error={refresh.error} retry={() => refresh.mutate()} />}
 
       <SectionHeader title={labels.dashboard.title}>
@@ -718,13 +813,17 @@ export function Dashboard() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MiniSparkline
-                          data={[g.buy, g.sell]}
+                          data={
+                            g.buy > 0 && g.change_percent != null
+                              ? generatePriceSparkline(g.buy, g.change_percent)
+                              : [g.buy, g.buy]
+                          }
                           color="amber"
                           width={80}
                           height={24}
                           showArea={false}
                         />
-                        <Value value={g.sell - g.buy} formatter={formatCurrency} className="value-text text-xs font-semibold text-slate-700" />
+                        <Value value={g.sell} formatter={formatCurrency} className="value-text text-xs font-semibold text-slate-700" />
                       </div>
                     </div>
                   ))}
@@ -1039,9 +1138,10 @@ export function Dashboard() {
       </div>
 
       <FintechCard delay={0.45}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h3 className="card-title inline-flex items-center">
             {labels.dashboard.portfolioTrend}
+            <span className="ml-1.5 text-xs text-slate-400">(%)</span>
             <InfoTooltip content={labels.tooltips.portfolioTrend} />
           </h3>
           <div className="flex items-center gap-3">
@@ -1056,12 +1156,51 @@ export function Dashboard() {
             <TrendBadge value={data.total_pnl_percent} />
           </div>
         </div>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {[
+            { key: "1W", label: "1 tuần" },
+            { key: "1M", label: "1 tháng" },
+            { key: "3M", label: "3 tháng" },
+            { key: "6M", label: "6 tháng" },
+            { key: "1Y", label: "1 năm" },
+            { key: "ALL", label: "Tất cả" },
+            { key: "CUSTOM", label: "Tùy chỉnh" },
+          ].map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setTrendPeriod(p.key as typeof trendPeriod)}
+              className={`text-xs px-2 py-1 rounded-md transition-colors ${trendPeriod === p.key
+                ? "bg-accent-blue text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          {trendPeriod === "CUSTOM" && (
+            <div className="flex items-center gap-2 ml-1">
+              <input
+                type="date"
+                className="input-fintech text-xs py-1"
+                value={trendCustomStart}
+                onChange={(e) => setTrendCustomStart(e.target.value)}
+              />
+              <span className="text-xs text-slate-400">→</span>
+              <input
+                type="date"
+                className="input-fintech text-xs py-1"
+                value={trendCustomEnd}
+                onChange={(e) => setTrendCustomEnd(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
         <div className="h-64">
-          {history.isLoading ? (
+          {trendHistory.isLoading ? (
             <Skeleton className="h-full" />
-          ) : trendData.length > 1 ? (
+          ) : hasTrendData ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
+              <ComposedChart data={displayTrendData}>
                 <defs>
                   <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity={0.35} />
@@ -1071,7 +1210,7 @@ export function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--fintech-border)" />
                 <XAxis dataKey="date" tick={{ fill: "var(--text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis
-                  tickFormatter={(v) => formatCurrency(v)}
+                  tickFormatter={(v) => formatPercent(v)}
                   tick={{ fill: "var(--text-muted)", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}
@@ -1080,7 +1219,7 @@ export function Dashboard() {
                 <Tooltip
                   contentStyle={chartTooltipStyle}
                   formatter={(v: number, name: string) => [
-                    formatCurrency(v),
+                    formatPercent(v),
                     name === "portfolio" ? labels.dashboard.portfolioTrend : labels.dashboard.benchmark,
                   ]}
                 />
@@ -1100,10 +1239,13 @@ export function Dashboard() {
                   stroke="var(--accent-amber)"
                   strokeWidth={2}
                   dot={false}
+                  connectNulls
                   animationDuration={1500}
                 />
-              </AreaChart>
+              </ComposedChart>
             </ResponsiveContainer>
+          ) : trendHistory.isFetching ? (
+            <Skeleton className="h-full" />
           ) : (
             <div className="h-full flex items-center justify-center">
               <EmptyState

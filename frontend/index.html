@@ -9,7 +9,7 @@
     (function () {
       try {
         var key = localStorage.getItem("wealth-theme");
-        var valid = ["clean-slate", "command-center", "eco-logistics", "high-contrast", "espresso-cream", "sky-blue"];
+        var valid = ["clean-slate", "command-center", "eco-logistics", "high-contrast", "espresso-cream", "sky-blue", "midnight-navy", "royal-plum", "solarized-sand", "mint-slate", "graphite-rose"];
         var theme = valid.indexOf(key) >= 0 ? key : "clean-slate";
         document.documentElement.classList.add("theme-" + theme);
       } catch (e) {
@@ -19,7 +19,9 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap"
+    rel="stylesheet" />
   <title>Quản lý Tài sản Việt Nam</title>
 </head>
 

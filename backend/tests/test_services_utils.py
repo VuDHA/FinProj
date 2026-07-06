@@ -153,7 +153,7 @@ def test_gold_fx_with_mocked_requests(monkeypatch):
         if "vang.today" in url:
             response.status_code = 200
             response.json.return_value = {
-                "prices": {"SJC": {"name": "SJC", "buy": 70000, "sell": 71000}}
+                "prices": {"SJC": {"name": "SJC", "buy": 70000, "sell": 71000, "change_buy": 1000}}
             }
         elif "vietcombank" in url:
             response.status_code = 200
@@ -168,6 +168,9 @@ def test_gold_fx_with_mocked_requests(monkeypatch):
     result = get_gold_fx()
     assert len(result.gold) >= 1
     assert len(result.fx) >= 1
+    gold = result.gold[0]
+    assert gold.change == 1000
+    assert gold.change_percent == (1000 / 69000) * 100
 
 
 def test_market_data_fetch_price(session, monkeypatch):

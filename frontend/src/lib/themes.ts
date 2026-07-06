@@ -4,7 +4,12 @@ export type ThemeKey =
   | "eco-logistics"
   | "high-contrast"
   | "espresso-cream"
-  | "sky-blue";
+  | "sky-blue"
+  | "midnight-navy"
+  | "royal-plum"
+  | "solarized-sand"
+  | "mint-slate"
+  | "graphite-rose";
 
 export interface Theme {
   key: ThemeKey;
@@ -52,6 +57,36 @@ export const THEMES: Theme[] = [
     name: "Sky Blue",
     description: "Phong cách trời xanh — nhẹ nhàng, tươi sáng, dễ chịu.",
     chartColors: ["#0EA5E9", "#2563EB", "#6366F1", "#14B8A6", "#F43F5E", "#F59E0B"],
+  },
+  {
+    key: "midnight-navy",
+    name: "Midnight Navy",
+    description: "Phong cách hải quân đêm — tối, sang trọng, vàng đồng nổi bật.",
+    chartColors: ["#3B82F6", "#8B5CF6", "#F59E0B", "#10B981", "#EF4444", "#FBBF24"],
+  },
+  {
+    key: "royal-plum",
+    name: "Royal Plum",
+    description: "Phong cách mận chín — tím đậm, thanh lịch, nhẹ nhàng.",
+    chartColors: ["#A78BFA", "#C084FC", "#D8B4FE", "#34D399", "#F472B6", "#FBBF24"],
+  },
+  {
+    key: "solarized-sand",
+    name: "Solarized Sand",
+    description: "Phong cách cát nắng — ấm áp, dễ nhìn, tự nhiên.",
+    chartColors: ["#0D9488", "#0EA5E9", "#8B5CF6", "#059669", "#DC2626", "#D97706"],
+  },
+  {
+    key: "mint-slate",
+    name: "Mint Slate",
+    description: "Phong cách bạc hà — mát mẻ, sạch sẽ, hiện đại.",
+    chartColors: ["#0D9488", "#6366F1", "#2DD4BF", "#10B981", "#F43F5E", "#F59E0B"],
+  },
+  {
+    key: "graphite-rose",
+    name: "Graphite Rose",
+    description: "Phong cách hồng than — tối, mềm mại, độc đáo.",
+    chartColors: ["#F43F5E", "#FB7185", "#A78BFA", "#34D399", "#FDA4AF", "#FBBF24"],
   },
 ];
 

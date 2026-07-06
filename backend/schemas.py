@@ -311,6 +311,8 @@ class GoldRate(BaseModel):
     buy: float
     sell: float
     updated_at: Optional[str] = None
+    change: Optional[float] = 0.0
+    change_percent: Optional[float] = 0.0
 
 
 class FxRate(BaseModel):

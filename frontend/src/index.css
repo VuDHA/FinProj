@@ -261,83 +261,298 @@
   --gradient-end: rgb(var(--gradient-end-rgb));
 }
 
+.theme-midnight-navy {
+  --surface-rgb: 10 17 40;
+  --surface: rgb(var(--surface-rgb));
+  --surface-elevated-rgb: 18 28 59;
+  --surface-elevated: rgb(var(--surface-elevated-rgb));
+  --surface-card-rgb: 18 28 59;
+  --surface-card: rgb(var(--surface-card-rgb) / 0.78);
+  --accent-cyan-rgb: 245 158 11;
+  --accent-cyan: rgb(var(--accent-cyan-rgb));
+  --accent-blue-rgb: 59 130 246;
+  --accent-blue: rgb(var(--accent-blue-rgb));
+  --accent-violet-rgb: 139 92 246;
+  --accent-violet: rgb(var(--accent-violet-rgb));
+  --accent-emerald-rgb: 16 185 129;
+  --accent-emerald: rgb(var(--accent-emerald-rgb));
+  --accent-rose-rgb: 239 68 68;
+  --accent-rose: rgb(var(--accent-rose-rgb));
+  --accent-amber-rgb: 245 158 11;
+  --accent-amber: rgb(var(--accent-amber-rgb));
+  --fintech-border-rgb: 59 130 246;
+  --fintech-border: rgb(var(--fintech-border-rgb) / 0.2);
+  --fintech-glow-rgb: 59 130 246;
+  --fintech-glow: rgb(var(--fintech-glow-rgb) / 0.35);
+  --text-primary-rgb: 248 250 252;
+  --text-primary: rgb(var(--text-primary-rgb));
+  --text-muted-rgb: 148 163 184;
+  --text-muted: rgb(var(--text-muted-rgb));
+  --text-inverse-rgb: 10 17 40;
+  --text-inverse: rgb(var(--text-inverse-rgb));
+  --bg-primary-rgb: 10 17 40;
+  --bg-primary: rgb(var(--bg-primary-rgb));
+  --bg-secondary-rgb: 30 41 59;
+  --bg-secondary: rgb(var(--bg-secondary-rgb));
+  --border-base-rgb: 59 130 246;
+  --border-base: rgb(var(--border-base-rgb) / 0.2);
+  --gradient-top-rgb: 59 130 246;
+  --gradient-top: rgb(var(--gradient-top-rgb) / 0.08);
+  --gradient-bottom-rgb: 245 158 11;
+  --gradient-bottom: rgb(var(--gradient-bottom-rgb) / 0.06);
+  --gradient-end-rgb: 10 17 40;
+  --gradient-end: rgb(var(--gradient-end-rgb));
+}
+
+.theme-royal-plum {
+  --surface-rgb: 26 16 51;
+  --surface: rgb(var(--surface-rgb));
+  --surface-elevated-rgb: 37 24 74;
+  --surface-elevated: rgb(var(--surface-elevated-rgb));
+  --surface-card-rgb: 37 24 74;
+  --surface-card: rgb(var(--surface-card-rgb) / 0.78);
+  --accent-cyan-rgb: 216 180 254;
+  --accent-cyan: rgb(var(--accent-cyan-rgb));
+  --accent-blue-rgb: 167 139 250;
+  --accent-blue: rgb(var(--accent-blue-rgb));
+  --accent-violet-rgb: 192 132 252;
+  --accent-violet: rgb(var(--accent-violet-rgb));
+  --accent-emerald-rgb: 52 211 153;
+  --accent-emerald: rgb(var(--accent-emerald-rgb));
+  --accent-rose-rgb: 244 114 182;
+  --accent-rose: rgb(var(--accent-rose-rgb));
+  --accent-amber-rgb: 251 191 36;
+  --accent-amber: rgb(var(--accent-amber-rgb));
+  --fintech-border-rgb: 168 85 247;
+  --fintech-border: rgb(var(--fintech-border-rgb) / 0.2);
+  --fintech-glow-rgb: 168 85 247;
+  --fintech-glow: rgb(var(--fintech-glow-rgb) / 0.35);
+  --text-primary-rgb: 243 232 255;
+  --text-primary: rgb(var(--text-primary-rgb));
+  --text-muted-rgb: 196 181 253;
+  --text-muted: rgb(var(--text-muted-rgb));
+  --text-inverse-rgb: 26 16 51;
+  --text-inverse: rgb(var(--text-inverse-rgb));
+  --bg-primary-rgb: 26 16 51;
+  --bg-primary: rgb(var(--bg-primary-rgb));
+  --bg-secondary-rgb: 46 16 101;
+  --bg-secondary: rgb(var(--bg-secondary-rgb));
+  --border-base-rgb: 168 85 247;
+  --border-base: rgb(var(--border-base-rgb) / 0.2);
+  --gradient-top-rgb: 168 85 247;
+  --gradient-top: rgb(var(--gradient-top-rgb) / 0.08);
+  --gradient-bottom-rgb: 216 180 254;
+  --gradient-bottom: rgb(var(--gradient-bottom-rgb) / 0.06);
+  --gradient-end-rgb: 26 16 51;
+  --gradient-end: rgb(var(--gradient-end-rgb));
+}
+
+.theme-solarized-sand {
+  --surface-rgb: 245 240 232;
+  --surface: rgb(var(--surface-rgb));
+  --surface-elevated-rgb: 250 246 240;
+  --surface-elevated: rgb(var(--surface-elevated-rgb));
+  --surface-card-rgb: 250 246 240;
+  --surface-card: rgb(var(--surface-card-rgb) / 0.78);
+  --accent-cyan-rgb: 13 148 136;
+  --accent-cyan: rgb(var(--accent-cyan-rgb));
+  --accent-blue-rgb: 14 165 233;
+  --accent-blue: rgb(var(--accent-blue-rgb));
+  --accent-violet-rgb: 139 92 246;
+  --accent-violet: rgb(var(--accent-violet-rgb));
+  --accent-emerald-rgb: 5 150 105;
+  --accent-emerald: rgb(var(--accent-emerald-rgb));
+  --accent-rose-rgb: 220 38 38;
+  --accent-rose: rgb(var(--accent-rose-rgb));
+  --accent-amber-rgb: 217 119 6;
+  --accent-amber: rgb(var(--accent-amber-rgb));
+  --fintech-border-rgb: 13 148 136;
+  --fintech-border: rgb(var(--fintech-border-rgb) / 0.14);
+  --fintech-glow-rgb: 13 148 136;
+  --fintech-glow: rgb(var(--fintech-glow-rgb) / 0.28);
+  --text-primary-rgb: 67 52 34;
+  --text-primary: rgb(var(--text-primary-rgb));
+  --text-muted-rgb: 120 113 108;
+  --text-muted: rgb(var(--text-muted-rgb));
+  --text-inverse-rgb: 255 255 255;
+  --text-inverse: rgb(var(--text-inverse-rgb));
+  --bg-primary-rgb: 255 255 255;
+  --bg-primary: rgb(var(--bg-primary-rgb));
+  --bg-secondary-rgb: 231 229 228;
+  --bg-secondary: rgb(var(--bg-secondary-rgb));
+  --border-base-rgb: 13 148 136;
+  --border-base: rgb(var(--border-base-rgb) / 0.14);
+  --gradient-top-rgb: 13 148 136;
+  --gradient-top: rgb(var(--gradient-top-rgb) / 0.08);
+  --gradient-bottom-rgb: 14 165 233;
+  --gradient-bottom: rgb(var(--gradient-bottom-rgb) / 0.06);
+  --gradient-end-rgb: 250 246 240;
+  --gradient-end: rgb(var(--gradient-end-rgb));
+}
+
+.theme-mint-slate {
+  --surface-rgb: 240 253 250;
+  --surface: rgb(var(--surface-rgb));
+  --surface-elevated-rgb: 247 255 254;
+  --surface-elevated: rgb(var(--surface-elevated-rgb));
+  --surface-card-rgb: 247 255 254;
+  --surface-card: rgb(var(--surface-card-rgb) / 0.78);
+  --accent-cyan-rgb: 45 212 191;
+  --accent-cyan: rgb(var(--accent-cyan-rgb));
+  --accent-blue-rgb: 13 148 136;
+  --accent-blue: rgb(var(--accent-blue-rgb));
+  --accent-violet-rgb: 99 102 241;
+  --accent-violet: rgb(var(--accent-violet-rgb));
+  --accent-emerald-rgb: 16 185 129;
+  --accent-emerald: rgb(var(--accent-emerald-rgb));
+  --accent-rose-rgb: 244 63 94;
+  --accent-rose: rgb(var(--accent-rose-rgb));
+  --accent-amber-rgb: 245 158 11;
+  --accent-amber: rgb(var(--accent-amber-rgb));
+  --fintech-border-rgb: 13 148 136;
+  --fintech-border: rgb(var(--fintech-border-rgb) / 0.14);
+  --fintech-glow-rgb: 13 148 136;
+  --fintech-glow: rgb(var(--fintech-glow-rgb) / 0.28);
+  --text-primary-rgb: 19 78 74;
+  --text-primary: rgb(var(--text-primary-rgb));
+  --text-muted-rgb: 15 118 110;
+  --text-muted: rgb(var(--text-muted-rgb));
+  --text-inverse-rgb: 255 255 255;
+  --text-inverse: rgb(var(--text-inverse-rgb));
+  --bg-primary-rgb: 255 255 255;
+  --bg-primary: rgb(var(--bg-primary-rgb));
+  --bg-secondary-rgb: 204 251 241;
+  --bg-secondary: rgb(var(--bg-secondary-rgb));
+  --border-base-rgb: 13 148 136;
+  --border-base: rgb(var(--border-base-rgb) / 0.14);
+  --gradient-top-rgb: 13 148 136;
+  --gradient-top: rgb(var(--gradient-top-rgb) / 0.08);
+  --gradient-bottom-rgb: 99 102 241;
+  --gradient-bottom: rgb(var(--gradient-bottom-rgb) / 0.06);
+  --gradient-end-rgb: 240 253 250;
+  --gradient-end: rgb(var(--gradient-end-rgb));
+}
+
+.theme-graphite-rose {
+  --surface-rgb: 28 25 23;
+  --surface: rgb(var(--surface-rgb));
+  --surface-elevated-rgb: 41 37 36;
+  --surface-elevated: rgb(var(--surface-elevated-rgb));
+  --surface-card-rgb: 41 37 36;
+  --surface-card: rgb(var(--surface-card-rgb) / 0.78);
+  --accent-cyan-rgb: 253 164 175;
+  --accent-cyan: rgb(var(--accent-cyan-rgb));
+  --accent-blue-rgb: 244 63 94;
+  --accent-blue: rgb(var(--accent-blue-rgb));
+  --accent-violet-rgb: 167 139 250;
+  --accent-violet: rgb(var(--accent-violet-rgb));
+  --accent-emerald-rgb: 52 211 153;
+  --accent-emerald: rgb(var(--accent-emerald-rgb));
+  --accent-rose-rgb: 251 113 133;
+  --accent-rose: rgb(var(--accent-rose-rgb));
+  --accent-amber-rgb: 251 191 36;
+  --accent-amber: rgb(var(--accent-amber-rgb));
+  --fintech-border-rgb: 244 63 94;
+  --fintech-border: rgb(var(--fintech-border-rgb) / 0.2);
+  --fintech-glow-rgb: 244 63 94;
+  --fintech-glow: rgb(var(--fintech-glow-rgb) / 0.35);
+  --text-primary-rgb: 250 250 249;
+  --text-primary: rgb(var(--text-primary-rgb));
+  --text-muted-rgb: 168 162 158;
+  --text-muted: rgb(var(--text-muted-rgb));
+  --text-inverse-rgb: 28 25 23;
+  --text-inverse: rgb(var(--text-inverse-rgb));
+  --bg-primary-rgb: 28 25 23;
+  --bg-primary: rgb(var(--bg-primary-rgb));
+  --bg-secondary-rgb: 68 64 60;
+  --bg-secondary: rgb(var(--bg-secondary-rgb));
+  --border-base-rgb: 244 63 94;
+  --border-base: rgb(var(--border-base-rgb) / 0.2);
+  --gradient-top-rgb: 244 63 94;
+  --gradient-top: rgb(var(--gradient-top-rgb) / 0.08);
+  --gradient-bottom-rgb: 253 164 175;
+  --gradient-bottom: rgb(var(--gradient-bottom-rgb) / 0.06);
+  --gradient-end-rgb: 28 25 23;
+  --gradient-end: rgb(var(--gradient-end-rgb));
+}
+
 /* Legacy Tailwind utility overrides — make slate / white / black classes adapt to themes */
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.text-slate-900, .text-slate-800, .text-slate-950, .hover\:text-slate-900:hover, .hover\:text-slate-800:hover, .hover\:text-slate-950:hover, .focus\:text-slate-900:focus, .focus\:text-slate-800:focus, .focus\:text-slate-950:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.text-slate-900, .text-slate-800, .text-slate-950, .hover\:text-slate-900:hover, .hover\:text-slate-800:hover, .hover\:text-slate-950:hover, .focus\:text-slate-900:focus, .focus\:text-slate-800:focus, .focus\:text-slate-950:focus) {
   color: var(--text-primary);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.text-slate-700, .text-slate-600, .text-slate-500, .text-slate-400, .text-slate-300, .text-slate-200, .text-slate-100, .hover\:text-slate-700:hover, .hover\:text-slate-600:hover, .hover\:text-slate-500:hover, .hover\:text-slate-400:hover, .hover\:text-slate-300:hover, .hover\:text-slate-200:hover, .hover\:text-slate-100:hover, .focus\:text-slate-700:focus, .focus\:text-slate-600:focus, .focus\:text-slate-500:focus, .focus\:text-slate-400:focus, .focus\:text-slate-300:focus, .focus\:text-slate-200:focus, .focus\:text-slate-100:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.text-slate-700, .text-slate-600, .text-slate-500, .text-slate-400, .text-slate-300, .text-slate-200, .text-slate-100, .hover\:text-slate-700:hover, .hover\:text-slate-600:hover, .hover\:text-slate-500:hover, .hover\:text-slate-400:hover, .hover\:text-slate-300:hover, .hover\:text-slate-200:hover, .hover\:text-slate-100:hover, .focus\:text-slate-700:focus, .focus\:text-slate-600:focus, .focus\:text-slate-500:focus, .focus\:text-slate-400:focus, .focus\:text-slate-300:focus, .focus\:text-slate-200:focus, .focus\:text-slate-100:focus) {
   color: var(--text-muted);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.text-slate-50, .hover\:text-slate-50:hover, .focus\:text-slate-50:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.text-slate-50, .hover\:text-slate-50:hover, .focus\:text-slate-50:focus) {
   color: var(--text-inverse);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.text-white, .hover\:text-white:hover, .focus\:text-white:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.text-white, .hover\:text-white:hover, .focus\:text-white:focus) {
   color: var(--text-inverse);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.text-black, .hover\:text-black:hover, .focus\:text-black:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.text-black, .hover\:text-black:hover, .focus\:text-black:focus) {
   color: var(--text-primary);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-slate-300, .bg-slate-400, .bg-slate-500, .hover\:bg-slate-50:hover, .hover\:bg-slate-100:hover, .hover\:bg-slate-200:hover, .hover\:bg-slate-300:hover, .hover\:bg-slate-400:hover, .hover\:bg-slate-500:hover, .focus\:bg-slate-50:focus, .focus\:bg-slate-100:focus, .focus\:bg-slate-200:focus, .focus\:bg-slate-300:focus, .focus\:bg-slate-400:focus, .focus\:bg-slate-500:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.bg-slate-50, .bg-slate-100, .bg-slate-200, .bg-slate-300, .bg-slate-400, .bg-slate-500, .hover\:bg-slate-50:hover, .hover\:bg-slate-100:hover, .hover\:bg-slate-200:hover, .hover\:bg-slate-300:hover, .hover\:bg-slate-400:hover, .hover\:bg-slate-500:hover, .focus\:bg-slate-50:focus, .focus\:bg-slate-100:focus, .focus\:bg-slate-200:focus, .focus\:bg-slate-300:focus, .focus\:bg-slate-400:focus, .focus\:bg-slate-500:focus) {
   background-color: var(--surface-elevated);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900, .bg-slate-950, .hover\:bg-slate-600:hover, .hover\:bg-slate-700:hover, .hover\:bg-slate-800:hover, .hover\:bg-slate-900:hover, .hover\:bg-slate-950:hover, .focus\:bg-slate-600:focus, .focus\:bg-slate-700:focus, .focus\:bg-slate-800:focus, .focus\:bg-slate-900:focus, .focus\:bg-slate-950:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.bg-slate-600, .bg-slate-700, .bg-slate-800, .bg-slate-900, .bg-slate-950, .hover\:bg-slate-600:hover, .hover\:bg-slate-700:hover, .hover\:bg-slate-800:hover, .hover\:bg-slate-900:hover, .hover\:bg-slate-950:hover, .focus\:bg-slate-600:focus, .focus\:bg-slate-700:focus, .focus\:bg-slate-800:focus, .focus\:bg-slate-900:focus, .focus\:bg-slate-950:focus) {
   background-color: var(--bg-overlay);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.bg-white, .hover\:bg-white:hover, .focus\:bg-white:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.bg-white, .hover\:bg-white:hover, .focus\:bg-white:focus) {
   background-color: var(--surface-elevated);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.bg-black, .hover\:bg-black:hover, .focus\:bg-black:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.bg-black, .hover\:bg-black:hover, .focus\:bg-black:focus) {
   background-color: var(--bg-overlay);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-white/"] {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-white/"] {
   background-color: var(--surface-elevated);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-50/"],
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-100/"],
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-200/"] {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-50/"],
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-100/"],
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-200/"] {
   background-color: var(--surface-elevated);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-600/"],
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-700/"],
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-800/"],
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-900/"],
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-slate-950/"] {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-600/"],
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-700/"],
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-800/"],
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-900/"],
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-slate-950/"] {
   background-color: var(--bg-overlay);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) [class*="bg-black/"] {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) [class*="bg-black/"] {
   background-color: var(--bg-overlay);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.border-slate-200, .border-slate-300, .hover\:border-slate-200:hover, .hover\:border-slate-300:hover, .focus\:border-slate-200:focus, .focus\:border-slate-300:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.border-slate-200, .border-slate-300, .hover\:border-slate-200:hover, .hover\:border-slate-300:hover, .focus\:border-slate-200:focus, .focus\:border-slate-300:focus) {
   border-color: var(--fintech-border);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.ring-slate-200, .ring-slate-300, .focus\:ring-slate-200:focus, .focus\:ring-slate-300:focus) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.ring-slate-200, .ring-slate-300, .focus\:ring-slate-200:focus, .focus\:ring-slate-300:focus) {
   --tw-ring-color: var(--fintech-border);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.placeholder-slate-400, .focus\:placeholder-slate-400:focus)::placeholder {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.placeholder-slate-400, .focus\:placeholder-slate-400:focus)::placeholder {
   color: var(--text-muted);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.from-slate-900, .from-slate-800, .from-slate-700) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.from-slate-900, .from-slate-800, .from-slate-700) {
   --tw-gradient-from: var(--bg-overlay) var(--tw-gradient-from-position);
   --tw-gradient-to: var(--bg-overlay) var(--tw-gradient-to-position);
 }
 
-:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue) :is(.to-slate-900, .to-slate-800, .to-slate-700) {
+:is(.theme-command-center, .theme-eco-logistics, .theme-high-contrast, .theme-espresso-cream, .theme-sky-blue, .theme-midnight-navy, .theme-royal-plum, .theme-solarized-sand, .theme-mint-slate, .theme-graphite-rose) :is(.to-slate-900, .to-slate-800, .to-slate-700) {
   --tw-gradient-to: var(--bg-overlay) var(--tw-gradient-to-position);
 }
 
@@ -443,7 +658,7 @@ body {
   }
 
   .table-fintech thead th {
-    @apply px-2 md:px-4 py-2 md:py-3 text-left text-[10px] md:text-xs font-semibold uppercase tracking-wider;
+    @apply px-2 md:px-4 py-2 md:py-3 text-[10px] md:text-xs font-semibold uppercase tracking-wider;
     color: rgb(var(--accent-blue-rgb) / 0.7);
   }
 
@@ -532,5 +747,23 @@ body {
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: rgba(59, 130, 246, 0.4);
+  }
+
+  .scrollbar-thumb-hidden {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-thumb-hidden::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thumb-hidden::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thumb-hidden::-webkit-scrollbar-thumb {
+    background: transparent;
   }
 }

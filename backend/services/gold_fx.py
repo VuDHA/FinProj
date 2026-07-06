@@ -99,6 +99,15 @@ def _parse_number(s: str) -> float:
         return 0.0
 
 
+def _gold_change_percent(change: float, current: float) -> float:
+    if not current:
+        return 0.0
+    previous = current - change
+    if not previous:
+        return 0.0
+    return (change / previous) * 100
+
+
 def _fetch_gold_sjc() -> List[GoldRate]:
     gold = []
     updated = _today().isoformat()
@@ -112,12 +121,16 @@ def _fetch_gold_sjc() -> List[GoldRate]:
             prices = payload.get("prices") or payload.get("data") or {}
             for code, item in prices.items():
                 if isinstance(item, dict):
+                    buy = float(item.get("buy", 0))
+                    change = float(item.get("change_buy", 0))
                     gold.append(
                         GoldRate(
                             source=item.get("name", code),
-                            buy=float(item.get("buy", 0)),
+                            buy=buy,
                             sell=float(item.get("sell", 0)),
                             updated_at=updated,
+                            change=change,
+                            change_percent=_gold_change_percent(change, buy),
                         )
                     )
             if gold:

@@ -25,10 +25,13 @@ class VangTodayGoldSource(Source):
                     if isinstance(item, dict):
                         buy = float(item.get("buy", 0))
                         if buy > 0:
+                            change = float(item.get("change_buy", 0))
+                            previous = buy - change
+                            change_percent = (change / previous * 100) if previous else 0.0
                             return {
                                 "price": buy,
-                                "change": 0.0,
-                                "change_percent": 0.0,
+                                "change": change,
+                                "change_percent": change_percent,
                                 "date": today(),
                             }
         except Exception as e:

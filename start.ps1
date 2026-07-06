@@ -249,152 +249,33 @@ $envFile = Join-Path $BackendDir ".env"
 $envExample = Join-Path $BackendDir ".env.example"
 if ((-not (Test-Path $envFile)) -and (Test-Path $envExample)) { Copy-Item $envExample $envFile }
 
-$ollamaProc = $null
-
-function Test-OllamaHealth($url) {
-    try {
-        $client = New-Object System.Net.Sockets.TcpClient
-        $uri = [System.Uri]$url
-        $result = $client.BeginConnect($uri.Host, $uri.Port, $null, $null)
-        $success = $result.AsyncWaitHandle.WaitOne(2000, $false)
-        if ($success) {
-            $client.EndConnect($result)
-            $client.Close()
-            return $true
-        }
-        $client.Close()
-        return $false
-    } catch {
-        return $false
-    }
-}
-
-# --- Ollama (local AI tagger) ---
-$ollamaEnabled = $true
-$ollamaModel = "qwen2.5:1.5b"
-$ollamaBaseUrl = "http://localhost:11434"
-$ollamaEmbeddingEnabled = $false
-$ollamaEmbeddingModel = "nomic-embed-text"
-$ollamaNumThreads = "0"
-$ollamaKeepAlive = "15m"
-$ollamaNumParallel = "1"
-$ollamaMaxLoadedModels = "1"
-if (Test-Path $envFile) {
-    $envContent = Get-Content $envFile -Raw
-    if ($envContent -match "OLLAMA_ENABLED\s*=\s*true") { $ollamaEnabled = $true }
-    if ($envContent -match "OLLAMA_MODEL\s*=\s*([^\s#]+)") { $ollamaModel = $Matches[1].Trim() }
-    if ($envContent -match "OLLAMA_BASE_URL\s*=\s*([^\s#]+)") { $ollamaBaseUrl = $Matches[1].Trim() }
-    if ($envContent -match "OLLAMA_EMBEDDING_ENABLED\s*=\s*true") { $ollamaEmbeddingEnabled = $true }
-    if ($envContent -match "OLLAMA_EMBEDDING_MODEL\s*=\s*([^\s#]+)") { $ollamaEmbeddingModel = $Matches[1].Trim() }
-    if ($envContent -match "OLLAMA_NUM_THREADS\s*=\s*([^\s#]+)") { $ollamaNumThreads = $Matches[1].Trim() }
-    if ($envContent -match "OLLAMA_KEEP_ALIVE\s*=\s*([^\s#]+)") { $ollamaKeepAlive = $Matches[1].Trim() }
-    if ($envContent -match "OLLAMA_NUM_PARALLEL\s*=\s*([^\s#]+)") { $ollamaNumParallel = $Matches[1].Trim() }
-    if ($envContent -match "OLLAMA_MAX_LOADED_MODELS\s*=\s*([^\s#]+)") { $ollamaMaxLoadedModels = $Matches[1].Trim() }
-}
-
-if ($ollamaEnabled) {
-    if (-not (Test-Command ollama)) {
-        Write-Info "Đang cài đặt Ollama..."
-        $ollamaInstaller = Join-Path $TempDir "OllamaSetup.exe"
-        if (-not (Test-Path $ollamaInstaller)) {
-            Show-Spinner "Đang tải Ollama" 2
-            Invoke-WebRequest -Uri "https://ollama.com/download/OllamaSetup.exe" -OutFile $ollamaInstaller -UseBasicParsing
-        }
-        Show-Spinner "Đang cài Ollama" 2
-        Start-Process $ollamaInstaller -ArgumentList "/S" -Wait -NoNewWindow
-        Refresh-Path
-        if (-not (Test-Command ollama)) {
-            Write-Warn "Không thể cài đặt Ollama tự động. Vui lòng cài thủ công từ https://ollama.com. Hệ thống sẽ dùng tagger từ khóa."
-        } else {
-            Write-Ok "Ollama đã được cài đặt"
-        }
-    }
-
-    if (Test-Command ollama) {
-        $ollamaRunning = Test-OllamaHealth $ollamaBaseUrl
-        if (-not $ollamaRunning) {
-            Write-Info "Đang khởi động Ollama server..."
-            $env:OLLAMA_NUM_THREADS = $ollamaNumThreads
-            $env:OLLAMA_KEEP_ALIVE = $ollamaKeepAlive
-            $env:OLLAMA_NUM_PARALLEL = $ollamaNumParallel
-            $env:OLLAMA_MAX_LOADED_MODELS = $ollamaMaxLoadedModels
-            Write-Info "Tuning Ollama: threads=$ollamaNumThreads keep_alive=$ollamaKeepAlive parallel=$ollamaNumParallel max_loaded=$ollamaMaxLoadedModels"
-            $ollamaProc = Start-Process ollama -ArgumentList "serve" -WindowStyle Hidden -PassThru
-            for ($i = 0; $i -lt 30; $i++) {
-                if (Test-OllamaHealth $ollamaBaseUrl) {
-                    $ollamaRunning = $true
-                    break
-                }
-                Start-Sleep -Seconds 1
-            }
-            if (-not $ollamaRunning) {
-                Write-Warn "Không thể khởi động Ollama server. Hệ thống sẽ dùng tagger từ khóa."
-            }
-        }
-
-        if ($ollamaRunning) {
-            $modelList = & ollama list 2>$null | Out-String
-            if ($modelList -notmatch [regex]::Escape($ollamaModel)) {
-                Write-Info "Đang tải model $ollamaModel..."
-                & ollama pull $ollamaModel
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Warn "Tải model $ollamaModel thất bại. Hệ thống sẽ dùng tagger từ khóa."
-                } else {
-                    Write-Ok "Đã tải model $ollamaModel"
-                }
-            } else {
-                Write-Ok "Model $ollamaModel đã có sẵn"
-            }
-
-            if ($ollamaEmbeddingEnabled) {
-                if ($modelList -notmatch [regex]::Escape($ollamaEmbeddingModel)) {
-                    Write-Info "Đang tải model embedding $ollamaEmbeddingModel..."
-                    & ollama pull $ollamaEmbeddingModel
-                    if ($LASTEXITCODE -ne 0) {
-                        Write-Warn "Tải model embedding $ollamaEmbeddingModel thất bại. RAG tương tự bài viết sẽ không hoạt động."
-                    } else {
-                        Write-Ok "Đã tải model embedding $ollamaEmbeddingModel"
-                    }
-                } else {
-                    Write-Ok "Model embedding $ollamaEmbeddingModel đã có sẵn"
-                }
-            }
-        }
-    }
-} else {
-    $aiProvider = "ollama"
-    if ($envContent -match "AI_PROVIDER\s*=\s*([^
-#]+)") { $aiProvider = $Matches[1].Trim() }
-    if ($aiProvider -eq "gemini") {
-        Write-Info "Ollama chưa được bật. AI_PROVIDER=gemini; hệ thống sẽ dùng Google Gemini API với tagger từ khóa làm dự phòng."
-    } else {
-        Write-Info "Ollama chưa được bật (OLLAMA_ENABLED=false). Hệ thống sẽ dùng tagger từ khóa."
-    }
-}
+$LogDir = Join-Path $ProjectDir ".logs"
+if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
+$backendLog = Join-Path $LogDir "backend_install.log"
+$frontendLog = Join-Path $LogDir "frontend_install.log"
 
 # --- Dependencies ---
 Write-Info "Cài đặt / cập nhật thư viện backend..."
 Show-Progress 10 "cập nhật backend"
+Write-Info "Ghi log backend: $backendLog"
 $venvPython = Join-Path $VenvDir "Scripts\python.exe"
-& $venvPython -m pip install -q -r (Join-Path $BackendDir "requirements.txt")
+$requirementsFile = Join-Path $BackendDir "requirements.txt"
+cmd /c "`"$venvPython`" -m pip install -r `"$requirementsFile`" 2>&1" | Tee-Object -FilePath $backendLog
 if ($LASTEXITCODE -ne 0) {
-    Write-Err "Cài đặt thư viện backend thất bại."
+    Write-Err "Cài đặt thư viện backend thất bại. Xem log: $backendLog"
     exit 1
 }
+Write-Ok "Thư viện backend đã cập nhật"
 
-$nodeModules = Join-Path $FrontendDir "node_modules"
-$packageLock = Join-Path $nodeModules ".package-lock.json"
-$packageJson = Join-Path $FrontendDir "package.json"
-$needsNpmInstall = -not (Test-Path $nodeModules) -or -not (Test-Path $packageLock) -or ((Get-Item $packageJson -ErrorAction SilentlyContinue).LastWriteTime -gt (Get-Item $packageLock -ErrorAction SilentlyContinue).LastWriteTime)
-if ($needsNpmInstall) {
-    Write-Info "Cài đặt / cập nhật thư viện frontend..."
-    Show-Progress 60 "cài đặt frontend"
-    & npm install --prefix $FrontendDir
-    if ($LASTEXITCODE -ne 0) {
-        Write-Err "Cài đặt thư viện frontend thất bại."
-        exit 1
-    }
+Write-Info "Cài đặt / cập nhật thư viện frontend..."
+Show-Progress 60 "cài đặt frontend"
+Write-Info "Ghi log frontend: $frontendLog"
+cmd /c "cd /d `"$FrontendDir`" && npm install 2>&1" | Tee-Object -FilePath $frontendLog
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "Cài đặt thư viện frontend thất bại. Xem log: $frontendLog"
+    exit 1
 }
+Write-Ok "Thư viện frontend đã cập nhật"
 Show-Progress 100 "hoàn tất"
 
 # --- Start backend ---
