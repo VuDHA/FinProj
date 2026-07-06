@@ -1,0 +1,109 @@
+frontend/src/components/Layout.tsx
+  s_ec7deaaddab270::t_e99dd0646208d4 126,132
+  s_3aae8d37600dbf::t_e19a885fa24eb4 8,12
+  s_ec7deaaddab270::t_b395117bd82d29 19,21,30-40,52-112,114-125,127-131,133-147,224
+  s_056723af10cefc::t_af631977691d32 113
+  s_ec7deaaddab270::t_89c2bbe8450c39 221-223
+  s_ec7deaaddab270::t_ebf943fba17415 225-227
+frontend/src/lib/themes.ts
+  s_32208377f1e726::t_d01f1bd48b0341 7-12
+  s_32208377f1e726::t_cd2228541f5528 61-90
+frontend/src/App.tsx
+  s_3aae8d37600dbf::t_669ed79019de83 5,23
+start.ps1
+  s_da7ae0bb33983f::t_ed72c2fbf1422d 262-263
+  s_a4d54d35adfc0e::t_38b070039b99f9 252-255,260,265,268
+  s_da7ae0bb33983f::t_237855671bcd4e 270-276,278
+frontend/index.html
+  s_32208377f1e726::t_eca5b8d9913c39 12,22-24
+frontend/src/pages/Dashboard.tsx
+  s_22ff8df5399e6d::t_59b331e6ec21d8 1
+  s_22ff8df5399e6d::t_fdfa06e4d4c8f1 25
+frontend/src/index.css
+  s_32208377f1e726::t_18ad941b83d48d 264-478
+  s_32208377f1e726::t_f8f887c8e83343 480,484,488,492,496,500,504,508,512,516,520-522,526-530,534,538,542,546,550,555
+  s_5479bfd4cb5c86::t_0b335122ca78e4 661
+  s_ec7deaaddab270::t_0679e46b323036 751-768
+backend/services/sources/gold.py
+  s_799fe77b23909e::t_c3259d6063c8f3 28-30,33-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "05f513a8770d3c6342c39918f95d936308b9420a",
+  "prompts": {},
+  "sessions": {
+    "s_056723af10cefc": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "70906365-889a-413d-9356-aa81ddf39a5e",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_22ff8df5399e6d": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "20c2a48b-318e-4871-82a2-2edce37bb0b2",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_32208377f1e726": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "f40f57c3-d8d8-4442-8800-02c7241165e2",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_3aae8d37600dbf": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "2859919a-6795-421f-9d5f-bfdb666dc3ce",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_5479bfd4cb5c86": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "3c7edf0f-5a27-4a02-8b89-762fc30b5878",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_799fe77b23909e": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "4ee4f45f-4cc0-45e1-9755-001849b5c356",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_a4d54d35adfc0e": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "3b68ce5a-1533-4dd2-beb6-cf8d226c6615",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_da7ae0bb33983f": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "545af685-5b49-46a8-a6cc-2065934c8e1f",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_ec7deaaddab270": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "c8ac6b17-d3c0-431c-a176-16a84cdec351",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
