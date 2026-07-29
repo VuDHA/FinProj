@@ -1,0 +1,19 @@
+.github/workflows/release.yml
+  s_fd30dc669ad71d::t_98cdca808a39ad 74,80,82,84-87,90,108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "cf5c6923bbf9cf242e72e6ef7f89233b977f31e5",
+  "prompts": {},
+  "sessions": {
+    "s_fd30dc669ad71d": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_fd30dc669ad71d",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
