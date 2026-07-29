@@ -1,0 +1,176 @@
+backend/services/gold_fx.py
+  s_5479bfd4cb5c86::t_a6be81b3204026 13,19-24,32,36-41,68,94,106-111,113-125,127,132-135
+  s_5479bfd4cb5c86::t_cc06bcb6bb5d1a 12
+  s_fdd1a98874449c::t_4293c754c7aca1 2,8,145-150,179
+backend/services/batch_ai.py
+  s_a4e3c72a974258::t_6ca32075986b9a 17
+  s_a4e3c72a974258::t_51d296997ffd5f 16
+  s_fdd1a98874449c::t_b3050469075084 3,5-6,23-39,193,197-198,260-271,284-285,298,300-301,312,314-315,405-416,428-430,435,438-439,450,453-454,492-493,496,545,633-644,749-760,811-822,982-983,988,994,1018,1022-1023
+backend/services/backtest.py
+  s_d7c0c61fa4de1e::t_9585f36ae2f129 132
+  s_d7c0c61fa4de1e::t_c07d62e00a45e8 129-131
+  s_fdd1a98874449c::t_7340c272dc5184 2,14-20,43,112-128,190,225,234-235,256-260,296,299,301,306-314,316,319-322,337-340,356-364,366-379,382,384,390,396
+backend/database.py
+  s_f97527ca335318::t_1e06187bbb3b13 12
+  s_f97527ca335318::t_958f74923eede4 11
+  s_fdd1a98874449c::t_aee04793d9b078 1,34,106-107
+backend/services/smart_import.py
+  s_d821dfac88c7b1::t_9f31b590ee7530 219-220,223-228,232-244,246-262,272-296,298-304,306-322,334-335
+  s_d821dfac88c7b1::t_ac96de6619263c 216-218
+  s_d821dfac88c7b1::t_c71639b62f3adf 221-222
+  s_d821dfac88c7b1::t_1ec4c5afdecb07 331-333
+  s_d821dfac88c7b1::t_7b8c9dcff9841a 336
+  s_fdd1a98874449c::t_94cef8dfc02016 3,13,199-200,203-204,212-215,324-330,338-361,365-379
+backend/main.py
+  s_b42aaccce97650::t_6cacf83c4c6e56 188
+  s_b42aaccce97650::t_84d4b6dde938b1 185-187
+  s_fdd1a98874449c::t_66fe8df42413c2 1,4,6-7,11,21,25-121,135,145-147,154-155,174-184
+backend/jobs/news_updater.py
+  s_e3f998bbf396a8::t_c11401aeedf9f7 21
+  s_e3f998bbf396a8::t_1cb7356cab7ae0 20
+  s_fdd1a98874449c::t_94bb056f664d17 1-2,34,36,52,67,77,86,88-90
+backend/services/market_data.py
+  s_d821dfac88c7b1::t_be89bcb5b5dae1 16,22-27,29-41,43-44,48-51
+  s_d821dfac88c7b1::t_4caec9295292ca 15
+  s_fdd1a98874449c::t_a6005eb2f8ad3c 2,4,110,119,126,146,161-162,198,264,338,398,411,454,505
+backend/api/alerts.py
+  s_fdd1a98874449c::t_14d3f6ae889def 2,16,33,106-110,158-162,199-203
+backend/api/assets.py
+  s_fdd1a98874449c::t_59c4b8bf4a5848 2,65-69,77,80-84,139,145-149,161-165
+backend/api/dividends.py
+  s_fdd1a98874449c::t_4c7ae48b984b05 1-200
+backend/api/goals.py
+  s_fdd1a98874449c::t_54bbe7198c800d 1-123
+backend/api/import_export.py
+  s_fdd1a98874449c::t_b76a62253c1259 19-28,55,93,121
+backend/api/income.py
+  s_fdd1a98874449c::t_4971683ddd207f 30-34,45-49
+backend/api/search.py
+  s_fdd1a98874449c::t_df961aa25b3059 1-21
+backend/api/settings.py
+  s_fdd1a98874449c::t_27066c01f7d2d5 106,109
+backend/api/tax.py
+  s_fdd1a98874449c::t_c7ad202360a706 1-53
+backend/api/transactions.py
+  s_fdd1a98874449c::t_f1afef692f94e3 2,6,42-46,56,64,83-84,95,105,138-140,152-156,212-214,223-227,255-259
+backend/jobs/backup.py
+  s_fdd1a98874449c::t_18a11162c306a3 1-183
+backend/jobs/price_updater.py
+  s_fdd1a98874449c::t_b5b74bee8b0208 1-2,10-11,55,61,63,68,78,81
+backend/models.py
+  s_fdd1a98874449c::t_99df12499f990c 2,23,25-26,30,36,38-40,46,52,54,61,64-65,74,101,123,129,149,154-229
+backend/schemas.py
+  s_fdd1a98874449c::t_dd186522f379ea 2,5,57-59,69-71,80,90-91,104-106,114-115,121,126-127,146,148,160-162,175-180,185-187,189-191,199,204-206,225-226,232,239-240,244-245,267,273-275,281-283,289,294,303-306,315-316,318,324-326,348,359,368-370,375-376,381,383-385,392-394,398,623-858
+backend/services/ai_insights/portfolio.py
+  s_fdd1a98874449c::t_f812a9bf45d9d2 44
+backend/services/ai_insights/prompts.py
+  s_fdd1a98874449c::t_eaa55f29192eed 147,149,152,154
+backend/services/ai_queue.py
+  s_fdd1a98874449c::t_aec994b8f6a58a 1,5,9-14,33-34,37-51,55,63-66,76,80,84,86,88-90,178-179,195
+backend/services/analytics.py
+  s_fdd1a98874449c::t_e712f8d16b7b0d 2,23-29,129,139,143-144,152,180,191,198,248-249,259-260,264,267-268,280,284,292-293,299,319
+backend/services/benchmark.py
+  s_fdd1a98874449c::t_6a1f9f1f09753e 2,12-18,45-46,58-59,78,82
+backend/services/compare.py
+  s_fdd1a98874449c::t_b48255d5773140 50-75,82-83,87-90,92,137-138,161-162,208-209
+backend/services/corporate_actions.py
+  s_fdd1a98874449c::t_421b6bdce678b4 1-261
+backend/services/csv_io.py
+  s_fdd1a98874449c::t_8a5fe94dfbb815 4,25-83,87,96-100,111,116-117,122,133-134,137-138,145-151,154-179,181-197,211-227,229-232,234-242,244-247,249-254,256-259,261-268,270-273,275-298,302-316
+backend/services/dividends.py
+  s_fdd1a98874449c::t_e98e4e0929f8d6 1-141
+backend/services/goals.py
+  s_fdd1a98874449c::t_24e86dce7f3c35 1-106
+backend/services/news/article_ai.py
+  s_fdd1a98874449c::t_2326715d2a0526 8,109-110,117-120,129-132
+backend/services/news/crawler.py
+  s_fdd1a98874449c::t_79acddc03ba8b8 3,6,9-10,109-116
+backend/services/news/scraper.py
+  s_fdd1a98874449c::t_ac0db3e32d9576 1-2,5,12-61,156-158,214-219
+backend/services/news/search.py
+  s_fdd1a98874449c::t_5d9cc6c114ce0a 1-370
+backend/services/portfolio.py
+  s_fdd1a98874449c::t_02065ed69fba81 1,51-52,89-93,98,141-144
+backend/services/portfolio_history.py
+  s_fdd1a98874449c::t_7f12c1bc76743c 2,49,63-65,80,85-86,103-104,114-116,126-128,131,135-136
+backend/services/rag_context.py
+  s_fdd1a98874449c::t_8dd65a5a8d6dbb 51-52,56,74
+backend/services/rebalance.py
+  s_fdd1a98874449c::t_700c9fd33df417 1,10-19,28,32,35,37,42-45,72,78,80,91-93,95-97,104
+backend/services/risk_metrics.py
+  s_fdd1a98874449c::t_e8b3b8ddc97fb6 28,39,117-118,120
+backend/services/tax.py
+  s_fdd1a98874449c::t_a3ee66ea2b78af 1-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fbac6801b3fe9be93f9f9d5587d48fa7d168607b",
+  "prompts": {},
+  "sessions": {
+    "s_5479bfd4cb5c86": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "3c7edf0f-5a27-4a02-8b89-762fc30b5878",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_a4e3c72a974258": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "b82a7b21-7b8e-4872-b49a-3fca004216ed",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_b42aaccce97650": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "e95b8d53-1966-4495-b49a-1450e64b2321",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_d7c0c61fa4de1e": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "9db3b16e-d22d-415b-9f34-6b85201ab1c4",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_d821dfac88c7b1": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "fa7c12ec-e9bd-4445-af98-2322d086b8b4",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_e3f998bbf396a8": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "f4113e18-3e53-4bab-9b54-8d78a33469d5",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_f97527ca335318": {
+      "agent_id": {
+        "tool": "windsurf",
+        "id": "8fe049bf-bf6a-4931-8a50-3b62b5976ded",
+        "model": "Kimi K2.7"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    },
+    "s_fdd1a98874449c": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_fdd1a98874449c",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
