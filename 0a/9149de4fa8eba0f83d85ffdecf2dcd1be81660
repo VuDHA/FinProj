@@ -1,0 +1,19 @@
+.gitignore
+  s_625900730ba5fd::t_f6fae803a6a75e 162-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0a9149de4fa8eba0f83d85ffdecf2dcd1be81660",
+  "prompts": {},
+  "sessions": {
+    "s_625900730ba5fd": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_625900730ba5fd",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
