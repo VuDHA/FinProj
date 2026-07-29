@@ -63,5 +63,13 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+      - name: Create dummy sidecar binary
+        shell: pwsh
+        run: |
+          # The Tauri build script checks that the sidecar binary exists.
+          # In CI we don't build the real sidecar (it requires PyInstaller +
+          # the full backend), so create a placeholder to satisfy the check.
+          New-Item -ItemType Directory -Force -Path binaries | Out-Null
+          Set-Content -Path "binaries/wealth-backend-x86_64-pc-windows-msvc.exe" -Value "placeholder" -NoNewline
       - name: Cargo check (type-check Rust)
         run: cargo check
