@@ -52,18 +52,27 @@ jobs:
 
   tauri-check:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: src-tauri
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
       - name: Setup Rust stable
         uses: dtolnay/rust-toolchain@stable
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+      - name: Build frontend (needed by tauri generate_context!)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
       - name: Create dummy sidecar binary
+        working-directory: src-tauri
         shell: pwsh
         run: |
           # The Tauri build script checks that the sidecar binary exists.
@@ -72,4 +81,5 @@ jobs:
           New-Item -ItemType Directory -Force -Path binaries | Out-Null
           Set-Content -Path "binaries/wealth-backend-x86_64-pc-windows-msvc.exe" -Value "placeholder" -NoNewline
       - name: Cargo check (type-check Rust)
+        working-directory: src-tauri
         run: cargo check

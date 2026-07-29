@@ -58,7 +58,7 @@ import json
 from fastapi._compat import ModelField as _ModelField
 
 _original_serialize = _ModelField.serialize
-_original_serialize_json = _ModelField.serialize_json
+_original_serialize_json = getattr(_ModelField, "serialize_json", None)
 
 
 def _decimal_serialize(self: _ModelField, value: Any, *, mode: str = "json", **kwargs: Any) -> Any:
@@ -85,7 +85,9 @@ def _decimal_serialize_json(self: _ModelField, value: Any, **kwargs: Any) -> byt
 
 
 _ModelField.serialize = _decimal_serialize  # type: ignore[method-assign]
-_ModelField.serialize_json = _decimal_serialize_json  # type: ignore[method-assign]
+# serialize_json was removed in newer pydantic versions; only patch if present.
+if _original_serialize_json is not None:
+    _ModelField.serialize_json = _decimal_serialize_json  # type: ignore[method-assign]
 
 
 # Patch jsonable_encoder for endpoints WITHOUT a response_model. When
