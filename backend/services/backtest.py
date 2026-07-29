@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from typing import List, Optional, Dict
 from collections import defaultdict
 
@@ -8,6 +9,13 @@ from models import Asset, PriceSnapshot, Transaction
 from schemas import BacktestPosition, BacktestRequest, BacktestPoint, BacktestResult, BacktestTrade
 from services.market_data import MarketDataService
 from services.prompt_parser import PromptParser, PromptParserError
+
+
+def _to_decimal(val) -> Decimal:
+    """Convert a numeric value (float or Decimal) to Decimal safely."""
+    if isinstance(val, Decimal):
+        return val
+    return Decimal(str(val))
 
 
 class BacktestService:
@@ -32,7 +40,7 @@ class BacktestService:
             )
             .order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
         ).all()
-        return {s.date: s.price for s in snapshots}
+        return {s.date: float(s.price) for s in snapshots}
 
     def _get_history(self, asset: Asset, start: datetime.date, end: datetime.date) -> Dict[datetime.date, float]:
         snapshots = self._history_from_snapshots(asset.id, start, end)
@@ -101,6 +109,27 @@ class BacktestService:
         n = len(symbols)
         return {s: 1.0 / n for s in symbols}
 
+    @staticmethod
+    def _execution_price(
+        history: Dict[datetime.date, float],
+        signal_date: datetime.date,
+        lag: int,
+    ) -> Optional[float]:
+        """Get the execution price for a signal on signal_date, executed lag days later.
+
+        This avoids lookahead bias by not trading at the same-day close price.
+        When lag > 0, the trade executes at the price on the first available
+        date >= signal_date + lag days.
+        """
+        if lag <= 0:
+            return history.get(signal_date)
+        # Find the next available date >= signal_date + lag days
+        target = signal_date + datetime.timedelta(days=lag)
+        available_dates = sorted(d for d in history if d >= target)
+        if available_dates:
+            return history[available_dates[0]]
+        return None
+
     def run(self, request: BacktestRequest) -> BacktestResult:
         start = request.start_date
         end = request.end_date
@@ -158,7 +187,7 @@ class BacktestService:
         if not all_dates:
             return BacktestResult(
                 final_value=request.initial_cash,
-                total_return=0.0,
+                total_return=Decimal("0"),
                 total_return_percent=0.0,
                 max_drawdown_percent=0.0,
                 equity_curve=[BacktestPoint(date=start, value=request.initial_cash)],
@@ -193,7 +222,7 @@ class BacktestService:
         if not symbols:
             return BacktestResult(
                 final_value=request.initial_cash,
-                total_return=0.0,
+                total_return=Decimal("0"),
                 total_return_percent=0.0,
                 max_drawdown_percent=0.0,
                 equity_curve=[BacktestPoint(date=start, value=request.initial_cash)],
@@ -202,8 +231,8 @@ class BacktestService:
             )
 
         id_by_symbol = {asset_by_id[aid].symbol: aid for aid in histories.keys()}
-        cash = float(request.initial_cash)
-        holdings: Dict[str, float] = {symbol: 0.0 for symbol in symbols}
+        cash: Decimal = request.initial_cash
+        holdings: Dict[str, Decimal] = {symbol: Decimal("0") for symbol in symbols}
         trades: List[BacktestTrade] = []
 
         equity_curve: List[BacktestPoint] = []
@@ -224,10 +253,11 @@ class BacktestService:
                 asset_id = id_by_symbol[symbol]
                 if asset_id not in histories or not histories[asset_id]:
                     continue
-                price = float(pos.price)
-                qty = float(pos.quantity)
-                cost = price * qty
-                if cost > cash + 1:
+                price = pos.price  # Decimal
+                qty = pos.quantity  # Decimal
+                base_cost = price * qty
+                cost = base_cost * (Decimal("1") + Decimal(str(request.slippage_percent))) + base_cost * Decimal(str(request.commission_percent))
+                if cost > cash + Decimal("1"):
                     warnings.append(f"Không đủ tiền mặt để mua {symbol} theo vị thế đã nhập")
                     continue
                 cash -= cost
@@ -263,24 +293,33 @@ class BacktestService:
                         should_rebalance = True
 
                 if should_rebalance:
-                    # Only rebalance symbols that have a price on this date
+                    # Only rebalance symbols that have a price on this date (for valuation)
                     available_symbols = [s for s in symbols if date in histories[id_by_symbol[s]]]
                     if available_symbols:
+                        # Valuation uses same-day prices (this is just portfolio valuation, not trading)
                         current_value = cash + sum(
-                            holdings[sym] * histories[id_by_symbol[sym]][date]
+                            holdings[sym] * _to_decimal(histories[id_by_symbol[sym]][date])
                             for sym in available_symbols
                         )
                         for symbol in available_symbols:
                             asset_id = id_by_symbol[symbol]
-                            price = histories[asset_id][date]
-                            target_value = current_value * allocation_fractions[symbol]
-                            current_position_value = holdings[symbol] * price
+                            # T+1 execution: use price from signal_date + execution_lag_days
+                            exec_price_raw = self._execution_price(
+                                histories[asset_id], date, request.execution_lag_days
+                            )
+                            if exec_price_raw is None:
+                                continue
+                            price = _to_decimal(exec_price_raw)
+                            target_value = current_value * Decimal(str(allocation_fractions[symbol]))
+                            current_position_value = holdings[symbol] * _to_decimal(histories[asset_id][date])
                             diff_value = target_value - current_position_value
-                            if abs(diff_value) > 1:
+                            if abs(diff_value) > Decimal("1"):
                                 diff_qty = diff_value / price
                                 if diff_qty > 0:
-                                    cost = diff_qty * price
-                                    if cost <= cash + 1:
+                                    # BUY with transaction costs (slippage + commission)
+                                    base_cost = diff_qty * price
+                                    cost = base_cost * (Decimal("1") + Decimal(str(request.slippage_percent))) + base_cost * Decimal(str(request.commission_percent))
+                                    if cost <= cash + Decimal("1"):
                                         cash -= cost
                                         holdings[symbol] += diff_qty
                                         trades.append(
@@ -295,7 +334,10 @@ class BacktestService:
                                 else:
                                     sell_qty = min(-diff_qty, holdings[symbol])
                                     if sell_qty > 0:
-                                        cash += sell_qty * price
+                                        # SELL with transaction costs (slippage + commission)
+                                        base_proceeds = sell_qty * price
+                                        proceeds = base_proceeds * (Decimal("1") - Decimal(str(request.slippage_percent))) - base_proceeds * Decimal(str(request.commission_percent))
+                                        cash += proceeds
                                         holdings[symbol] -= sell_qty
                                         trades.append(
                                             BacktestTrade(
@@ -311,36 +353,47 @@ class BacktestService:
                 for symbol in symbols:
                     if date == first_date_by_symbol[symbol]:
                         asset_id = id_by_symbol[symbol]
-                        price = histories[asset_id][date]
-                        symbol_allocation = request.initial_cash * allocation_fractions[symbol]
-                        if price and price > 0 and cash >= symbol_allocation:
+                        # T+1 execution: use price from signal_date + execution_lag_days
+                        exec_price_raw = self._execution_price(
+                            histories[asset_id], date, request.execution_lag_days
+                        )
+                        if exec_price_raw is None:
+                            continue
+                        price = _to_decimal(exec_price_raw)
+                        symbol_allocation = request.initial_cash * Decimal(str(allocation_fractions[symbol]))
+                        if price and price > 0:
                             qty = symbol_allocation / price
-                            cash -= qty * price
-                            holdings[symbol] = qty
-                            trades.append(
-                                BacktestTrade(
-                                    date=date,
-                                    symbol=symbol,
-                                    action="BUY",
-                                    quantity=round(qty, 6),
-                                    price=round(price, 2),
+                            # BUY with transaction costs (slippage + commission)
+                            base_cost = qty * price
+                            cost = base_cost * (Decimal("1") + Decimal(str(request.slippage_percent))) + base_cost * Decimal(str(request.commission_percent))
+                            if cost <= cash + Decimal("1"):
+                                cash -= cost
+                                holdings[symbol] = qty
+                                trades.append(
+                                    BacktestTrade(
+                                        date=date,
+                                        symbol=symbol,
+                                        action="BUY",
+                                        quantity=round(qty, 6),
+                                        price=round(price, 2),
+                                    )
                                 )
-                            )
 
+            # Equity curve valuation uses same-day prices (valuation, not trading)
             total_value = cash + sum(
-                holdings[sym] * histories[id_by_symbol[sym]].get(date, 0)
+                holdings[sym] * _to_decimal(histories[id_by_symbol[sym]].get(date, 0))
                 for sym in symbols
             )
             equity_curve.append(BacktestPoint(date=date, value=round(total_value, 2)))
             if total_value > max_value:
                 max_value = total_value
-            drawdown = (max_value - total_value) / max_value if max_value else 0
+            drawdown = float((max_value - total_value) / max_value) if max_value else 0.0
             if drawdown > max_drawdown:
                 max_drawdown = drawdown
 
         final_value = equity_curve[-1].value if equity_curve else request.initial_cash
         total_return = final_value - request.initial_cash
-        total_return_percent = (total_return / request.initial_cash * 100) if request.initial_cash else 0.0
+        total_return_percent = float(total_return / request.initial_cash * 100) if request.initial_cash else 0.0
 
         return BacktestResult(
             final_value=round(final_value, 2),

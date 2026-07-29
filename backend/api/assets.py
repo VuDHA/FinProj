@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -61,7 +62,11 @@ def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
     manual_value = payload.pop("manual_value", None)
     db_asset = Asset(**payload)
     session.add(db_asset)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(db_asset)
 
     if manual_value:
@@ -69,10 +74,14 @@ def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
             PriceSnapshot(
                 asset_id=db_asset.id,
                 date=datetime.date.today(),
-                price=float(manual_value),
+                price=Decimal(str(manual_value)),
             )
         )
-        session.commit()
+        try:
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
 
     return db_asset
 
@@ -127,13 +136,17 @@ def update_asset(asset_id: int, update: AssetUpdate, session: Session = Depends(
                 PriceSnapshot(
                     asset_id=asset.id,
                     date=datetime.date.today(),
-                    price=float(update.manual_value),
+                    price=Decimal(str(update.manual_value)),
                 )
             )
         # For market-priced assets manual_value is not used; ignore it.
 
     session.add(asset)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(asset)
     return asset
 
@@ -145,5 +158,9 @@ def delete_asset(asset_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Asset not found")
     asset.is_active = False
     session.add(asset)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     return {"ok": True}

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Dict, List
 
 from sqlmodel import Session, select
@@ -5,6 +6,16 @@ from sqlmodel import Session, select
 from models import AllocationTarget
 from schemas import RebalanceResult, RebalanceSuggestion, RebalanceTrade
 from services.portfolio import PortfolioService
+
+# Lot sizes by asset type. Vietnamese stocks trade in lots of 100.
+LOT_SIZES = {"STOCK": 100, "FUND": 100, "ETF": 100, "GOLD": 0.01, "CRYPTO": 0.0001}
+
+
+def _round_to_lot(quantity: Decimal, asset_type: str) -> Decimal:
+    """Round a quantity to the nearest valid lot size for the asset type."""
+    lot = LOT_SIZES.get(asset_type, 1)
+    lot_dec = Decimal(str(lot))
+    return Decimal(round(quantity / lot_dec)) * lot_dec
 
 
 class RebalanceService:
@@ -14,24 +25,24 @@ class RebalanceService:
     def suggest(self) -> RebalanceResult:
         portfolio = PortfolioService(self.session).get_portfolio()
         targets = self.session.exec(select(AllocationTarget)).all()
-        target_map: Dict[str, float] = {t.type: t.target_percent for t in targets}
+        target_map: Dict[str, Decimal] = {t.type: t.target_percent for t in targets}
 
         total_value = portfolio.total_value
         if total_value <= 0:
-            return RebalanceResult(total_value=0.0, suggestions=[], trades=[])
+            return RebalanceResult(total_value=Decimal("0"), suggestions=[], trades=[])
 
         # Group current portfolio by asset type.
-        current_by_type: Dict[str, float] = {}
+        current_by_type: Dict[str, Decimal] = {}
         for item in portfolio.items:
-            current_by_type[item.type] = current_by_type.get(item.type, 0.0) + item.current_value
+            current_by_type[item.type] = current_by_type.get(item.type, Decimal("0")) + item.current_value
 
         all_types = set(current_by_type.keys()) | set(target_map.keys())
         suggestions = []
         for t in sorted(all_types):
-            current_value = current_by_type.get(t, 0.0)
-            current_percent = (current_value / total_value) * 100
-            target_percent = target_map.get(t, 0.0)
-            target_value = (target_percent / 100) * total_value
+            current_value = current_by_type.get(t, Decimal("0"))
+            current_percent = float(current_value / total_value * 100)
+            target_percent = target_map.get(t, Decimal("0"))
+            target_value = (target_percent / Decimal("100")) * total_value
             suggestions.append(
                 RebalanceSuggestion(
                     type=t,
@@ -58,15 +69,15 @@ class RebalanceService:
                 price = target_asset.latest_price
                 if price <= 0:
                     continue
-                quantity = suggestion.diff_value / price
+                quantity = _round_to_lot(suggestion.diff_value / price, target_asset.type)
                 trades.append(
                     RebalanceTrade(
                         symbol=target_asset.symbol,
                         name=target_asset.name,
                         action="BUY",
-                        quantity=round(quantity, 4),
+                        quantity=quantity,
                         estimated_price=round(price, 2),
-                        estimated_value=round(suggestion.diff_value, 2),
+                        estimated_value=round(quantity * price, 2),
                     )
                 )
             else:
@@ -77,17 +88,20 @@ class RebalanceService:
                 price = target_asset.latest_price
                 if price <= 0:
                     continue
-                quantity = min(
-                    target_asset.quantity,
-                    abs(suggestion.diff_value) / price,
+                quantity = _round_to_lot(
+                    min(target_asset.quantity, abs(suggestion.diff_value) / price),
+                    target_asset.type,
                 )
+                # Ensure lot-rounded sell quantity doesn't exceed actual holding
+                if quantity > target_asset.quantity:
+                    quantity = target_asset.quantity
                 value = quantity * price
                 trades.append(
                     RebalanceTrade(
                         symbol=target_asset.symbol,
                         name=target_asset.name,
                         action="SELL",
-                        quantity=round(quantity, 4),
+                        quantity=quantity,
                         estimated_price=round(price, 2),
                         estimated_value=round(value, 2),
                     )

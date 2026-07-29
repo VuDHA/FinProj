@@ -27,7 +27,11 @@ def create_income(income: IncomeCreate, session: Session = Depends(get_session))
 
     db_income = Income(**income.model_dump())
     session.add(db_income)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(db_income)
     return db_income
 
@@ -38,5 +42,9 @@ def delete_income(income_id: int, session: Session = Depends(get_session)):
     if not item:
         raise HTTPException(status_code=404, detail="Income not found")
     session.delete(item)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     return {"ok": True}

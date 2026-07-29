@@ -1,9 +1,13 @@
+import logging
+
 from sqlmodel import Session, select
 
 from database import engine
 from models import Asset, PriceSnapshot
 from services.asset_type_config import is_market_price_type
 from services.market_data import MarketDataService
+
+logger = logging.getLogger(__name__)
 
 
 def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> PriceSnapshot | None:
@@ -48,20 +52,20 @@ def update_all_prices():
                 continue
             data, _ = service.fetch_price_with_warnings(asset)
             if _get_or_create_snapshot(session, asset, data):
-                print(f"[scheduler] updated {asset.symbol}: {data['price']}")
+                logger.info("scheduler updated %s: %s", asset.symbol, data['price'])
         session.commit()
 
         try:
             triggered = evaluate_notifications(session)
             if triggered:
-                print(f"[scheduler] {len(triggered)} price alerts triggered")
+                logger.info("scheduler %d price alerts triggered", len(triggered))
         except Exception as e:
-            print(f"[scheduler] alert evaluation error: {e}")
+            logger.error("scheduler alert evaluation error: %s", e)
 
 
 def start_scheduler(hour: int = 15, minute: int = 35):
     if not APSCHEDULER_AVAILABLE:
-        print("[scheduler] APScheduler not installed; skipping")
+        logger.warning("scheduler APScheduler not installed; skipping")
         return None
     scheduler = BackgroundScheduler()
     scheduler.add_job(
@@ -71,7 +75,8 @@ def start_scheduler(hour: int = 15, minute: int = 35):
         minute=minute,
         id="daily_price_update",
         replace_existing=True,
+        max_instances=1,
     )
     scheduler.start()
-    print(f"[scheduler] daily price update at {hour:02d}:{minute:02d}")
+    logger.info("scheduler daily price update at %02d:%02d", hour, minute)
     return scheduler

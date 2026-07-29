@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,7 +13,7 @@ from services.market_data import MarketDataService
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 
-def _latest_price(session: Session, asset: Asset) -> Optional[float]:
+def _latest_price(session: Session, asset: Asset) -> Optional[Decimal]:
     """Return the best available market price for an asset."""
     snapshot = session.exec(
         select(PriceSnapshot)
@@ -29,7 +30,7 @@ def _latest_price(session: Session, asset: Asset) -> Optional[float]:
     return None
 
 
-def _build_notification(alert: Alert, asset: Asset, current_price: float) -> Optional[NotificationRead]:
+def _build_notification(alert: Alert, asset: Asset, current_price: Decimal) -> Optional[NotificationRead]:
     """Build a notification if the alert condition is met."""
     if alert.value_type == "VALUE":
         if alert.type == "STOP_LOSS":
@@ -102,7 +103,11 @@ def create_alert(alert: AlertCreate, session: Session = Depends(get_session)):
         is_active=True,
     )
     session.add(db_alert)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(db_alert)
 
     return AlertRead(
@@ -150,7 +155,11 @@ def delete_alert(alert_id: int, session: Session = Depends(get_session)):
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     session.delete(alert)
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     return {"ok": True}
 
 
@@ -187,7 +196,11 @@ def resolve_alert(alert_id: int, session: Session = Depends(get_session)):
 
     alert.is_active = False
     alert.resolved_at = datetime.utcnow()
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(alert)
 
     asset = session.get(Asset, alert.asset_id)

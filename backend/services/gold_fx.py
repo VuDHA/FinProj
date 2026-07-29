@@ -1,17 +1,27 @@
 import datetime
+import logging
 import re
 import xml.etree.ElementTree as ET
 from typing import List
 
 import requests
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception_type
 
 from schemas import GoldRate, FxRate, GoldFxResponse
+
+logger = logging.getLogger(__name__)
 
 
 def _today() -> datetime.date:
     return datetime.datetime.now().date()
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential_jitter(initial=1, max=10),
+    retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, Exception)),
+    reraise=True,
+)
 def _fetch_exchangerate_usd_vnd() -> float:
     try:
         url = "https://api.exchangerate-api.com/v4/latest/USD"
@@ -19,10 +29,16 @@ def _fetch_exchangerate_usd_vnd() -> float:
         if r.status_code == 200:
             return float(r.json().get("rates", {}).get("VND", 0))
     except Exception as e:
-        print(f"[gold_fx] exchangerate error: {e}")
+        logger.error("gold_fx exchangerate error: %s", e)
     return 0.0
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential_jitter(initial=1, max=10),
+    retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, Exception)),
+    reraise=True,
+)
 def _fetch_vcb_fx() -> List[FxRate]:
     rates = []
 
@@ -49,7 +65,7 @@ def _fetch_vcb_fx() -> List[FxRate]:
             if rates:
                 return rates
     except Exception as e:
-        print(f"[gold_fx] vcb xml error: {e}")
+        logger.error("gold_fx vcb xml error: %s", e)
 
     # Fallback: scrape VCB public page
     try:
@@ -75,7 +91,7 @@ def _fetch_vcb_fx() -> List[FxRate]:
             if rates:
                 return rates
     except Exception as e:
-        print(f"[gold_fx] vcb scrape error: {e}")
+        logger.error("gold_fx vcb scrape error: %s", e)
 
     # Final fallback: exchangerate-api for USD/VND
     usd_vnd = _fetch_exchangerate_usd_vnd()
@@ -87,16 +103,34 @@ def _fetch_vcb_fx() -> List[FxRate]:
     return rates
 
 
-def _parse_number(s: str) -> float:
-    if s is None:
+def _parse_price_value(raw: str) -> float:
+    """Parse a price string that may use comma as decimal or thousands separator."""
+    if raw is None:
         return 0.0
+    s = str(raw).strip().replace(" ", "")
+    if not s:
+        return 0.0
+    for sym in ("₫", "$", "€", "£", "¥", "VND", "USD", "EUR"):
+        s = s.replace(sym, "")
+    s = s.strip()
+    has_comma = "," in s
+    has_dot = "." in s
+    if has_comma and has_dot:
+        s = s.replace(",", "")
+    elif has_comma:
+        parts = s.rsplit(",", 1)
+        if len(parts) == 2 and len(parts[1]) <= 2:
+            s = parts[0].replace(",", "") + "." + parts[1]
+        else:
+            s = s.replace(",", "")
     try:
-        # Treat comma as a thousands separator and keep the dot as decimal.
-        # If both are present, remove only commas. This matches the VCB XML format.
-        cleaned = s.replace(",", "")
-        return float(cleaned)
+        return float(s)
     except ValueError:
         return 0.0
+
+
+def _parse_number(s: str) -> float:
+    return _parse_price_value(s)
 
 
 def _gold_change_percent(change: float, current: float) -> float:
@@ -108,6 +142,12 @@ def _gold_change_percent(change: float, current: float) -> float:
     return (change / previous) * 100
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential_jitter(initial=1, max=10),
+    retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, Exception)),
+    reraise=True,
+)
 def _fetch_gold_sjc() -> List[GoldRate]:
     gold = []
     updated = _today().isoformat()
@@ -136,7 +176,7 @@ def _fetch_gold_sjc() -> List[GoldRate]:
             if gold:
                 return gold
     except Exception as e:
-        print(f"[gold_fx] vang.today error: {e}")
+        logger.error("gold_fx vang.today error: %s", e)
 
     # Fallback placeholder so the app does not crash
     gold.append(

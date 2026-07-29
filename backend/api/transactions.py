@@ -1,7 +1,9 @@
 import datetime
+from decimal import Decimal
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 from database import get_session
@@ -37,7 +39,11 @@ def repair_zero_price_transactions(session: Session) -> int:
             session.add(tx)
             repaired += 1
     if repaired:
-        session.commit()
+        try:
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
     return repaired
 
 
@@ -47,7 +53,7 @@ def list_transactions(session: Session = Depends(get_session)):
 
 
 def _validate_sell_holding(
-    session: Session, asset_id: int, transaction_date: datetime.date, quantity: float, exclude_id: int | None = None
+    session: Session, asset_id: int, transaction_date: datetime.date, quantity: Decimal, exclude_id: int | None = None
 ) -> None:
     query = (
         select(Transaction)
@@ -55,7 +61,7 @@ def _validate_sell_holding(
         .order_by(Transaction.date.asc())
     )
     existing = session.exec(query).all()
-    holding = 0.0
+    holding = Decimal("0")
     for t in existing:
         if t.date > transaction_date:
             break
@@ -74,8 +80,8 @@ def _validate_sell_holding(
 
 def _resolve_transaction_price(
     session: Session, asset: Asset, transaction: TransactionCreate | TransactionUpdate
-) -> float:
-    """Resolve and validate the transaction price, returning a positive float."""
+) -> Decimal:
+    """Resolve and validate the transaction price, returning a positive Decimal."""
     market = MarketDataService(session)
     price = market.resolve_effective_price(asset, transaction.date, transaction.price)
     if price is None or price <= 0:
@@ -86,7 +92,7 @@ def _resolve_transaction_price(
     return price
 
 
-def _update_stable_snapshot(session: Session, asset: Asset, price: float) -> None:
+def _update_stable_snapshot(session: Session, asset: Asset, price: Decimal) -> None:
     """Replace stale snapshots for a non-market asset with the given transaction price."""
     for snap in session.exec(
         select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
@@ -96,7 +102,7 @@ def _update_stable_snapshot(session: Session, asset: Asset, price: float) -> Non
         PriceSnapshot(
             asset_id=asset.id,
             date=datetime.date.today(),
-            price=float(price),
+            price=price,
         )
     )
 
@@ -129,6 +135,9 @@ def create_transaction(
     transaction.price = _resolve_transaction_price(session, asset, transaction)
 
     if is_sell_type(transaction.type):
+        # Acquire the write lock before validation so that the validate+insert
+        # is atomic and no concurrent write can modify holdings in between.
+        session.execute(text("BEGIN IMMEDIATE"))
         _validate_sell_holding(session, asset.id, transaction.date, transaction.quantity)
 
     db_tx = Transaction(**transaction.model_dump())
@@ -140,7 +149,11 @@ def create_transaction(
     if not is_market_price_type(session, asset.type):
         _update_stable_snapshot(session, asset, transaction.price)
 
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(db_tx)
     return db_tx
 
@@ -196,6 +209,9 @@ def update_transaction(
         tx.price = effective_price
 
     if is_sell_type(tx.type):
+        # Acquire the write lock before validation so that the validate+insert
+        # is atomic and no concurrent write can modify holdings in between.
+        session.execute(text("BEGIN IMMEDIATE"))
         _validate_sell_holding(session, asset.id, tx.date, tx.quantity, exclude_id=tx.id)
 
     session.add(tx)
@@ -204,7 +220,11 @@ def update_transaction(
     if not is_market_price_type(session, asset.type):
         _update_stable_snapshot(session, asset, tx.price)
 
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     session.refresh(tx)
     return tx
 
@@ -232,5 +252,9 @@ def delete_transaction(transaction_id: int, session: Session = Depends(get_sessi
             ).all():
                 session.delete(snap)
 
-    session.commit()
+    try:
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     return {"ok": True}

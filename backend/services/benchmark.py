@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from sqlmodel import Session
@@ -6,6 +7,13 @@ from sqlmodel import Session
 from schemas import BenchmarkPoint
 from services.market_data import MarketDataService
 from services.portfolio_history import PortfolioHistoryService
+
+
+def _to_decimal(val) -> Decimal:
+    """Convert a numeric value (float or Decimal) to Decimal safely."""
+    if isinstance(val, Decimal):
+        return val
+    return Decimal(str(val))
 
 
 class BenchmarkService:
@@ -34,8 +42,8 @@ class BenchmarkService:
 
         # Find the first date where both portfolio value and benchmark price are positive.
         base_date = None
-        base_benchmark_price = 0.0
-        base_portfolio_value = 0.0
+        base_benchmark_price = Decimal("0")
+        base_portfolio_value = Decimal("0")
         for point in portfolio_history:
             price = benchmark_history.get(point.date)
             if price is None:
@@ -47,8 +55,8 @@ class BenchmarkService:
             if price is None or price <= 0 or point.value <= 0:
                 continue
             base_date = point.date
-            base_benchmark_price = price
-            base_portfolio_value = point.value
+            base_benchmark_price = _to_decimal(price)
+            base_portfolio_value = _to_decimal(point.value)
             break
 
         if base_date is None or base_benchmark_price <= 0 or base_portfolio_value <= 0:
@@ -67,11 +75,11 @@ class BenchmarkService:
                         break
             if price is None:
                 continue
-            normalized_benchmark = (price / base_benchmark_price) * base_portfolio_value
+            normalized_benchmark = (_to_decimal(price) / base_benchmark_price) * base_portfolio_value
             result.append(
                 BenchmarkPoint(
                     date=point.date,
-                    portfolio_value=round(point.value, 2),
+                    portfolio_value=round(_to_decimal(point.value), 2),
                     benchmark_value=round(normalized_benchmark, 2),
                 )
             )

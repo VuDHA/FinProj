@@ -1,3 +1,5 @@
+import logging
+
 from sqlmodel import Session
 
 try:
@@ -15,6 +17,8 @@ from database import engine
 from services.news.alerts import AlertService
 from services.news.crawler import NewsCrawlerService
 
+logger = logging.getLogger(__name__)
+
 
 def _refresh_region(region: str, generate_alerts: bool = True):
     """Crawl one region and optionally generate alerts."""
@@ -27,9 +31,9 @@ def _refresh_region(region: str, generate_alerts: bool = True):
                 alerts_service = AlertService(session)
                 alerts_count = alerts_service.generate_alerts(hours=1)
             total = sum(results.values())
-            print(f"[news scheduler] {region}: crawled {total} new articles, {alerts_count} alerts")
+            logger.info("news scheduler %s: crawled %d new articles, %d alerts", region, total, alerts_count)
     except Exception as e:
-        print(f"[news scheduler] {region} error: {e}")
+        logger.error("news scheduler %s error: %s", region, e)
 
 
 def update_vn_news():
@@ -45,7 +49,7 @@ def update_global_news():
 def add_news_jobs(scheduler: BackgroundScheduler):
     """Register news-related cron jobs on the shared scheduler."""
     if not settings.NEWS_SCHEDULER_ENABLED:
-        print("[news scheduler] disabled by settings")
+        logger.info("news scheduler disabled by settings")
         return
 
     vn_market_interval = max(1, settings.NEWS_VN_MARKET_INTERVAL_MINUTES)
@@ -60,6 +64,7 @@ def add_news_jobs(scheduler: BackgroundScheduler):
         minute=f"*/{vn_market_interval}",
         id="news_update_vn_hours",
         replace_existing=True,
+        max_instances=1,
     )
     # VN off-hours: crawl every N minutes
     scheduler.add_job(
@@ -69,6 +74,7 @@ def add_news_jobs(scheduler: BackgroundScheduler):
         minute=f"*/{vn_off_hours_interval}",
         id="news_update_off_hours",
         replace_existing=True,
+        max_instances=1,
     )
     # Global news: slower cadence, every N minutes
     scheduler.add_job(
@@ -77,8 +83,9 @@ def add_news_jobs(scheduler: BackgroundScheduler):
         minute=f"*/{global_interval}",
         id="news_update_global",
         replace_existing=True,
+        max_instances=1,
     )
-    print(
-        f"[news scheduler] registered jobs: vn_market={vn_market_interval}min, "
-        f"vn_off_hours={vn_off_hours_interval}min, global={global_interval}min"
+    logger.info(
+        "news scheduler registered jobs: vn_market=%dmin, vn_off_hours=%dmin, global=%dmin",
+        vn_market_interval, vn_off_hours_interval, global_interval,
     )

@@ -1,9 +1,16 @@
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from config import settings
+
+logger = logging.getLogger(__name__)
+
+# Visibility timeout: slots held longer than this are considered leaked
+# (e.g. the process crashed) and are automatically reaped.
+SLOT_TIMEOUT = 300  # 5 minutes
 
 
 class AIQueueBusyError(Exception):
@@ -23,13 +30,29 @@ class _ProviderBucket:
     window_seconds: int = 60
     _requests: List[float] = field(default_factory=list)
     _concurrent: int = 0
+    _acquired_at: Dict[int, float] = field(default_factory=dict)
+    _next_slot_id: int = 0
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
-    def acquire(self, timeout: float = 0.0) -> Optional[float]:
-        """Try to acquire a slot. Returns cooldown seconds if unavailable, or None on success."""
+    def _reap_stale_slots(self) -> None:
+        """Release slots that have been held longer than SLOT_TIMEOUT."""
+        now = time.time()
+        stale = [sid for sid, ts in self._acquired_at.items() if now - ts > SLOT_TIMEOUT]
+        for sid in stale:
+            self._acquired_at.pop(sid, None)
+            self._concurrent -= 1
+            logger.warning("Reaped stale AI queue slot %d (held > %ds)", sid, SLOT_TIMEOUT)
+
+    def acquire(self, timeout: float = 0.0) -> Tuple[Optional[int], Optional[float]]:
+        """Try to acquire a slot.
+
+        Returns (slot_id, None) on success, or (None, cooldown_seconds) if
+        unavailable.
+        """
         deadline = time.time() + timeout
         while True:
             with self._lock:
+                self._reap_stale_slots()
                 now = time.time()
                 cutoff = now - self.window_seconds
                 self._requests = [t for t in self._requests if t > cutoff]
@@ -37,7 +60,10 @@ class _ProviderBucket:
                 if self._concurrent < self.max_concurrent and len(self._requests) < self.max_rpm:
                     self._concurrent += 1
                     self._requests.append(now)
-                    return None
+                    slot_id = self._next_slot_id
+                    self._next_slot_id += 1
+                    self._acquired_at[slot_id] = now
+                    return slot_id, None
 
                 # Compute the soonest time a slot will be available.
                 cooldown = 0.0
@@ -47,19 +73,21 @@ class _ProviderBucket:
                     cooldown = max(cooldown, self._requests[0] + self.window_seconds - now, 0.0)
 
             if timeout <= 0:
-                return cooldown
+                return None, cooldown
 
             wait_time = min(cooldown, deadline - time.time())
             if wait_time <= 0:
-                return cooldown
+                return None, cooldown
             time.sleep(wait_time)
 
             if time.time() >= deadline:
-                return cooldown
+                return None, cooldown
 
-    def release(self) -> None:
+    def release(self, slot_id: int) -> None:
         with self._lock:
-            self._concurrent = max(0, self._concurrent - 1)
+            if slot_id in self._acquired_at:
+                self._acquired_at.pop(slot_id)
+                self._concurrent -= 1
 
     def status(self) -> dict:
         with self._lock:
@@ -147,8 +175,8 @@ class AIQueue:
         with self._state_lock:
             self._pending_count += 1
 
-        cooldown = bucket.acquire(timeout=self._timeout_seconds)
-        if cooldown is not None:
+        slot_id, cooldown = bucket.acquire(timeout=self._timeout_seconds)
+        if slot_id is None:
             with self._state_lock:
                 self._pending_count = max(0, self._pending_count - 1)
             raise AIQueueBusyError(
@@ -164,7 +192,7 @@ class AIQueue:
         finally:
             with self._state_lock:
                 self._current_task = None
-            bucket.release()
+            bucket.release(slot_id)
 
     def status(self) -> dict:
         """Return the current queue state and per-provider bucket status."""

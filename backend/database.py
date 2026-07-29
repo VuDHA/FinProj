@@ -1,3 +1,4 @@
+import logging
 import os
 
 from sqlalchemy import event, inspect, text
@@ -6,6 +7,8 @@ from sqlmodel import SQLModel, create_engine, Session
 import sqlite_vec
 
 from config import settings
+
+logger = logging.getLogger(__name__)
 
 
 db_path = settings.DATABASE_URL.replace("sqlite:///", "")
@@ -28,7 +31,7 @@ else:
 
 
 def _ensure_columns():
-    """Add columns created by SQLModel 0.0.19 if the table already exists."""
+    """Add columns for backward compatibility with existing databases."""
     if not settings.DATABASE_URL.startswith("sqlite"):
         return
     inspector = inspect(engine)
@@ -100,8 +103,8 @@ def _create_embedding_table():
             )
         ).fetchone()
         if existing and "USING vec0" in (existing[0] or ""):
-            print(
-                "[database] dropping old vec0 article_embeddings table and shadow tables"
+            logger.info(
+                "dropping old vec0 article_embeddings table and shadow tables"
             )
             conn.execute(text("DROP TABLE IF EXISTS article_embeddings"))
         conn.execute(

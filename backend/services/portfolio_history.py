@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from typing import Dict, List, Optional
 
 from sqlmodel import Session, select
@@ -45,7 +46,7 @@ class PortfolioHistoryService:
 
         # Per-asset data.
         asset_transactions: Dict[int, List[Transaction]] = {}
-        asset_snapshots: Dict[int, Dict[datetime.date, float]] = {}
+        asset_snapshots: Dict[int, Dict[datetime.date, Decimal]] = {}
         for asset in assets:
             asset_transactions[asset.id] = [
                 t for t in all_transactions if t.asset_id == asset.id
@@ -59,9 +60,9 @@ class PortfolioHistoryService:
 
         result = []
         for d in dates:
-            day_value = 0.0
-            day_cost = 0.0
-            day_by_type: Dict[str, float] = {}
+            day_value = Decimal("0")
+            day_cost = Decimal("0")
+            day_by_type: Dict[str, Decimal] = {}
             for asset in assets:
                 qty = self._quantity_on_date(asset_transactions.get(asset.id, []), d)
                 if qty <= 0:
@@ -76,13 +77,13 @@ class PortfolioHistoryService:
                 asset_cost = qty * avg_cost
                 day_value += asset_value
                 day_cost += asset_cost
-                day_by_type[asset.type] = round(day_by_type.get(asset.type, 0.0) + asset_value, 2)
+                day_by_type[asset.type] = day_by_type.get(asset.type, Decimal("0")) + asset_value
 
             result.append(
                 PortfolioHistoryPoint(
                     date=d,
-                    value=round(day_value, 2),
-                    cost=round(day_cost, 2),
+                    value=day_value,
+                    cost=day_cost,
                     by_type=day_by_type,
                 )
             )
@@ -99,8 +100,8 @@ class PortfolioHistoryService:
         return dates
 
     @staticmethod
-    def _quantity_on_date(transactions: List[Transaction], date: datetime.date) -> float:
-        qty = 0.0
+    def _quantity_on_date(transactions: List[Transaction], date: datetime.date) -> Decimal:
+        qty = Decimal("0")
         for t in transactions:
             if t.date > date:
                 break
@@ -110,9 +111,9 @@ class PortfolioHistoryService:
                 qty -= t.quantity
         return qty
 
-    def _avg_cost_on_date(self, transactions: List[Transaction], date: datetime.date, asset: Asset) -> float:
-        qty = 0.0
-        cost = 0.0
+    def _avg_cost_on_date(self, transactions: List[Transaction], date: datetime.date, asset: Asset) -> Decimal:
+        qty = Decimal("0")
+        cost = Decimal("0")
         for t in transactions:
             if t.date > date:
                 break
@@ -122,15 +123,17 @@ class PortfolioHistoryService:
                 qty += t.quantity
                 cost += t.quantity * price + t.fee
             elif is_sell_type(t.type):
+                if qty > 0:
+                    avg_cost = cost / qty
+                    cost -= t.quantity * avg_cost
                 qty -= t.quantity
-                cost -= t.quantity * price
         if qty <= 0:
-            return 0.0
+            return Decimal("0")
         return cost / qty
 
     @staticmethod
-    def _latest_price(snapshots: Dict[datetime.date, float], date: datetime.date) -> float:
-        latest = 0.0
+    def _latest_price(snapshots: Dict[datetime.date, Decimal], date: datetime.date) -> Decimal:
+        latest = Decimal("0")
         for d, price in snapshots.items():
             if d <= date and price > 0:
                 latest = price

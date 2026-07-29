@@ -1,8 +1,12 @@
 import datetime
 import hashlib
+import logging
 from typing import Any, Dict, List, Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
+
+logger = logging.getLogger(__name__)
 
 from models import NewsArticle, NewsSource, NewsSymbol
 from services.embedding_store import EmbeddingStore
@@ -102,9 +106,14 @@ class NewsCrawlerService:
             language=data.get("language"),
             region=data.get("region", source.region),
         )
-        self.session.add(article)
-        self.session.flush()
-        self.session.refresh(article)
+        try:
+            self.session.add(article)
+            self.session.flush()
+            self.session.refresh(article)
+        except IntegrityError:
+            # Article already exists (duplicate URL), skip it
+            self.session.rollback()
+            return None
 
         for symbol in data.get("symbols", []):
             link = NewsSymbol(article_id=article.id, symbol=symbol)

@@ -1,5 +1,6 @@
 import datetime
 import json
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
@@ -9,6 +10,7 @@ from config import settings
 from models import Asset, PriceSnapshot, Transaction
 from schemas import CsvImportResult
 from services.asset_type_config import get_asset_type_codes, is_market_price_type
+from services.csv_io import parse_date, parse_number
 from services.file_utils import read_excel_sheet_names, read_rows
 from services.transaction_types import (
     is_buy_type,
@@ -194,15 +196,12 @@ class SmartImportService:
         return CsvImportResult(created=0, skipped=0, errors=["Invalid import type"])
 
     @staticmethod
-    def _parse_value(row: Dict[str, Any], target_to_source: Dict[str, str]) -> Optional[float]:
-        raw = (row.get(target_to_source.get("value", "")) or "").strip().replace(",", "")
+    def _parse_value(row: Dict[str, Any], target_to_source: Dict[str, str]) -> Optional[Decimal]:
+        raw = (row.get(target_to_source.get("value", "")) or "").strip()
         if not raw:
             return None
-        try:
-            value = float(raw)
-            return value if value > 0 else None
-        except ValueError:
-            return None
+        value = parse_number(raw)
+        return value if value > 0 else None
 
     def _import_assets(
         self, session: Session, rows: List[Dict[str, Any]], target_to_source: Dict[str, str]
@@ -210,53 +209,57 @@ class SmartImportService:
         created = 0
         skipped = 0
         errors: List[str] = []
-        for i, row in enumerate(rows, start=2):
-            symbol = (row.get(target_to_source.get("symbol", "")) or "").strip().upper()
-            name = (row.get(target_to_source.get("name", "")) or "").strip()
-            type_ = (row.get(target_to_source.get("type", "")) or "").strip().upper()
-            if not symbol or not name or not type_:
-                errors.append(f"Row {i}: missing symbol/name/type")
-                skipped += 1
-                continue
-            if type_ not in get_asset_type_codes(session):
-                errors.append(f"Row {i}: invalid asset type {type_}")
-                skipped += 1
-                continue
-            existing = session.exec(
-                select(Asset).where(Asset.symbol == symbol, Asset.is_active == True)
-            ).first()
-            if existing:
-                skipped += 1
-                continue
-
-            value = self._parse_value(row, target_to_source)
-            if not is_market_price_type(session, type_):
-                if value is None:
-                    errors.append(f"Row {i}: asset type {type_} requires a positive value")
+        try:
+            for i, row in enumerate(rows, start=2):
+                symbol = (row.get(target_to_source.get("symbol", "")) or "").strip().upper()
+                name = (row.get(target_to_source.get("name", "")) or "").strip()
+                type_ = (row.get(target_to_source.get("type", "")) or "").strip().upper()
+                if not symbol or not name or not type_:
+                    errors.append(f"Row {i}: missing symbol/name/type")
+                    skipped += 1
+                    continue
+                if type_ not in get_asset_type_codes(session):
+                    errors.append(f"Row {i}: invalid asset type {type_}")
+                    skipped += 1
+                    continue
+                existing = session.exec(
+                    select(Asset).where(Asset.symbol == symbol, Asset.is_active == True)
+                ).first()
+                if existing:
                     skipped += 1
                     continue
 
-            asset = Asset(
-                symbol=symbol,
-                name=name,
-                type=type_,
-                exchange=(row.get(target_to_source.get("exchange", "")) or "").strip() or None,
-                currency=(row.get(target_to_source.get("currency", "")) or "VND").strip() or "VND",
-            )
-            session.add(asset)
-            session.commit()
-            session.refresh(asset)
-            created += 1
+                value = self._parse_value(row, target_to_source)
+                if not is_market_price_type(session, type_):
+                    if value is None:
+                        errors.append(f"Row {i}: asset type {type_} requires a positive value")
+                        skipped += 1
+                        continue
 
-            if value:
-                session.add(
-                    PriceSnapshot(
-                        asset_id=asset.id,
-                        date=datetime.date.today(),
-                        price=value,
-                    )
+                asset = Asset(
+                    symbol=symbol,
+                    name=name,
+                    type=type_,
+                    exchange=(row.get(target_to_source.get("exchange", "")) or "").strip() or None,
+                    currency=(row.get(target_to_source.get("currency", "")) or "VND").strip() or "VND",
                 )
-                session.commit()
+                session.add(asset)
+                session.flush()
+                session.refresh(asset)
+                created += 1
+
+                if value:
+                    session.add(
+                        PriceSnapshot(
+                            asset_id=asset.id,
+                            date=datetime.date.today(),
+                            price=value,
+                        )
+                    )
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         return CsvImportResult(created=created, skipped=skipped, errors=errors)
 
     def _import_transactions(
@@ -266,96 +269,112 @@ class SmartImportService:
         skipped = 0
         errors: List[str] = []
 
-        for i, row in enumerate(rows, start=2):
-            symbol = (row.get(target_to_source.get("symbol", "")) or "").strip().upper()
-            type_ = (row.get(target_to_source.get("type", "")) or "").strip().upper()
-            if not symbol or type_ not in MARKET_TRANSACTION_TYPES | NON_MARKET_TRANSACTION_TYPES:
-                errors.append(f"Row {i}: invalid symbol or type")
-                skipped += 1
-                continue
-            try:
-                quantity = float(
-                    (row.get(target_to_source.get("quantity", "")) or "0")
-                    .replace(",", "")
-                )
-                price = float(
-                    (row.get(target_to_source.get("price", "")) or "0")
-                    .replace(",", "")
-                )
-                fee = float(
-                    (row.get(target_to_source.get("fee", "")) or "0")
-                    .replace(",", "")
-                )
-                date = datetime.date.fromisoformat(
-                    (row.get(target_to_source.get("date", "")) or "").strip()
-                )
-            except Exception as e:
-                errors.append(f"Row {i}: invalid numeric/date field ({e})")
-                skipped += 1
-                continue
-
-            if quantity <= 0 or price < 0 or fee < 0:
-                errors.append(f"Row {i}: quantity/price/fee must be positive")
-                skipped += 1
-                continue
-
-            asset = session.exec(
-                select(Asset).where(Asset.symbol == symbol, Asset.is_active == True)
-            ).first()
-            if not asset:
-                asset = Asset(symbol=symbol, name=symbol, type="STOCK")
-                session.add(asset)
-                session.commit()
-                session.refresh(asset)
-
-            allowed_types = (
-                NON_MARKET_TRANSACTION_TYPES
-                if not is_market_price_type(session, asset.type)
-                else MARKET_TRANSACTION_TYPES
-            )
-            if type_ not in allowed_types:
-                errors.append(
-                    f"Row {i}: type {type_} is not allowed for {asset.type} assets"
-                )
-                skipped += 1
-                continue
-
-            if price <= 0 and not is_market_price_type(session, asset.type):
-                snapshot = session.exec(
-                    select(PriceSnapshot)
-                    .where(PriceSnapshot.asset_id == asset.id)
-                    .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
-                ).first()
-                if snapshot and snapshot.price > 0:
-                    price = snapshot.price
-
-            if price <= 0:
-                errors.append(f"Row {i}: price must be positive or resolvable")
-                skipped += 1
-                continue
-
-            if is_sell_type(type_):
-                existing = session.exec(
-                    select(Transaction).where(Transaction.asset_id == asset.id)
-                ).all()
-                holding = sum(
-                    t.quantity if is_buy_type(t.type) else -t.quantity for t in existing
-                )
-                if quantity > holding:
-                    errors.append(f"Row {i}: cannot sell {quantity}, holding is {holding}")
+        try:
+            for i, row in enumerate(rows, start=2):
+                symbol = (row.get(target_to_source.get("symbol", "")) or "").strip().upper()
+                type_ = (row.get(target_to_source.get("type", "")) or "").strip().upper()
+                if not symbol or type_ not in MARKET_TRANSACTION_TYPES | NON_MARKET_TRANSACTION_TYPES:
+                    errors.append(f"Row {i}: invalid symbol or type")
+                    skipped += 1
+                    continue
+                try:
+                    quantity = parse_number(
+                        row.get(target_to_source.get("quantity", "")) or "0"
+                    )
+                    price = parse_number(
+                        row.get(target_to_source.get("price", "")) or "0"
+                    )
+                    fee = parse_number(
+                        row.get(target_to_source.get("fee", "")) or "0"
+                    )
+                    date = parse_date(
+                        (row.get(target_to_source.get("date", "")) or "").strip()
+                    )
+                except Exception as e:
+                    errors.append(f"Row {i}: invalid numeric/date field ({e})")
                     skipped += 1
                     continue
 
-            tx = Transaction(
-                asset_id=asset.id,
-                type=type_,
-                quantity=quantity,
-                price=price,
-                fee=fee,
-                date=date,
-                notes=(row.get(target_to_source.get("notes", "")) or "").strip() or None,
-            )
-            session.add(tx)
-            created += 1
-        session.commit()
+                if quantity <= 0 or price < 0 or fee < 0:
+                    errors.append(f"Row {i}: quantity/price/fee must be positive")
+                    skipped += 1
+                    continue
+
+                asset = session.exec(
+                    select(Asset).where(Asset.symbol == symbol, Asset.is_active == True)
+                ).first()
+                if not asset:
+                    asset = Asset(symbol=symbol, name=symbol, type="STOCK")
+                    session.add(asset)
+                    session.flush()
+                    session.refresh(asset)
+
+                allowed_types = (
+                    NON_MARKET_TRANSACTION_TYPES
+                    if not is_market_price_type(session, asset.type)
+                    else MARKET_TRANSACTION_TYPES
+                )
+                if type_ not in allowed_types:
+                    errors.append(
+                        f"Row {i}: type {type_} is not allowed for {asset.type} assets"
+                    )
+                    skipped += 1
+                    continue
+
+                if price <= 0 and not is_market_price_type(session, asset.type):
+                    snapshot = session.exec(
+                        select(PriceSnapshot)
+                        .where(PriceSnapshot.asset_id == asset.id)
+                        .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
+                    ).first()
+                    if snapshot and snapshot.price > 0:
+                        price = snapshot.price
+
+                if price <= 0:
+                    errors.append(f"Row {i}: price must be positive or resolvable")
+                    skipped += 1
+                    continue
+
+                if is_sell_type(type_):
+                    existing = session.exec(
+                        select(Transaction).where(Transaction.asset_id == asset.id)
+                    ).all()
+                    holding = sum(
+                        (t.quantity if is_buy_type(t.type) else -t.quantity) for t in existing
+                    )
+                    if quantity > holding:
+                        errors.append(f"Row {i}: cannot sell {quantity}, holding is {holding}")
+                        skipped += 1
+                        continue
+
+                # Duplicate transaction detection (C5)
+                existing_tx = session.exec(
+                    select(Transaction).where(
+                        Transaction.asset_id == asset.id,
+                        Transaction.type == type_,
+                        Transaction.quantity == quantity,
+                        Transaction.price == price,
+                        Transaction.date == date,
+                    )
+                ).first()
+                if existing_tx:
+                    errors.append(f"Row {i}: duplicate transaction already exists")
+                    skipped += 1
+                    continue
+
+                tx = Transaction(
+                    asset_id=asset.id,
+                    type=type_,
+                    quantity=quantity,
+                    price=price,
+                    fee=fee,
+                    date=date,
+                    notes=(row.get(target_to_source.get("notes", "")) or "").strip() or None,
+                )
+                session.add(tx)
+                created += 1
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
         return CsvImportResult(created=created, skipped=skipped, errors=errors)

@@ -103,10 +103,10 @@ def save_allocation_targets(
     session: Session = Depends(get_session),
 ):
     total = sum(t.target_percent for t in targets)
-    if total > 100:
+    if abs(total - 100) > 0.01:
         raise HTTPException(
             status_code=400,
-            detail=f"Total target allocation must be 100% or less, got {total}%",
+            detail=f"Allocation targets must sum to 100%, got {total}%",
         )
 
     result = []

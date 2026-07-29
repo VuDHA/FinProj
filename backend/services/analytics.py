@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 from typing import List, Dict, Optional
 from collections import defaultdict
 
@@ -17,6 +18,13 @@ from services.asset_type_config import is_market_price_type
 from services.market_data import MarketDataService
 from services.transaction_types import is_buy_type, is_sell_type
 from services.portfolio import PortfolioService
+
+
+def _to_decimal(val) -> Decimal:
+    """Convert a numeric value (float or Decimal) to Decimal safely."""
+    if isinstance(val, Decimal):
+        return val
+    return Decimal(str(val))
 
 
 class AnalyticsService:
@@ -118,7 +126,7 @@ class AnalyticsService:
                 Income.date >= start_date, Income.date <= end_date
             )
         ).all()
-        grouped: Dict[str, float] = defaultdict(float)
+        grouped: Dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
         for income in incomes:
             grouped[income.type] += income.amount
         return [
@@ -128,12 +136,12 @@ class AnalyticsService:
 
     def _portfolio_value_at_date(
         self, date: datetime.date
-    ) -> tuple[float, List[PortfolioValueByType]]:
+    ) -> tuple[Decimal, List[PortfolioValueByType]]:
         assets = self.session.exec(
             select(Asset).where(Asset.is_active == True)
         ).all()
-        total = 0.0
-        by_type: Dict[str, float] = defaultdict(float)
+        total = Decimal("0")
+        by_type: Dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
 
         for asset in assets:
             transactions = self.session.exec(
@@ -141,7 +149,7 @@ class AnalyticsService:
                 .where(Transaction.asset_id == asset.id)
                 .order_by(Transaction.date.asc())
             ).all()
-            qty = 0.0
+            qty = Decimal("0")
             for t in transactions:
                 if t.date > date:
                     break
@@ -169,7 +177,7 @@ class AnalyticsService:
                     )
                     .order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
                 ).first()
-            price = snapshot.price if snapshot and snapshot.price > 0 else 0.0
+            price = snapshot.price if snapshot and snapshot.price > 0 else Decimal("0")
             value = qty * price
             total += value
             by_type[asset.type] += value
@@ -180,14 +188,14 @@ class AnalyticsService:
         ]
 
     def _type_returns(self, items: List) -> List[TypeReturn]:
-        grouped = defaultdict(lambda: {"value": 0.0, "cost": 0.0})
+        grouped = defaultdict(lambda: {"value": Decimal("0"), "cost": Decimal("0")})
         for item in items:
             grouped[item.type]["value"] += item.current_value
             grouped[item.type]["cost"] += item.cost
         result = []
         for t, data in grouped.items():
             pnl = data["value"] - data["cost"]
-            pnl_percent = (pnl / data["cost"] * 100) if data["cost"] else 0.0
+            pnl_percent = float(pnl / data["cost"] * 100) if data["cost"] else 0.0
             result.append(
                 TypeReturn(
                     type=t,
@@ -237,8 +245,8 @@ class AnalyticsService:
                 print(f"[analytics] fetch_history failed for {asset.symbol}: {e}")
                 asset_prices[asset.id] = {}
 
-        def _quantity_on_date(asset_id: int, date: datetime.date) -> float:
-            qty = 0.0
+        def _quantity_on_date(asset_id: int, date: datetime.date) -> Decimal:
+            qty = Decimal("0")
             for t in asset_transactions.get(asset_id, []):
                 if t.date > date:
                     break
@@ -248,16 +256,16 @@ class AnalyticsService:
                     qty -= t.quantity
             return qty
 
-        def _price_on_date(prices: Dict[datetime.date, float], date: datetime.date) -> float:
-            price = 0.0
+        def _price_on_date(prices: Dict[datetime.date, float], date: datetime.date) -> Decimal:
+            price = Decimal("0")
             for d, p in sorted(prices.items()):
                 if d > date:
                     break
-                price = p
+                price = _to_decimal(p)
             return price
 
-        def _value_at_date(date: datetime.date) -> float:
-            total = 0.0
+        def _value_at_date(date: datetime.date) -> Decimal:
+            total = Decimal("0")
             for asset in assets:
                 qty = _quantity_on_date(asset.id, date)
                 if qty <= 0:
@@ -269,11 +277,11 @@ class AnalyticsService:
                         .where(PriceSnapshot.asset_id == asset.id, PriceSnapshot.date <= date)
                         .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
                     ).first()
-                    price = snapshot.price if snapshot and snapshot.price > 0 else 0.0
+                    price = snapshot.price if snapshot and snapshot.price > 0 else Decimal("0")
                 total += qty * price
             return round(total, 2)
 
-        def _net_investment(start: datetime.date, end: datetime.date) -> float:
+        def _net_investment(start: datetime.date, end: datetime.date) -> Decimal:
             """Net cash injected into the portfolio during (start, end].
 
             Buy transactions are cash outflows; sell transactions are cash inflows.
@@ -281,14 +289,14 @@ class AnalyticsService:
             start portfolio value already includes them.
             """
             market = MarketDataService(self.session)
-            buy_cost = 0.0
-            sell_proceeds = 0.0
+            buy_cost = Decimal("0")
+            sell_proceeds = Decimal("0")
             for asset in assets:
                 for t in asset_transactions.get(asset.id, []):
                     if t.date <= start or t.date > end:
                         continue
                     effective_price = market.resolve_effective_price(asset, t.date, t.price)
-                    price = effective_price if effective_price and effective_price > 0 else t.price
+                    price = _to_decimal(effective_price) if effective_price and effective_price > 0 else t.price
                     if is_buy_type(t.type):
                         buy_cost += t.quantity * price + t.fee
                     elif is_sell_type(t.type):
@@ -308,7 +316,7 @@ class AnalyticsService:
             net_investment = _net_investment(month_start, month_end)
             pnl = round(month_value - prev_value - net_investment, 2)
             invested_capital = round(prev_value + net_investment, 2)
-            pnl_percent = round((pnl / invested_capital * 100), 2) if invested_capital > 0 else 0.0
+            pnl_percent = round(float(pnl / invested_capital * 100), 2) if invested_capital > 0 else 0.0
             result.append(
                 MonthlyPnL(
                     month=month_start.strftime("%Y-%m"),

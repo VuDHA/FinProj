@@ -25,7 +25,7 @@ class RiskMetricsService:
         if len(portfolio_history) < 2:
             return RiskMetrics()
 
-        portfolio_values = {p.date: p.value for p in portfolio_history}
+        portfolio_values = {p.date: float(p.value) for p in portfolio_history}
 
         # Use PnL-based returns (purchases excluded) instead of raw portfolio value changes.
         monthly_pnl = AnalyticsService(self.session)._monthly_pnl(start, end)
@@ -36,7 +36,7 @@ class RiskMetricsService:
             return RiskMetrics()
 
         benchmark_data = BenchmarkService(self.session).get_comparison("VNINDEX", start, end)
-        benchmark_values = {b.date: b.benchmark_value for b in benchmark_data}
+        benchmark_values = {b.date: float(b.benchmark_value) for b in benchmark_data}
         benchmark_monthly = self._monthly_returns(benchmark_values)
 
         returns = portfolio_monthly
@@ -114,10 +114,10 @@ class RiskMetricsService:
     def _max_drawdown(values: Dict[datetime.date, float]) -> Optional[float]:
         if not values:
             return None
-        peak = 0.0
+        sorted_values = [values[d] for d in sorted(values.keys())]
+        peak = sorted_values[0]
         max_dd = 0.0
-        for d in sorted(values.keys()):
-            v = values[d]
+        for v in sorted_values:
             if v > peak:
                 peak = v
             if peak > 0:

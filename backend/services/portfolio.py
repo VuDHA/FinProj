@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import List
 
 from sqlmodel import Session, select
@@ -47,8 +48,8 @@ class PortfolioService:
             transactions = self.session.exec(
                 select(Transaction).where(Transaction.asset_id == asset.id)
             ).all()
-            quantity = 0.0
-            cost = 0.0
+            quantity = Decimal("0")
+            cost = Decimal("0")
             for t in transactions:
                 effective_price = self.market.resolve_effective_price(asset, t.date, t.price)
                 price = effective_price if effective_price and effective_price > 0 else t.price
@@ -59,7 +60,6 @@ class PortfolioService:
                     if quantity > 0:
                         avg_cost = cost / quantity
                         cost -= t.quantity * avg_cost
-                        cost += t.fee
                     quantity -= t.quantity
 
             if quantity <= 0:
@@ -86,16 +86,16 @@ class PortfolioService:
 
         # Second pass: build portfolio items using the latest available price.
         items: List[PortfolioItem] = []
-        total_cost = 0.0
-        total_value = 0.0
-        market_value = 0.0
-        market_cost = 0.0
-        stable_value = 0.0
+        total_cost = Decimal("0")
+        total_value = Decimal("0")
+        market_value = Decimal("0")
+        market_cost = Decimal("0")
+        stable_value = Decimal("0")
 
         for asset in held_assets:
             quantity = holdings[asset.id]["quantity"]
             cost = holdings[asset.id]["cost"]
-            avg_cost = cost / quantity if quantity > 0 else 0.0
+            avg_cost = cost / quantity if quantity > 0 else Decimal("0")
 
             quote = market_data.get(asset.symbol.upper())
             if quote and (quote.get("price") or 0) > 0:
@@ -138,7 +138,10 @@ class PortfolioService:
                 )
             )
 
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
 
         # PnL is calculated only on market-priced assets; stable assets are excluded.
         total_pnl = market_value - market_cost

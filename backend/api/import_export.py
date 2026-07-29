@@ -16,6 +16,16 @@ from services.smart_import import SmartImportService
 
 router = APIRouter(prefix="/import-export", tags=["import-export"])
 
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
+
+
+def _read_upload_content(file: UploadFile) -> bytes:
+    """Read uploaded file content with a max size check (H18)."""
+    content = file.file.read(MAX_UPLOAD_SIZE + 1)
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="File too large (max 50MB)")
+    return content
+
 
 @router.get("/export/assets")
 def export_assets(session: Session = Depends(get_session)):
@@ -42,7 +52,7 @@ def _read_simple_import_file(file: UploadFile) -> List[Dict[str, Any]]:
         file_utils.validate_extension(file.filename, allow_zip=True)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    content = file.file.read()
+    content = _read_upload_content(file)
     try:
         return file_utils.read_rows(content, file.filename or "")
     except ValueError as e:
@@ -80,7 +90,7 @@ def smart_import_preview(
         file_utils.validate_extension(file.filename, allow_zip=True)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    content = file.file.read()
+    content = _read_upload_content(file)
     service = SmartImportService()
     try:
         preview = service.preview(content, file.filename, sheet_name=sheet)
@@ -108,7 +118,7 @@ def smart_import(
         payload = SmartImportRequest.model_validate_json(payload_json)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid payload JSON: {e}")
-    content = file.file.read()
+    content = _read_upload_content(file)
     service = SmartImportService()
     try:
         return service.import_data(

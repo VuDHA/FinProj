@@ -47,20 +47,49 @@ def _log_returns(values: Dict[datetime.date, float]) -> List[float]:
     return returns
 
 
-def _annualized_volatility(log_returns: List[float]) -> Optional[float]:
+def _annualization_factor(dates: Optional[List[datetime.date]] = None) -> int:
+    """Detect trading frequency from date intervals.
+
+    Returns the number of trading periods per year for annualization.
+    """
+    if not dates or len(dates) < 2:
+        return 252
+    sorted_dates = sorted(dates)
+    intervals = [
+        (sorted_dates[i + 1] - sorted_dates[i]).days
+        for i in range(min(10, len(sorted_dates) - 1))
+    ]
+    avg_interval = sum(intervals) / len(intervals)
+    if avg_interval <= 2:
+        return 252  # daily
+    elif avg_interval <= 8:
+        return 52  # weekly
+    elif avg_interval <= 35:
+        return 12  # monthly
+    return 252  # default to daily
+
+
+def _annualized_volatility(
+    log_returns: List[float],
+    dates: Optional[List[datetime.date]] = None,
+) -> Optional[float]:
     if len(log_returns) < 2:
         return None
     mean = sum(log_returns) / len(log_returns)
     variance = sum((r - mean) ** 2 for r in log_returns) / (len(log_returns) - 1)
     if variance <= 0:
         return None
-    return math.sqrt(variance) * math.sqrt(252) * 100
+    factor = _annualization_factor(dates)
+    return math.sqrt(variance) * math.sqrt(factor) * 100
 
 
 def _max_drawdown(values: Dict[datetime.date, float]) -> Optional[float]:
-    peak = 0.0
+    sorted_values = [p for _, p in sorted(values.items())]
+    if not sorted_values:
+        return None
+    peak = sorted_values[0]
     max_dd = 0.0
-    for _, p in sorted(values.items()):
+    for p in sorted_values:
         if p > peak:
             peak = p
         if peak > 0:
@@ -105,7 +134,8 @@ class CompareService:
         for symbol, asset_type in symbols:
             try:
                 history = self.market.fetch_market_history_with_backfill(symbol, asset_type, start, end)
-                result[symbol.upper()] = history or {}
+                # Ensure all prices are float to avoid Decimal/float mixing in math operations.
+                result[symbol.upper()] = {d: float(p) for d, p in (history or {}).items()}
             except Exception as e:
                 print(f"[compare] history {symbol} error: {e}")
                 result[symbol.upper()] = {}
@@ -128,7 +158,8 @@ class CompareService:
             total = _total_return(values)
             ann = _annualized_return(values)
             log_rets = _log_returns(values)
-            vol = _annualized_volatility(log_rets)
+            sorted_dates = sorted(values.keys())
+            vol = _annualized_volatility(log_rets, sorted_dates)
             dd = _max_drawdown(values)
             sharpe = None
             if ann is not None and vol is not None and vol > 0:
@@ -174,7 +205,8 @@ class CompareService:
             dates = set(rets.keys())
             common_dates = dates if common_dates is None else common_dates & dates
 
-        if not common_dates or len(common_dates) < 2:
+        if not common_dates or len(common_dates) < 20:
+            # Not enough data for meaningful correlation
             return CompareCorrelation(
                 labels=labels, matrix=[[0.0] * len(labels) for _ in labels]
             )

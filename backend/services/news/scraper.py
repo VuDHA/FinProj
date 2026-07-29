@@ -1,11 +1,64 @@
+import ipaddress
+import logging
 import random
 import re
+import socket
 import time
 from typing import Dict, Optional
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception_type
+
+logger = logging.getLogger(__name__)
+
+
+# Defense-in-depth: block private/internal IP ranges so the scraper never
+# fetches from internal networks even if an admin-configured feed URL is
+# manipulated to point at them.
+_BLOCKED_NETWORKS = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local (cloud metadata)
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),  # IPv6 private
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
+]
+
+
+def _is_safe_url(url: str) -> bool:
+    """Check if URL points to a public address, not internal/private networks."""
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Resolve hostname to IP and check against blocked ranges
+        try:
+            ip = ipaddress.ip_address(hostname)
+            for network in _BLOCKED_NETWORKS:
+                if ip in network:
+                    return False
+            return True
+        except ValueError:
+            # hostname is a domain, not an IP — resolve it
+            try:
+                addrs = socket.getaddrinfo(hostname, None)
+                for addr in addrs:
+                    ip = ipaddress.ip_address(addr[4][0])
+                    for network in _BLOCKED_NETWORKS:
+                        if ip in network:
+                            return False
+                return True
+            except socket.gaierror:
+                return False
+    except Exception:
+        return False
 
 
 class ArticleScraperError(Exception):
@@ -100,6 +153,9 @@ class ArticleScraper:
         if not url or not url.startswith(("http://", "https://")):
             raise ArticleScraperError(f"Invalid URL: {url}")
 
+        if not _is_safe_url(url):
+            raise ArticleScraperError("URL points to blocked internal network")
+
         response, last_error = None, None
         for attempt in range(self.retries + 1):
             try:
@@ -155,6 +211,12 @@ class ArticleScraper:
             "status_code": response.status_code,
         }
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(initial=1, max=10),
+        retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, requests.RequestException)),
+        reraise=True,
+    )
     def _fetch(self, url: str, attempt: int) -> requests.Response:
         """Fetch with browser-like headers and cookies."""
         session = requests.Session()

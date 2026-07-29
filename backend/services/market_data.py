@@ -1,5 +1,7 @@
 import datetime
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
 import requests
@@ -10,18 +12,41 @@ from services.source_selector import SourceSelector
 from services.sources import registry
 from sqlmodel import Session, select
 
+logger = logging.getLogger(__name__)
+
 
 def _today() -> datetime.date:
     return datetime.datetime.now().date()
 
 
-def _parse_float(value) -> float:
-    if value is None:
+def _parse_price_value(raw: str) -> float:
+    """Parse a price string that may use comma as decimal or thousands separator."""
+    if raw is None:
         return 0.0
+    s = str(raw).strip().replace(" ", "")
+    if not s:
+        return 0.0
+    for sym in ("₫", "$", "€", "£", "¥", "VND", "USD", "EUR"):
+        s = s.replace(sym, "")
+    s = s.strip()
+    has_comma = "," in s
+    has_dot = "." in s
+    if has_comma and has_dot:
+        s = s.replace(",", "")
+    elif has_comma:
+        parts = s.rsplit(",", 1)
+        if len(parts) == 2 and len(parts[1]) <= 2:
+            s = parts[0].replace(",", "") + "." + parts[1]
+        else:
+            s = s.replace(",", "")
     try:
-        return float(str(value).replace(",", ""))
-    except (ValueError, TypeError):
+        return float(s)
+    except ValueError:
         return 0.0
+
+
+def _parse_float(value) -> float:
+    return _parse_price_value(value)
 
 
 class MarketDataService:
@@ -82,7 +107,7 @@ class MarketDataService:
 
     def resolve_effective_price(
         self, asset: Asset, date: datetime.date, input_price: Optional[float]
-    ) -> Optional[float]:
+    ) -> Optional[Decimal]:
         """Return the price to use for calculations and storage.
 
         Priority:
@@ -91,14 +116,14 @@ class MarketDataService:
         3. None if no price can be determined.
         """
         if input_price and input_price > 0:
-            return input_price
+            return Decimal(str(input_price)) if not isinstance(input_price, Decimal) else input_price
         if not is_market_price_type(self.session, asset.type):
             return None
         return self.resolve_historical_price(asset, date)
 
     def resolve_historical_price(
         self, asset: Asset, date: datetime.date
-    ) -> Optional[float]:
+    ) -> Optional[Decimal]:
         """Return the best market price for `asset` on `date`.
 
         For historical dates the current live price is intentionally avoided,
@@ -118,7 +143,7 @@ class MarketDataService:
             history = self.selector.fetch_history(asset, date, date)
             price = history.get(date)
             if price and price > 0:
-                return price
+                return Decimal(str(price)) if not isinstance(price, Decimal) else price
 
         # Earliest stored snapshot on or after the date (closest available).
         snapshot = self.session.exec(
@@ -133,7 +158,8 @@ class MarketDataService:
         if date >= _today():
             data = self.fetch_price(asset)
             if data and data.get("price", 0) > 0:
-                return data["price"]
+                price = data["price"]
+                return Decimal(str(price)) if not isinstance(price, Decimal) else price
 
         return None
 
@@ -169,7 +195,7 @@ class MarketDataService:
                 try:
                     results.append(future.result())
                 except Exception as e:
-                    print(f"[market_data] quote thread {symbol} error: {e}")
+                    logger.error("market_data quote thread %s error: %s", symbol, e)
                     results.append(
                         {
                             "symbol": symbol.upper(),
@@ -235,7 +261,7 @@ class MarketDataService:
                             }
                         )
                 except Exception as e:
-                    print(f"[market_data] quote_for_asset thread {asset.symbol} error: {e}")
+                    logger.error("market_data quote_for_asset thread %s error: %s", asset.symbol, e)
                     results.append(
                         {
                             "symbol": asset.symbol.upper(),
@@ -309,7 +335,7 @@ class MarketDataService:
         if snapshots:
             span = (end - start).days + 1
             if len(snapshots) >= span * 0.5:
-                return {s.date: s.price for s in snapshots}
+                return {s.date: float(s.price) for s in snapshots}
 
         # Otherwise fetch live data and backfill into the database.
         live = self.fetch_market_history(symbol, asset_type, start, end)
@@ -369,7 +395,7 @@ class MarketDataService:
                 if data:
                     return data
             except Exception as e:
-                print(f"[market_data] fund_detail {symbol} via {source.code} error: {e}")
+                logger.error("market_data fund_detail %s via %s error: %s", symbol, source.code, e)
         return None
 
     def fetch_stock_detail(self, symbol: str) -> Optional[dict]:
@@ -382,7 +408,7 @@ class MarketDataService:
         try:
             quote = self.fetch_quotes([symbol], asset_type="STOCK")[0]
         except Exception as e:
-            print(f"[market_data] stock_detail quote {symbol} error: {e}")
+            logger.error("market_data stock_detail quote %s error: %s", symbol, e)
             quote = None
 
         result = {
@@ -425,7 +451,7 @@ class MarketDataService:
                     result["pb"] = _to_float(info.get("pb"))
                     result["dividend_yield"] = _to_float(info.get("dividendYield"))
         except Exception as e:
-            print(f"[market_data] stock_detail vndirect {symbol} error: {e}")
+            logger.error("market_data stock_detail vndirect %s error: %s", symbol, e)
 
         return result
 
@@ -476,7 +502,7 @@ class MarketDataService:
                         self._BENCHMARK_CACHE_TIME = datetime.datetime.now()
                         return result
         except Exception as e:
-            print(f"[market_data] dchart benchmark {symbol} error: {e}")
+            logger.error("market_data dchart benchmark %s error: %s", symbol, e)
 
         return {}
 

@@ -48,11 +48,12 @@ class RagContextService:
             .join(Asset, Asset.id == Transaction.asset_id)
             .where(Transaction.type.in_(["BUY", "DEPOSIT"]))
         ).all()
-        type_values: Dict[str, float] = {}
+        from decimal import Decimal
+        type_values: Dict[str, Decimal] = {}
         for tx, asset in buy_transactions:
             effective_price = market.resolve_effective_price(asset, tx.date, tx.price)
             price = effective_price if effective_price and effective_price > 0 else tx.price
-            type_values[asset.type] = type_values.get(asset.type, 0.0) + tx.quantity * price
+            type_values[asset.type] = type_values.get(asset.type, Decimal("0")) + Decimal(str(tx.quantity)) * Decimal(str(price))
 
         return {
             "portfolio_symbols": [a.symbol for a in assets],
@@ -70,7 +71,7 @@ class RagContextService:
                 }
                 for tx, symbol in recent_transactions
             ],
-            "type_allocation": {t: round(v, 2) for t, v in type_values.items()},
+            "type_allocation": {t: float(round(v, 2)) for t, v in type_values.items()},
         }
 
     def similar_articles(self, title: str, summary: str, k: int = 5) -> List[Dict[str, any]]:
