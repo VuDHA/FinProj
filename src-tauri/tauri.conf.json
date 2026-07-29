@@ -37,7 +37,7 @@
       "endpoints": [
         "https://github.com/VuDHA/FinProj/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU0RDYyQ0M1OTAxRDRDQ0YKUldUUFRCMlF4U3pXVkZqUGE5WTNmYU9YUmtrdHY1U05JelFESTVia3dZMHl6dTI1aTFHcG5lY1YK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVGNzNCM0ZENEMzODI4NDcKUldSSEtEaE0vYk56WHlsdDJvQjFsbXBFUDdob3lxeVlzbjI3TUE1U3IvWmpvcXJPWDdtVnlWcEUK",
       "dialog": true,
       "windows": {
         "installMode": "passive"

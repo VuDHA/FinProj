@@ -67,11 +67,19 @@ jobs:
             src-tauri/binaries/wealth-backend-x86_64-pc-windows-msvc.exe
 
       # --- Tauri build + release ---
+      - name: Write signing key to file
+        shell: pwsh
+        run: |
+          # Write the private key to a file so Tauri can use TAURI_SIGNING_PRIVATE_KEY_PATH.
+          # This avoids base64 decoding issues when the key is stored as a GitHub Secret.
+          "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" | Out-File -FilePath "$env:RUNNER_TEMP\wealth-vn.key" -Encoding utf8 -NoNewline
+          Write-Host "Key file written to $env:RUNNER_TEMP\wealth-vn.key"
+
       - name: Build & release with tauri-action
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PATH: ${{ runner.temp }}\wealth-vn.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
