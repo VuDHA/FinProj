@@ -1,0 +1,45 @@
+backend/api/backtest.py
+  s_be753c3dd1c750::t_7399f0487338f4 44
+backend/api/transactions.py
+  s_be753c3dd1c750::t_b65338b078fefe 101-103
+backend/services/ai_insights/portfolio.py
+  s_be753c3dd1c750::t_ead3f5f7954ffb 44
+backend/services/ai_insights/prompts.py
+  s_be753c3dd1c750::t_81e46690668dfa 149,154
+backend/services/backtest.py
+  s_be753c3dd1c750::t_029621f6b156c4 418,420-425
+backend/services/news/relevance.py
+  s_be753c3dd1c750::t_51858a8a046116 50
+backend/tests/test_ai_insights.py
+  s_be753c3dd1c750::t_c9fd59b93dcf98 13,37-57
+backend/tests/test_api_crud.py
+  s_be753c3dd1c750::t_e3998f647e86f5 504,542,582
+backend/tests/test_backtest_ai.py
+  s_be753c3dd1c750::t_194614c3e3c91c 100
+backend/tests/test_compare.py
+  s_be753c3dd1c750::t_9b35fb7607d9bb 49
+backend/tests/test_gemini_batch.py
+  s_be753c3dd1c750::t_e9639ee0b901b6 29-31,34,62-68,94-97,215-224
+backend/tests/test_jobs.py
+  s_be753c3dd1c750::t_f1c55321fdbe9a 32-33,61
+backend/tests/test_news_feed.py
+  s_be753c3dd1c750::t_96987d61ad5d5a 15,25,92
+backend/tests/test_smart_import.py
+  s_be753c3dd1c750::t_d1bfc3914c0c15 6,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "25822758872dc648d9e9aea3b3c121bf2857a10c",
+  "prompts": {},
+  "sessions": {
+    "s_be753c3dd1c750": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_be753c3dd1c750",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
