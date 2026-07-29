@@ -1,0 +1,21 @@
+.github/workflows/ci.yml
+  s_45463e59cfda1d::t_39535a69f26455 57-62,69-73,75,84
+backend/main.py
+  s_45463e59cfda1d::t_860e747d81d3d8 61,88-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f829ceb49718b9bbf640dfe839e218e727dfb57d",
+  "prompts": {},
+  "sessions": {
+    "s_45463e59cfda1d": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_45463e59cfda1d",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
