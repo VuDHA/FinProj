@@ -41,6 +41,45 @@ function Write-Ok($msg) { Write-Status $GR "OK" $msg }
 function Write-Err($msg) { Write-Status $RD "LỖI" $msg }
 function Write-Warn($msg) { Write-Status $YL "CẢNH BÁO" $msg }
 
+# Vietnamese step progress helpers (Yellow = in-progress, Green = done)
+function Write-Step($msg) { Write-Host "  $YL... $msg$RST" }
+function Write-StepDone($msg) { Write-Host "  $GR✔  $msg$RST" }
+
+# Show actionable error then wait for keypress before exiting
+function Exit-WithError($msg) {
+    Write-Host ""
+    Write-Host "$RD  [LỖI] $msg$RST"
+    Write-Host "$YL  Nhấn phím bất kỳ để thoát...$RST"
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
+
+# Create a desktop shortcut (only once, asks user first)
+function Create-DesktopShortcut {
+    $shortcutPath = "$env:USERPROFILE\Desktop\Wealth VN.lnk"
+    if (Test-Path $shortcutPath) { return }
+    Write-Host ""
+    Write-Host "$CY  Bạn có muốn tạo lối tắt trên màn hình nền không? (Y/N)$RST" -NoNewline
+    $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Write-Host ""
+    if ($key.Character -notmatch '^[yY]') {
+        Write-Host "$DIM  Đã bỏ qua tạo lối tắt.$RST"
+        return
+    }
+    try {
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = "$PSScriptRoot\start.bat"
+        $shortcut.IconLocation = "shell32.dll,13"
+        $shortcut.Description = "Wealth VN - Quản lý tài sản"
+        $shortcut.WorkingDirectory = $PSScriptRoot
+        $shortcut.Save()
+        Write-Host "$GR  Đã tạo lối tắt trên màn hình nền.$RST"
+    } catch {
+        Write-Warn "Không thể tạo lối tắt: $($_.Exception.Message)"
+    }
+}
+
 function Show-Typing($text, $color = "Cyan", $delay = 20) {
     foreach ($c in $text.ToCharArray()) {
         Write-Host $c -NoNewline -ForegroundColor $color
@@ -163,83 +202,113 @@ Write-Host ""
 if (-not (Test-Path $TempDir)) { New-Item -ItemType Directory -Path $TempDir -Force | Out-Null }
 
 # --- Python ---
+Write-Step "Đang kiểm tra Python..."
 $PythonCmd = $null
-if (Test-Command python) { $PythonCmd = "python" }
-elseif (Test-Command py) { $PythonCmd = "py" }
+$pyVersion = $null
+if (Test-Command python) {
+    $PythonCmd = "python"
+    $pyVersion = (& python --version 2>&1)
+}
+elseif (Test-Command py) {
+    $PythonCmd = "py"
+    $pyVersion = (& py --version 2>&1)
+}
+
+if ($pyVersion) {
+    Write-StepDone "$pyVersion đã được cài đặt"
+}
 
 if (-not $PythonCmd) {
-    Write-Info "Đang cài đặt Python..."
+    Write-Step "Đang cài đặt Python..."
     if (-not (Test-Admin)) {
-        Write-Err "Cần chạy với quyền Administrator để tự động cài đặt Python."
-        exit 1
+        Exit-WithError "Cần chạy với quyền Administrator để tự động cài đặt Python."
     }
 
+    $pyInstallOk = $false
     if (Test-Command winget) {
         Show-Spinner "Đang cài Python qua winget" 3
         $wingetArgs = "install Python.Python.3.13 --silent --accept-package-agreements --accept-source-agreements"
         Start-Process winget -ArgumentList $wingetArgs -Wait -NoNewWindow
+        $pyInstallOk = $true
     } else {
         $pyInstaller = Join-Path $TempDir "python-installer.exe"
-        if (-not (Test-Path $pyInstaller)) {
-            Show-Spinner "Đang tải Python" 2
-            Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.13.0/python-3.13.0-amd64.exe" -OutFile $pyInstaller -UseBasicParsing
+        try {
+            if (-not (Test-Path $pyInstaller)) {
+                Show-Spinner "Đang tải Python" 2
+                Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.13.0/python-3.13.0-amd64.exe" -OutFile $pyInstaller -UseBasicParsing
+            }
+            Show-Spinner "Đang cài Python" 2
+            Start-Process $pyInstaller -ArgumentList "/quiet InstallAllUsers=0 PrependPath=1 Include_pip=1" -Wait -NoNewWindow
+            $pyInstallOk = $true
+        } catch {
+            $pyInstallOk = $false
         }
-        Show-Spinner "Đang cài Python" 2
-        Start-Process $pyInstaller -ArgumentList "/quiet InstallAllUsers=0 PrependPath=1 Include_pip=1" -Wait -NoNewWindow
     }
     Refresh-Path
     if (Test-Command python) { $PythonCmd = "python" }
     elseif (Test-Command py) { $PythonCmd = "py" }
     if (-not $PythonCmd) {
-        Write-Err "Không thể cài đặt Python. Vui lòng khởi động lại và chạy lại."
-        exit 1
+        Exit-WithError "Không thể cài đặt Python. Vui lòng tải thủ công từ https://www.python.org/downloads/ và chạy lại."
     }
+    $pyVersion = (& $PythonCmd --version 2>&1)
+    Write-StepDone "$pyVersion đã được cài đặt"
 }
-Write-Ok "Python đã sẵn sàng"
-& $PythonCmd --version
 
 # --- Node.js ---
+Write-Step "Đang kiểm tra Node.js..."
 $NodeCmd = $null
-if (Test-Command node) { $NodeCmd = "node" }
+$nodeVersion = $null
+if (Test-Command node) {
+    $NodeCmd = "node"
+    $nodeVersion = (& node --version 2>&1)
+}
+
+if ($nodeVersion) {
+    Write-StepDone "Node.js $nodeVersion đã được cài đặt"
+}
 
 if (-not $NodeCmd) {
-    Write-Info "Đang cài đặt Node.js..."
+    Write-Step "Đang cài đặt Node.js..."
     if (-not (Test-Admin)) {
-        Write-Err "Cần chạy với quyền Administrator để tự động cài đặt Node.js."
-        exit 1
+        Exit-WithError "Cần chạy với quyền Administrator để tự động cài đặt Node.js."
     }
 
+    $nodeInstallOk = $false
     if (Test-Command winget) {
         Show-Spinner "Đang cài Node.js qua winget" 3
         $wingetArgs = "install OpenJS.NodeJS --silent --accept-package-agreements --accept-source-agreements"
         Start-Process winget -ArgumentList $wingetArgs -Wait -NoNewWindow
+        $nodeInstallOk = $true
     } else {
         $nodeInstaller = Join-Path $TempDir "node-installer.msi"
-        if (-not (Test-Path $nodeInstaller)) {
-            Show-Spinner "Đang tải Node.js" 2
-            Invoke-WebRequest -Uri "https://nodejs.org/dist/v22.11.0/node-v22.11.0-x64.msi" -OutFile $nodeInstaller -UseBasicParsing
+        try {
+            if (-not (Test-Path $nodeInstaller)) {
+                Show-Spinner "Đang tải Node.js" 2
+                Invoke-WebRequest -Uri "https://nodejs.org/dist/v22.11.0/node-v22.11.0-x64.msi" -OutFile $nodeInstaller -UseBasicParsing
+            }
+            Show-Spinner "Đang cài Node.js" 2
+            Start-Process msiexec -ArgumentList "/i `"$nodeInstaller`" /qn" -Wait -NoNewWindow
+            $nodeInstallOk = $true
+        } catch {
+            $nodeInstallOk = $false
         }
-        Show-Spinner "Đang cài Node.js" 2
-        Start-Process msiexec -ArgumentList "/i `"$nodeInstaller`" /qn" -Wait -NoNewWindow
     }
     Refresh-Path
     if (Test-Command node) { $NodeCmd = "node" }
     if (-not $NodeCmd) {
-        Write-Err "Không thể cài đặt Node.js. Vui lòng khởi động lại và chạy lại."
-        exit 1
+        Exit-WithError "Không thể cài đặt Node.js. Vui lòng tải thủ công từ https://nodejs.org/ và chạy lại."
     }
+    $nodeVersion = (& $NodeCmd --version 2>&1)
+    Write-StepDone "Node.js $nodeVersion đã được cài đặt"
 }
-Write-Ok "Node.js đã sẵn sàng"
-& $NodeCmd --version
 
 # --- Virtual environment ---
 if (-not (Test-Path $VenvDir)) {
-    Write-Info "Tạo môi trường ảo Python..."
+    Write-Step "Đang tạo môi trường ảo Python..."
     Show-Spinner "Đang tạo venv" 2
     & $PythonCmd -m venv $VenvDir
     if ($LASTEXITCODE -ne 0) {
-        Write-Err "Tạo môi trường ảo thất bại."
-        exit 1
+        Exit-WithError "Không thể tạo môi trường ảo Python. Kiểm tra cài đặt Python và thử lại."
     }
 }
 
@@ -255,30 +324,29 @@ $backendLog = Join-Path $LogDir "backend_install.log"
 $frontendLog = Join-Path $LogDir "frontend_install.log"
 
 # --- Dependencies ---
-Write-Info "Cài đặt / cập nhật thư viện backend..."
+Write-Step "Đang cài đặt phụ thuộc Python..."
 Show-Progress 10 "cập nhật backend"
 Write-Info "Ghi log backend: $backendLog"
 $venvPython = Join-Path $VenvDir "Scripts\python.exe"
 $requirementsFile = Join-Path $BackendDir "requirements.txt"
 cmd /c "`"$venvPython`" -m pip install -r `"$requirementsFile`" 2>&1" | Tee-Object -FilePath $backendLog
 if ($LASTEXITCODE -ne 0) {
-    Write-Err "Cài đặt thư viện backend thất bại. Xem log: $backendLog"
-    exit 1
+    Exit-WithError "Không thể cài đặt phụ thuộc Python. Kiểm tra kết nối Internet và thử lại. Xem log: $backendLog"
 }
-Write-Ok "Thư viện backend đã cập nhật"
+Write-StepDone "Phụ thuộc Python đã sẵn sàng"
 
-Write-Info "Cài đặt / cập nhật thư viện frontend..."
+Write-Step "Đang cài đặt phụ thuộc frontend..."
 Show-Progress 60 "cài đặt frontend"
 Write-Info "Ghi log frontend: $frontendLog"
 cmd /c "cd /d `"$FrontendDir`" && npm install 2>&1" | Tee-Object -FilePath $frontendLog
 if ($LASTEXITCODE -ne 0) {
-    Write-Err "Cài đặt thư viện frontend thất bại. Xem log: $frontendLog"
-    exit 1
+    Exit-WithError "Không thể cài đặt phụ thuộc frontend. Kiểm tra kết nối Internet và thử lại. Xem log: $frontendLog"
 }
-Write-Ok "Thư viện frontend đã cập nhật"
+Write-StepDone "Phụ thuộc frontend đã sẵn sàng"
 Show-Progress 100 "hoàn tất"
 
 # --- Start backend ---
+Write-Step "Đang khởi động backend..."
 Write-Info "Khởi động backend API trên http://localhost:8000 ..."
 $backendProc = Start-Process -FilePath $venvPython -ArgumentList (Join-Path $BackendDir "main.py") -WorkingDirectory $BackendDir -NoNewWindow -PassThru
 
@@ -289,6 +357,7 @@ if ($lanIp) {
     $env:VITE_LAN_URL = "http://${lanIp}:$frontendPort"
 }
 $lanHint = if ($lanIp) { " (LAN: http://${lanIp}:$frontendPort)" } else { "" }
+Write-Step "Đang khởi động frontend..."
 Write-Info "Khởi động frontend UI trên http://localhost:$frontendPort$lanHint ..."
 $viteBin = Join-Path $FrontendDir "node_modules\.bin\vite.cmd"
 $viteArgs = "--port $frontendPort --host"
@@ -310,9 +379,12 @@ for ($i = 0; $i -lt 30; $i++) {
 }
 
 if ($ready) {
+    Write-StepDone "Backend đã khởi động"
+    Write-StepDone "Frontend đã khởi động"
     Write-Ok "Hệ thống đã sẵn sàng!"
 } else {
     Write-Warn "Không thể xác nhận backend, vẫn mở trình duyệt..."
+    Write-Host "$RD  [LỖI] Backend không khởi động được. Kiểm tra cổng 8000 có bị chiếm không.$RST"
 }
 Start-Process "http://localhost:$frontendPort"
 
@@ -325,13 +397,26 @@ if ($lanIp) {
     Write-Host "$DIM      Mobile / QR   :$RST $CY http://${lanIp}:$frontendPort$RST"
 }
 Write-Host ""
+
+# Offer desktop shortcut on first successful launch
+Create-DesktopShortcut
+
+Write-Host ""
 Write-Host "$YL  [Nhấn phím bất kỳ để dừng cả hai server]$RST"
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 
 # --- Shutdown ---
-Write-Info "Đang dừng các server..."
-if ($backendProc) { Stop-ProcessTree $backendProc.Id }
-if ($frontendProc) { Stop-ProcessTree $frontendProc.Id }
+Write-Host ""
+if ($backendProc) {
+    Write-Step "Đang tắt backend..."
+    Stop-ProcessTree $backendProc.Id
+    Write-StepDone "Backend đã tắt"
+}
+if ($frontendProc) {
+    Write-Step "Đang tắt frontend..."
+    Stop-ProcessTree $frontendProc.Id
+    Write-StepDone "Frontend đã tắt"
+}
 
 $pyInstaller = Join-Path $TempDir "python-installer.exe"
 $nodeInstaller = Join-Path $TempDir "node-installer.msi"
@@ -339,5 +424,6 @@ if (Test-Path $pyInstaller) { Remove-Item $pyInstaller -Force }
 if (Test-Path $nodeInstaller) { Remove-Item $nodeInstaller -Force }
 if (Test-Path $TempDir) { Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue }
 
-Write-Ok "Đã dừng. Hẹn gặp lại!"
+Write-Host ""
+Write-Ok "Đã tắt hoàn toàn. Hẹn gặp lại!"
 exit 0

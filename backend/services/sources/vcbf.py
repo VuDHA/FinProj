@@ -1,4 +1,5 @@
 import datetime
+import logging
 import re
 from io import BytesIO
 from typing import Dict, List, Optional
@@ -10,6 +11,8 @@ from openpyxl import load_workbook
 from models import Asset
 from services.sources.base import Source
 from services.sources.utils import parse_float, today
+
+logger = logging.getLogger(__name__)
 
 
 VCBF_HEADERS = {
@@ -107,7 +110,7 @@ class VcbfFundSource(Source):
             results.sort(reverse=True)
             self._links_cache[cache_key] = (results, now)
         except Exception as e:
-            print(f"[source vcbf] find links {symbol} error: {e}")
+            logger.error("source vcbf find links %s error: %s", symbol, e)
         return results
 
     def _parse_excel_nav(self, url: str) -> tuple[Optional[float], Optional[float]]:
@@ -150,7 +153,7 @@ class VcbfFundSource(Source):
                 if values:
                     return (values[0], values[1] if len(values) > 1 else None)
         except Exception as e:
-            print(f"[source vcbf] parse excel {url} error: {e}")
+            logger.error("source vcbf parse excel %s error: %s", url, e)
         return (None, None)
 
     def fetch_price(self, asset: Asset) -> Optional[dict]:
@@ -172,7 +175,7 @@ class VcbfFundSource(Source):
                 "metadata": {"source": "vcbf", "report_url": latest_url},
             }
         except Exception as e:
-            print(f"[source vcbf] price {asset.symbol} error: {e}")
+            logger.error("source vcbf price %s error: %s", asset.symbol, e)
         return None
 
     def fetch_history(
@@ -192,7 +195,7 @@ class VcbfFundSource(Source):
                 if nav is not None:
                     result[d] = nav
         except Exception as e:
-            print(f"[source vcbf] history {symbol} error: {e}")
+            logger.error("source vcbf history %s error: %s", symbol, e)
         return result
 
     def fetch_listing(self) -> List[dict]:
@@ -221,7 +224,7 @@ class VcbfFundSource(Source):
             if links:
                 nav, _ = self._parse_excel_nav(links[0][1])
         except Exception as e:
-            print(f"[source vcbf] detail {symbol} error: {e}")
+            logger.error("source vcbf detail %s error: %s", symbol, e)
         return {
             "symbol": symbol,
             "name": info["name"],

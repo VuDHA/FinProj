@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Dict, List, Optional
 
 import requests
@@ -6,6 +7,8 @@ import requests
 from models import Asset
 from services.sources.base import Source
 from services.sources.utils import parse_float, today
+
+logger = logging.getLogger(__name__)
 
 
 DNSE_HEADERS = {
@@ -55,7 +58,7 @@ class DnseSource(Source):
                     result[d] = parse_float(close)
                 return result
         except Exception as e:
-            print(f"[source dnse] ohlcs {symbol} error: {e}")
+            logger.error("source dnse ohlcs %s error: %s", symbol, e)
         return {}
 
     def fetch_price(self, asset: Asset) -> Optional[dict]:
@@ -79,7 +82,7 @@ class DnseSource(Source):
                 "metadata": {"source": "dnse"},
             }
         except Exception as e:
-            print(f"[source dnse] price {asset.symbol} error: {e}")
+            logger.error("source dnse price %s error: %s", asset.symbol, e)
         return None
 
     def fetch_history(

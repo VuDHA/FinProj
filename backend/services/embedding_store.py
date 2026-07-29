@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import text
@@ -7,6 +8,14 @@ from sqlmodel import Session
 from config import settings
 from database import engine
 from services.ollama_client import OllamaClient
+
+logger = logging.getLogger(__name__)
+
+# BGE-M3 embedding model served via Ollama. Used for hybrid news search.
+# BGE-M3 produces 1024-dimensional dense vectors and supports multilingual
+# text (including Vietnamese), making it well-suited for this app.
+BGE_M3_MODEL = "bge-m3"
+BGE_M3_DIMENSION = 1024
 
 
 class EmbeddingStore:
@@ -274,3 +283,183 @@ class EmbeddingStore:
                 text(f"DELETE FROM {self.TABLE_NAME} WHERE article_id = :article_id"),
                 {"article_id": article_id},
             )
+
+
+# ---------------------------------------------------------------------------
+# Module-level BGE-M3 embedding helpers (for hybrid news search)
+# ---------------------------------------------------------------------------
+
+def _ollama_bge_m3_available() -> bool:
+    """Return True if Ollama is enabled and the bge-m3 model can be reached."""
+    if not settings.OLLAMA_ENABLED:
+        return False
+    try:
+        client = OllamaClient()
+        # Quick probe: a tiny embed call. If Ollama is down or the model is
+        # missing, this raises OllamaClientError.
+        client.embed(text="ping", model=BGE_M3_MODEL, task_name="bge_m3_probe")
+        return True
+    except Exception as e:
+        logger.debug("BGE-M3 via Ollama unavailable: %s", e)
+        return False
+
+
+# Cache the availability check so we don't probe on every call.
+_bge_m3_available_cache: Optional[bool] = None
+
+
+def _is_bge_m3_available() -> bool:
+    global _bge_m3_available_cache
+    if _bge_m3_available_cache is None:
+        _bge_m3_available_cache = _ollama_bge_m3_available()
+        if _bge_m3_available_cache:
+            logger.info("BGE-M3 embedding via Ollama is available")
+        else:
+            logger.info("BGE-M3 not available, will fall back to existing embedding method")
+    return _bge_m3_available_cache
+
+
+def _embed_via_bge_m3(text: str) -> Optional[List[float]]:
+    """Generate a single embedding using Ollama BGE-M3. Returns None on failure."""
+    try:
+        client = OllamaClient()
+        vector = client.embed(
+            text=text,
+            model=BGE_M3_MODEL,
+            task_name="bge_m3_embed",
+        )
+        if isinstance(vector, list) and len(vector) == BGE_M3_DIMENSION:
+            return vector
+        logger.warning(
+            "BGE-M3 returned unexpected dimension: expected %d, got %s",
+            BGE_M3_DIMENSION,
+            len(vector) if isinstance(vector, list) else type(vector),
+        )
+        return None
+    except Exception as e:
+        logger.warning("BGE-M3 single embed failed: %s", e)
+        return None
+
+
+def _embed_batch_via_bge_m3(texts: List[str]) -> Optional[List[List[float]]]:
+    """Generate embeddings for multiple texts using Ollama BGE-M3.
+
+    Ollama's /api/embeddings endpoint only accepts a single prompt, so we
+    loop over the texts. Returns None if any call fails (caller falls back).
+    """
+    try:
+        client = OllamaClient()
+        vectors: List[List[float]] = []
+        for text in texts:
+            vector = client.embed(
+                text=text,
+                model=BGE_M3_MODEL,
+                task_name="bge_m3_embed_batch",
+            )
+            if not isinstance(vector, list) or len(vector) != BGE_M3_DIMENSION:
+                logger.warning(
+                    "BGE-M3 batch returned unexpected dimension: expected %d, got %s",
+                    BGE_M3_DIMENSION,
+                    len(vector) if isinstance(vector, list) else type(vector),
+                )
+                return None
+            vectors.append(vector)
+        return vectors
+    except Exception as e:
+        logger.warning("BGE-M3 batch embed failed: %s", e)
+        return None
+
+
+def _embed_via_existing(text: str) -> Optional[List[float]]:
+    """Generate a single embedding using the existing EmbeddingStore method."""
+    try:
+        store = EmbeddingStore()
+        use_gemini = store.use_gemini
+        if use_gemini:
+            return store._get_gemini_client().embed(
+                text=text,
+                task_name="get_embedding:fallback",
+            )
+        else:
+            return store._get_ollama_client().embed(
+                text=text,
+                model=settings.OLLAMA_EMBEDDING_MODEL,
+                task_name="get_embedding:fallback",
+            )
+    except Exception as e:
+        logger.warning("Existing embedding method failed: %s", e)
+        return None
+
+
+def _embed_batch_via_existing(texts: List[str]) -> Optional[List[List[float]]]:
+    """Generate batch embeddings using the existing EmbeddingStore method."""
+    try:
+        store = EmbeddingStore()
+        use_gemini = store.use_gemini
+        if use_gemini:
+            return store._get_gemini_client().embed_batch(
+                texts,
+                task_name="get_embeddings:fallback",
+            )
+        else:
+            vectors: List[List[float]] = []
+            for text in texts:
+                vectors.append(
+                    store._get_ollama_client().embed(
+                        text=text,
+                        model=settings.OLLAMA_EMBEDDING_MODEL,
+                        task_name="get_embeddings:fallback",
+                    )
+                )
+            return vectors
+    except Exception as e:
+        logger.warning("Existing batch embedding method failed: %s", e)
+        return None
+
+
+def get_embedding(text: str) -> List[float]:
+    """Generate an embedding vector for a single text.
+
+    Tries Ollama BGE-M3 first (multilingual, 1024-dim). Falls back to the
+    existing embedding method (Gemini or nomic-embed-text) if BGE-M3 is
+    unavailable. Returns an empty list if all methods fail.
+    """
+    if not text or not text.strip():
+        return []
+    text = text.strip()[:1000]
+
+    if _is_bge_m3_available():
+        vector = _embed_via_bge_m3(text)
+        if vector is not None:
+            return vector
+        # BGE-M3 failed for this call; invalidate cache and try fallback.
+        global _bge_m3_available_cache
+        _bge_m3_available_cache = None
+
+    vector = _embed_via_existing(text)
+    if vector is not None:
+        return vector
+    return []
+
+
+def get_embeddings(texts: List[str]) -> List[List[float]]:
+    """Generate embedding vectors for multiple texts.
+
+    Tries Ollama BGE-M3 first, then falls back to the existing method.
+    Returns a list aligned with the input (empty list for failed items).
+    """
+    if not texts:
+        return []
+    cleaned = [t.strip()[:1000] if t else "" for t in texts]
+
+    if _is_bge_m3_available():
+        vectors = _embed_batch_via_bge_m3(cleaned)
+        if vectors is not None:
+            return vectors
+        global _bge_m3_available_cache
+        _bge_m3_available_cache = None
+
+    vectors = _embed_batch_via_existing(cleaned)
+    if vectors is not None:
+        return vectors
+    return [[] for _ in cleaned]

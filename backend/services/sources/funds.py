@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Dict, List, Optional
 
 import requests
@@ -6,6 +7,8 @@ import requests
 from models import Asset
 from services.sources.base import Source
 from services.sources.utils import parse_float, parse_timestamp_date, today
+
+logger = logging.getLogger(__name__)
 
 
 class FmarketFundSource(Source):
@@ -81,7 +84,7 @@ class FmarketFundSource(Source):
                 FmarketFundSource._LISTING_CACHE_TIME = datetime.datetime.now()
                 return all_rows
         except Exception as e:
-            print(f"[source fmarket] listing error: {e}")
+            logger.error("source fmarket listing error: %s", e)
         return self._LISTING_CACHE or []
 
     def _find_row(self, symbol: str) -> Optional[dict]:
@@ -117,7 +120,7 @@ class FmarketFundSource(Source):
                 if isinstance(data, list):
                     return sorted(data, key=lambda x: x["navDate"])
         except Exception as e:
-            print(f"[source fmarket] nav history {fund_id} error: {e}")
+            logger.error("source fmarket nav history %s error: %s", fund_id, e)
         return []
 
     def fetch_price(self, asset: Asset) -> Optional[dict]:
@@ -145,7 +148,7 @@ class FmarketFundSource(Source):
                         "date": date,
                     }
             except Exception as e:
-                print(f"[source fmarket] nav {asset.symbol} error: {e}")
+                logger.error("source fmarket nav %s error: %s", asset.symbol, e)
             nav = float(row["nav"])
             update_at = row.get("productNavChange", {}).get("updateAt")
             date = parse_timestamp_date(update_at) if update_at else today()
@@ -156,7 +159,7 @@ class FmarketFundSource(Source):
                 "date": date,
             }
         except Exception as e:
-            print(f"[source fmarket] direct {asset.symbol} error: {e}")
+            logger.error("source fmarket direct %s error: %s", asset.symbol, e)
             return None
 
     def fetch_fund_detail(self, symbol: str) -> Optional[dict]:
@@ -176,7 +179,7 @@ class FmarketFundSource(Source):
                 "vsd_fee_id": row.get("vsdFeeId"),
             }
         except Exception as e:
-            print(f"[source fmarket] fund detail {symbol} error: {e}")
+            logger.error("source fmarket fund detail %s error: %s", symbol, e)
             return None
 
     def fetch_history(
@@ -196,7 +199,7 @@ class FmarketFundSource(Source):
                 for h in history
             }
         except Exception as e:
-            print(f"[source fmarket] history {symbol} error: {e}")
+            logger.error("source fmarket history %s error: %s", symbol, e)
             return {}
 
     def fetch_listing(self) -> list:
@@ -218,5 +221,5 @@ class FmarketFundSource(Source):
                     }
                 )
         except Exception as e:
-            print(f"[source fmarket] listing error: {e}")
+            logger.error("source fmarket listing error: %s", e)
         return results

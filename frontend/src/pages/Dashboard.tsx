@@ -2,12 +2,16 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  ArrowDownRight,
   ArrowRight,
+  ArrowUpRight,
+  BarChart3,
   Bell,
   Bot,
   Check,
   Copy,
   GitCompare,
+  History,
   LineChart as LineChartIcon,
   Newspaper,
   Plus,
@@ -15,7 +19,10 @@ import {
   Receipt,
   RefreshCw,
   Scale,
+  Settings,
+  Sparkles,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Link } from "react-router-dom";
@@ -55,7 +62,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
+import { chartTooltipStyle, formatCurrency, formatNumber, formatPercent } from "../lib/utils";
 
 const TYPE_COLORS: Record<string, string> = {
   STOCK: "var(--accent-blue)",
@@ -281,6 +288,31 @@ export function Dashboard() {
     queryFn: async () => (await API.get("/rebalance/")).data,
   });
 
+  const recentTransactions = useQuery({
+    queryKey: ["transactions"],
+    queryFn: async () => (await API.get("/transactions/")).data as Array<{
+      id: number;
+      asset_id: number;
+      symbol?: string;
+      type: string;
+      quantity: number;
+      price: number;
+      fee: number;
+      date: string;
+      notes?: string;
+    }>,
+  });
+
+  const assets = useQuery({
+    queryKey: ["assets"],
+    queryFn: async () => (await API.get("/assets/")).data as Array<{
+      id: number;
+      symbol: string;
+      name?: string;
+      type: string;
+    }>,
+  });
+
   const [marketTab, setMarketTab] = usePersistentState<"STOCK" | "FUND" | "GOLD">(
     "dashboard.marketTab",
     "STOCK"
@@ -383,6 +415,23 @@ export function Dashboard() {
     stable_value: 0,
     items: [],
   };
+
+  // Contextual insight: month-over-month change in net worth
+  const monthlyChange = useMemo(() => {
+    const hist = history.data || [];
+    if (hist.length < 2) return null;
+    const sorted = [...hist].sort((a, b) => a.date.localeCompare(b.date));
+    const latest = sorted[sorted.length - 1];
+    const now = new Date();
+    const target = new Date(now);
+    target.setDate(now.getDate() - 30);
+    const targetIso = target.toISOString().split("T")[0];
+    const past =
+      sorted.find((h) => h.date >= targetIso) || sorted[0];
+    if (!past || past.value <= 0) return null;
+    const pct = ((latest.value - past.value) / past.value) * 100;
+    return { pct, delta: latest.value - past.value };
+  }, [history.data]);
 
   const trendPercentData = useMemo(() => {
     const trendMap = new Map<string, { label: string; portfolio?: number; benchmark?: number }>();
@@ -509,6 +558,36 @@ export function Dashboard() {
   const topGainer = analytics.data?.top_performers?.[0];
   const topLoser = analytics.data?.bottom_performers?.[0];
 
+  // Recent activity: last 5 transactions enriched with asset symbol/name
+  const recentActivity = useMemo(() => {
+    const txns = (recentTransactions.data || []).slice();
+    txns.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    return txns.slice(0, 5).map((t) => {
+      const asset = (assets.data || []).find((a) => a.id === t.asset_id);
+      return {
+        ...t,
+        symbol: t.symbol || asset?.symbol || `#${t.asset_id}`,
+        assetName: asset?.name || asset?.symbol || "",
+      };
+    });
+  }, [recentTransactions.data, assets.data]);
+
+  const transactionTypeLabel = (type: string) => {
+    switch (type) {
+      case "BUY": return labels.transactions.buy;
+      case "SELL": return labels.transactions.sell;
+      case "DEPOSIT": return labels.transactions.deposit;
+      case "WITHDRAWAL": return labels.transactions.withdrawal;
+      default: return type;
+    }
+  };
+
+  const transactionTypeBadgeClass = (type: string) => {
+    if (type === "BUY" || type === "DEPOSIT") return "badge-gain";
+    if (type === "SELL" || type === "WITHDRAWAL") return "badge-loss";
+    return "badge-loss";
+  };
+
   const biggestDrift = (rebalance.data?.suggestions || [])
     .map((s: any) => ({ ...s, drift: Math.abs(s.current_percent - s.target_percent) }))
     .sort((a: any, b: any) => b.drift - a.drift)[0];
@@ -552,6 +631,57 @@ export function Dashboard() {
       </SectionHeader>
 
       {portfolio.isLoading ? (
+        <Skeleton className="h-40" />
+      ) : (
+        <FintechCard delay={0.02} hover={false} className="relative overflow-hidden">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 rounded-lg bg-accent-cyan/10 text-accent-cyan ring-1 ring-inset ring-accent-cyan/20">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-500">
+                  {labels.summary.totalValue}
+                </span>
+                <InfoTooltip content={labels.tooltips.totalValue} />
+              </div>
+              <div className="font-mono font-bold tracking-tight text-slate-900 text-3xl sm:text-4xl lg:text-5xl">
+                <AnimatedNumber
+                  value={data.total_value}
+                  formatter={formatCurrency}
+                  duration={1400}
+                  className="block"
+                  title={formatCurrency(data.total_value)}
+                />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <TrendBadge value={data.total_pnl_percent} />
+                <span className={`text-sm font-medium ${data.total_pnl >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
+                  {data.total_pnl >= 0 ? "+" : ""}
+                  <AnimatedNumber value={data.total_pnl} formatter={formatCurrency} duration={1400} />
+                </span>
+              </div>
+            </div>
+            {monthlyChange && (
+              <div className="flex items-center gap-2 rounded-xl bg-slate-50/80 px-3 py-2 ring-1 ring-inset ring-slate-200/60">
+                <Sparkles className={`w-4 h-4 ${monthlyChange.pct >= 0 ? "text-accent-emerald" : "text-accent-rose"}`} />
+                <div className="text-xs leading-tight">
+                  <div className="text-slate-500">30 ngày qua</div>
+                  <div className={`font-semibold ${monthlyChange.pct >= 0 ? "text-accent-emerald" : "text-accent-rose"}`}>
+                    {monthlyChange.pct >= 0 ? "Tăng" : "Giảm"} {formatPercent(Math.abs(monthlyChange.pct))}
+                    {" "}
+                    <span className="text-slate-400 font-normal">
+                      ({monthlyChange.delta >= 0 ? "+" : ""}{formatCurrency(monthlyChange.delta)})
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </FintechCard>
+      )}
+
+      {portfolio.isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Skeleton className="h-28" count={3} />
         </div>
@@ -586,13 +716,21 @@ export function Dashboard() {
           </span>
           <InfoTooltip content={labels.tooltips.dashboardQuickActions} />
           <div className="w-px h-4 bg-slate-200 mx-1 hidden sm:block" />
+          <Link to="/transactions" className="btn-secondary py-1.5 px-3 text-xs">
+            <Receipt className="w-3.5 h-3.5" />
+            {labels.dashboard.addTransaction}
+          </Link>
           <Link to="/assets" className="btn-secondary py-1.5 px-3 text-xs">
             <Plus className="w-3.5 h-3.5" />
             {labels.dashboard.addAsset}
           </Link>
-          <Link to="/transactions" className="btn-secondary py-1.5 px-3 text-xs">
-            <Receipt className="w-3.5 h-3.5" />
-            {labels.dashboard.addTransaction}
+          <Link to="/assets" className="btn-secondary py-1.5 px-3 text-xs">
+            <Wallet className="w-3.5 h-3.5" />
+            Xem danh mục
+          </Link>
+          <Link to="/analytics" className="btn-secondary py-1.5 px-3 text-xs">
+            <BarChart3 className="w-3.5 h-3.5" />
+            Báo cáo
           </Link>
           <Link to="/rebalance" className="btn-secondary py-1.5 px-3 text-xs">
             <Scale className="w-3.5 h-3.5" />
@@ -606,7 +744,73 @@ export function Dashboard() {
             <LineChartIcon className="w-3.5 h-3.5" />
             {labels.market.title}
           </Link>
+          <Link to="/settings" className="btn-secondary py-1.5 px-3 text-xs">
+            <Settings className="w-3.5 h-3.5" />
+            Cài đặt
+          </Link>
         </div>
+      </FintechCard>
+
+      <FintechCard delay={0.12}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-accent-blue/10 text-accent-blue">
+              <History className="w-4 h-4" />
+            </div>
+            <h3 className="card-title">Hoạt động gần đây</h3>
+          </div>
+          <SectionLink to="/transactions">{labels.dashboard.viewAll}</SectionLink>
+        </div>
+        {recentTransactions.isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-12" count={3} />
+          </div>
+        ) : recentActivity.length > 0 ? (
+          <div className="space-y-1">
+            {recentActivity.map((t, idx) => {
+              const isBuy = t.type === "BUY" || t.type === "DEPOSIT";
+              const total = (t.quantity || 0) * (t.price || 0) + (t.fee || 0);
+              return (
+                <div
+                  key={t.id}
+                  className={`flex items-center justify-between py-2 ${idx > 0 ? "border-t border-slate-100" : ""}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-1.5 rounded-lg ${isBuy ? "bg-accent-emerald/10 text-accent-emerald" : "bg-accent-rose/10 text-accent-rose"}`}>
+                      {isBuy ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-display font-semibold text-slate-900 text-sm">
+                          {t.symbol}
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium ${transactionTypeBadgeClass(t.type)}`}>
+                          {transactionTypeLabel(t.type)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {new Date(t.date).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        {t.quantity > 0 && ` · ${formatNumber(t.quantity)} @ ${formatCurrency(t.price)}`}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`font-mono font-semibold text-sm whitespace-nowrap ${isBuy ? "text-accent-emerald" : "text-accent-rose"}`}>
+                    {isBuy ? "-" : "+"}{formatCurrency(total)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState
+            icon={<Receipt className="w-6 h-6" />}
+            title="Ghi nhận giao dịch đầu tiên"
+            description="Thêm giao dịch mua, bán hoặc nạp/rút để theo dõi lịch sử hoạt động và diễn biến danh mục."
+            actionLabel={labels.dashboard.addTransaction}
+            onAction={() => { window.location.hash = "/transactions"; }}
+            delay={0}
+          />
+        )}
       </FintechCard>
 
       <PriceAlertsSection />
@@ -829,7 +1033,14 @@ export function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-slate-500 py-4">{labels.dashboard.noMovers}</div>
+                <EmptyState
+                  icon={<LineChartIcon className="w-6 h-6" />}
+                  title="Khám phá giá vàng"
+                  description="Bảng giá vàng sẽ hiển thị tại đây khi có dữ liệu. Thử cập nhật giá để làm mới."
+                  actionLabel={labels.dashboard.refreshPrices}
+                  onAction={() => refresh.mutate()}
+                  delay={0}
+                />
               )
             ) : marketListItems.length > 0 ? (
               <div className="space-y-2">
@@ -864,7 +1075,14 @@ export function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-slate-500 py-4">{labels.dashboard.noMovers}</div>
+              <EmptyState
+                icon={<LineChartIcon className="w-6 h-6" />}
+                title="Theo dõi thị trường"
+                description="Thêm tài sản vào danh mục hoặc cập nhật giá để xem biến động cổ phiếu và quỹ tại đây."
+                actionLabel={labels.dashboard.refreshPrices}
+                onAction={() => refresh.mutate()}
+                delay={0}
+              />
             )}
           </FintechCard>
 
@@ -944,7 +1162,14 @@ export function Dashboard() {
                   );
                 })}
                 {(dailyBrief.data?.top_articles || []).length === 0 && (
-                  <div className="text-xs text-slate-500 py-4">{labels.dashboard.noBrief}</div>
+                  <EmptyState
+                    icon={<Newspaper className="w-6 h-6" />}
+                    title="Tin tức sẽ sớm xuất hiện"
+                    description="Chưa có tóm tắt tin tức hôm nay. Thêm tài sản hoặc mã vào danh mục để nhận tin cá nhân hóa."
+                    actionLabel={labels.dashboard.news}
+                    onAction={() => { window.location.hash = "/news"; }}
+                    delay={0}
+                  />
                 )}
               </div>
             )}
@@ -1123,7 +1348,14 @@ export function Dashboard() {
                     </div>
                   ))}
                   {(analytics.data?.top_performers || []).length === 0 && (analytics.data?.bottom_performers || []).length === 0 && (
-                    <div className="text-xs text-slate-500 py-2">{labels.dashboard.noMovers}</div>
+                    <EmptyState
+                      icon={<Activity className="w-6 h-6" />}
+                      title="Biến động sẽ hiển thị tại đây"
+                      description="Thêm giao dịch để xem top sinh lời và top thua lỗ của danh mục."
+                      actionLabel={labels.dashboard.addTransaction}
+                      onAction={() => { window.location.hash = "/transactions"; }}
+                      delay={0}
+                    />
                   )}
                 </div>
               </div>
@@ -1249,14 +1481,12 @@ export function Dashboard() {
           ) : (
             <div className="h-full flex items-center justify-center">
               <EmptyState
-                title={labels.dashboard.empty}
+                icon={<TrendingUp className="w-6 h-6" />}
+                title="Bắt đầu xây dựng danh mục"
                 description={labels.dashboard.addAssetsHint}
-                action={
-                  <Link to="/assets" className="btn-primary">
-                    <Plus className="w-4 h-4" />
-                    {labels.assets.addAsset}
-                  </Link>
-                }
+                actionLabel={labels.assets.addAsset}
+                onAction={() => { window.location.hash = "/assets"; }}
+                delay={0}
               />
             </div>
           )}

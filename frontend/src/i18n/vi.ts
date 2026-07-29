@@ -705,10 +705,33 @@ export const labels = {
     back: "Quay lại",
     finish: "Hoàn thành",
   },
+  pwa: {
+    installTitle: "Cài đặt Wealth VN",
+    installDescription: "Sử dụng như ứng dụng, truy cập nhanh từ màn hình nền",
+    installButton: "Cài đặt",
+    laterButton: "Để sau",
+    iosInstructions:
+      "Nhấn nút Chia sẻ rồi chọn 'Thêm vào màn hình chính' để cài đặt",
+    offlineMessage: "Không có kết nối mạng — đang hiển thị dữ liệu đã lưu",
+  },
 };
 
+// Re-export the labels as `vi` for react-i18next resource binding.
+// The existing `labels` export is kept for backward compatibility with
+// components that still import it directly (e.g. `import { labels } from "../i18n/vi"`).
+export const vi = labels;
+
+// ---------------------------------------------------------------------------
+// Formatting helpers (Vietnamese locale).
+//
+// These use Intl APIs with the "vi-VN" locale so that numbers, currency and
+// dates are rendered according to Vietnamese conventions. They can be used
+// directly in components or exposed to react-i18next via a custom formatter
+// (see ./index.ts).
+// ---------------------------------------------------------------------------
+
 export function formatCurrency(n: number, currency: string = "VND", fractionDigits: number = 2): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency,
     minimumFractionDigits: fractionDigits,
@@ -717,7 +740,7 @@ export function formatCurrency(n: number, currency: string = "VND", fractionDigi
 }
 
 export function formatNumber(n: number, fractionDigits: number = 2): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("vi-VN", {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   }).format(n);
@@ -725,4 +748,18 @@ export function formatNumber(n: number, fractionDigits: number = 2): string {
 
 export function formatPercent(n: number, fractionDigits: number = 2): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(fractionDigits)}%`;
+}
+
+/**
+ * Format a date (or ISO string / timestamp) using the Vietnamese locale.
+ * Defaults to a short date style (e.g. "01/02/2024").
+ */
+export function formatDate(date: string | number | Date, options: Intl.DateTimeFormatOptions = {}): string {
+  const d = date instanceof Date ? date : new Date(date);
+  return new Intl.DateTimeFormat("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    ...options,
+  }).format(d);
 }

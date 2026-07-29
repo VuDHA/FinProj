@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Optional
 
 import requests
@@ -6,6 +7,8 @@ import requests
 from models import Asset
 from services.sources.base import Source
 from services.sources.utils import today
+
+logger = logging.getLogger(__name__)
 
 
 class CoinGeckoCryptoSource(Source):
@@ -39,5 +42,5 @@ class CoinGeckoCryptoSource(Source):
                     "date": today(),
                 }
         except Exception as e:
-            print(f"[source coingecko] {asset.symbol} error: {e}")
+            logger.error("source coingecko %s error: %s", asset.symbol, e)
         return None

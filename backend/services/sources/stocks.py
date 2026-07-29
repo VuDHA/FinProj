@@ -1,11 +1,15 @@
 import datetime
+import logging
 from typing import Dict, Optional
 
 import requests
+from tenacity import retry, stop_after_attempt, wait_exponential_jitter, retry_if_exception_type
 
 from models import Asset
 from services.sources.base import Source
 from services.sources.utils import KBS_HEADERS, cafef_headers, parse_float, today
+
+logger = logging.getLogger(__name__)
 
 
 class KbsStockSource(Source):
@@ -15,6 +19,12 @@ class KbsStockSource(Source):
     supported_types = ["STOCK", "ETF"]
     supports_history = True
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(initial=1, max=10),
+        retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, Exception)),
+        reraise=True,
+    )
     def fetch_price(self, asset: Asset) -> Optional[dict]:
         try:
             url = "https://kbbuddywts.kbsec.com.vn/iis-server/investment/stock/iss"
@@ -40,9 +50,15 @@ class KbsStockSource(Source):
                         "date": today(),
                     }
         except Exception as e:
-            print(f"[source kbs] price {asset.symbol} error: {e}")
+            logger.error("source kbs price %s error: %s", asset.symbol, e)
         return None
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(initial=1, max=10),
+        retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, Exception)),
+        reraise=True,
+    )
     def fetch_history(
         self,
         symbol: str,
@@ -69,7 +85,7 @@ class KbsStockSource(Source):
                 if result:
                     return result
         except Exception as e:
-            print(f"[source kbs] history {symbol} error: {e}")
+            logger.error("source kbs history %s error: %s", symbol, e)
         return {}
 
 
@@ -81,6 +97,12 @@ class CafefStockSource(Source):
     supports_history = True
     supports_listing = True
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(initial=1, max=10),
+        retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, Exception)),
+        reraise=True,
+    )
     def _fetch_cafef_history(
         self,
         symbol: str,
@@ -109,7 +131,7 @@ class CafefStockSource(Source):
                             result[d] = parse_float(row["GiaDongCua"]) * 1000
                         return result
             except Exception as e:
-                print(f"[source cafef] {exchange} {symbol} error: {e}")
+                logger.error("source cafef %s %s error: %s", exchange, symbol, e)
         return {}
 
     def fetch_price(self, asset: Asset) -> Optional[dict]:
@@ -132,7 +154,7 @@ class CafefStockSource(Source):
                 "date": today(),
             }
         except Exception as e:
-            print(f"[source cafef] current {asset.symbol} error: {e}")
+            logger.error("source cafef current %s error: %s", asset.symbol, e)
             return None
 
     def fetch_history(
@@ -144,6 +166,12 @@ class CafefStockSource(Source):
     ) -> Dict[datetime.date, float]:
         return self._fetch_cafef_history(symbol, start, end)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential_jitter(initial=1, max=10),
+        retry=retry_if_exception_type((requests.Timeout, requests.ConnectionError, Exception)),
+        reraise=True,
+    )
     def fetch_listing(self) -> list:
         results = []
         try:
@@ -181,6 +209,6 @@ class CafefStockSource(Source):
                         }
                     )
         except Exception as e:
-            print(f"[source cafef] listing error: {e}")
+            logger.error("source cafef listing error: %s", e)
         return results
 

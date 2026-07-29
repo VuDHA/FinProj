@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     SCHEDULER_HOUR: int = 15
     SCHEDULER_MINUTE: int = 35
 
+    # When True, expose /docs, /redoc, and /openapi.json.  Disable in production.
+    DEBUG: bool = False
+
     # News scheduler settings
     NEWS_SCHEDULER_ENABLED: bool = True
     NEWS_VN_MARKET_INTERVAL_MINUTES: int = 15

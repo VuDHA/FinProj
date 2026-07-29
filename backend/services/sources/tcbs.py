@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Dict, List, Optional
 
 import requests
@@ -6,6 +7,8 @@ import requests
 from models import Asset
 from services.sources.base import Source
 from services.sources.utils import parse_float, today
+
+logger = logging.getLogger(__name__)
 
 
 TCBS_HEADERS = {
@@ -56,7 +59,7 @@ class TcbsSource(Source):
                 if result:
                     return result
         except Exception as e:
-            print(f"[source tcbs] bars {symbol} error: {e}")
+            logger.error("source tcbs bars %s error: %s", symbol, e)
         return {}
 
     def fetch_price(self, asset: Asset) -> Optional[dict]:
@@ -80,7 +83,7 @@ class TcbsSource(Source):
                 "metadata": {"source": "tcbs"},
             }
         except Exception as e:
-            print(f"[source tcbs] price {asset.symbol} error: {e}")
+            logger.error("source tcbs price %s error: %s", asset.symbol, e)
         return None
 
     def fetch_history(
@@ -127,7 +130,7 @@ class TcbsSource(Source):
                     break
                 offset += limit
         except Exception as e:
-            print(f"[source tcbs] listing error: {e}")
+            logger.error("source tcbs listing error: %s", e)
         return results
 
 

@@ -9,6 +9,7 @@ Usage:
 """
 
 import argparse
+import logging
 import os
 import sys
 from typing import List
@@ -25,6 +26,8 @@ from database import engine, init_db
 from models import NewsArticle, NewsSymbol
 from services.news.dictionaries import get_known_symbols
 from services.news.processor import NewsProcessor
+
+logger = logging.getLogger(__name__)
 
 
 def _build_processor(force_ollama: bool) -> NewsProcessor:
@@ -106,7 +109,7 @@ def main() -> None:
 
         articles = session.exec(query).all()
         total = len(articles)
-        print(f"[retag] found {total} articles to process")
+        logger.info("retag found %d articles to process", total)
 
         updated = 0
         for i, article in enumerate(articles, start=1):
@@ -124,16 +127,16 @@ def main() -> None:
 
             if i % args.batch_size == 0:
                 session.commit()
-                print(
-                    f"[retag] processed {i}/{total} articles, "
-                    f"updated {updated}"
+                logger.info(
+                    "retag processed %d/%d articles, updated %d",
+                    i, total, updated,
                 )
 
         session.commit()
 
-    print(
-        f"[retag] done. processed {total} articles, "
-        f"updated {updated}"
+    logger.info(
+        "retag done. processed %d articles, updated %d",
+        total, updated,
     )
 
 

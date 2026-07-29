@@ -159,6 +159,8 @@ dist/
 build/
 *.manifest
 *.spec
+# Keep our PyInstaller sidecar spec (needed for Tauri desktop builds)
+!backend/pyinstaller.spec
 .tmp
 
 # Archives / backups
@@ -189,4 +191,6 @@ Thumbs.db
 desktop.ini
 
 # Devin / AI session artifacts
-backend/.devin/
+backend/.devin/backend/.coverage
+backend/coverage.xml
+backend/htmlcov/

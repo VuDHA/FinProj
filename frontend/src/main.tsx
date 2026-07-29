@@ -9,6 +9,7 @@ import { AiQueueProvider } from "./contexts/AiQueueContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { checkStorageVersion, getLocalStorage } from "./lib/storage";
+import "./i18n";
 import "./index.css";
 
 checkStorageVersion();
@@ -18,7 +19,8 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 0,
+      staleTime: 60_000,
+      gcTime: 1000 * 60 * 60 * 24,
     },
   },
 });
@@ -33,7 +35,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       client={queryClient}
       persistOptions={{
         persister,
-        maxAge: Infinity,
+        maxAge: 1000 * 60 * 60 * 24,
         dehydrateOptions: { shouldDehydrateQuery: () => true },
       }}
     >

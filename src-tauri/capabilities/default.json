@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "default",
+  "description": "Capabilities for the Wealth VN main window: sidecar execution, auto-update, and process restart.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "wealth-backend",
+          "sidecar": true,
+          "args": false
+        }
+      ]
+    },
+    "shell:allow-spawn",
+    "shell:allow-kill",
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download",
+    "updater:allow-install",
+    "process:default",
+    "process:allow-restart",
+    "process:allow-exit"
+  ]
+}

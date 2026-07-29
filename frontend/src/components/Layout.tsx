@@ -22,8 +22,10 @@ import { useEffect, useState } from "react";
 import { labels } from "../i18n/vi";
 import { HelpModal } from "./HelpModal";
 import { InfoTooltip } from "./InfoTooltip";
+import { OfflineBanner } from "./OfflineBanner";
 import { OnboardingTour, TourStep } from "./OnboardingTour";
 import { PriceAlertsBell } from "./PriceAlertsBell";
+import { PwaInstallPrompt } from "./PwaInstallPrompt";
 import { ThemeSelector } from "./ThemeSelector";
 
 const nav = [
@@ -217,6 +219,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <HelpModal open={showHelp} onClose={() => setShowHelp(false)} />
 
       <main className="flex-1 p-4 md:p-8 overflow-auto">
+        <OfflineBanner />
+        <PwaInstallPrompt />
         <div className="flex items-center justify-between mb-4 md:hidden">
           <button
             onClick={() => setMobileMenuOpen(true)}
