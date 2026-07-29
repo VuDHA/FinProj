@@ -1,0 +1,21 @@
+.github/workflows/ci.yml
+  s_958e59a288a511::t_1f4e603a6803ee 66-73
+backend/requirements.txt
+  s_958e59a288a511::t_33ce842692ddec 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "355895cec5fc4cf6b59870e0dd962d44f7402c02",
+  "prompts": {},
+  "sessions": {
+    "s_958e59a288a511": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_958e59a288a511",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
