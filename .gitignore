@@ -160,3 +160,33 @@ build/
 *.manifest
 *.spec
 .tmp
+
+# Archives / backups
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Tauri / Rust build artifacts
+src-tauri/target/
+src-tauri/gen/
+src-tauri/binaries/
+
+# Backend data directory (database, backups)
+backend/data/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Devin / AI session artifacts
+backend/.devin/
