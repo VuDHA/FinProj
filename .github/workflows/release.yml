@@ -67,35 +67,27 @@ jobs:
             src-tauri/binaries/wealth-backend-x86_64-pc-windows-msvc.exe
 
       # --- Tauri build + release ---
-      - name: Write signing key to file
-        shell: pwsh
-        run: |
-          # Write the private key to a file so Tauri can use TAURI_SIGNING_PRIVATE_KEY_PATH.
-          # This avoids base64 decoding issues when the key is stored as a GitHub Secret.
-          "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" | Out-File -FilePath "$env:RUNNER_TEMP\wealth-vn.key" -Encoding utf8 -NoNewline
-          Write-Host "Key file written to $env:RUNNER_TEMP\wealth-vn.key"
-
       - name: Build & release with tauri-action
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY_PATH: ${{ runner.temp }}\wealth-vn.key
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Wealth VN v__VERSION__'
           releaseBody: |
-            Xem các tệp đính kèm bên dưới để tải xuống.
+            Xem cac tep dinh kem ben duoi de tai xuong.
 
-            **Wealth VN** — Ứng dụng quản lý tài sản cá nhân.
+            **Wealth VN** - Ung dung quan ly tai san ca nhan.
 
-            ## Hướng dẫn cài đặt
-            1. Tải tệp `.exe` (NSIS) hoặc `.msi` phù hợp với hệ thống của bạn.
-            2. Chạy tệp cài đặt và làm theo hướng dẫn.
-            3. Khởi động ứng dụng — dữ liệu cũ (nếu có) sẽ được giữ nguyên.
+            ## Huong dan cai dat
+            1. Tai tep `.exe` (NSIS) hoac `.msi` phu hop voi he thong cua ban.
+            2. Chay tep cai dat va lam theo huong dan.
+            3. Khoi dong ung dung - du lieu cu (neu co) se duoc giu nguyen.
 
             **Changelog:**
-            - Xem chi tiết thay đổi trong commit history.
+            - Xem chi tiet thay doi trong commit history.
           releaseDraft: true
           prerelease: false
           args: '--target x86_64-pc-windows-msvc'
