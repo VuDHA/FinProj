@@ -3,7 +3,7 @@ import io
 
 from models import Asset
 from services.smart_import import SmartImportService
-from sqlalchemy import select
+from sqlmodel import select
 
 
 def test_preview_csv_returns_headers_and_sample_rows():
@@ -23,6 +23,7 @@ def test_preview_csv_returns_headers_and_sample_rows():
 
 def test_suggest_mapping_fallback_without_ollama():
     service = SmartImportService()
+    service._is_ai_enabled = lambda: False
     headers = ["mã", "tên", "loại tài sản", "sàn", "ngày"]
     mapping = service.suggest_mapping(headers, "assets")
 

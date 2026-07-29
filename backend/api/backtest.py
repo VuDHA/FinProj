@@ -41,7 +41,7 @@ def run_backtest_stress_from_prompt(
     try:
         return BacktestService(session).run_stress_from_prompt(
             payload.prompt,
-            payload.base_request if payload.base_request else BacktestRequest(),
+            payload.base_request,
         )
     except PromptParserError as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -415,8 +415,14 @@ class BacktestService:
             "result": result,
         }
 
-    def run_stress_from_prompt(self, prompt: str, base_request: BacktestRequest) -> Dict:
+    def run_stress_from_prompt(self, prompt: str, base_request: Optional[BacktestRequest] = None) -> Dict:
         """Apply a stress/what-if prompt to a base request and run the backtest."""
+        if base_request is None:
+            today = datetime.date.today()
+            base_request = BacktestRequest(
+                start_date=today - datetime.timedelta(days=365),
+                end_date=today,
+            )
         parser = PromptParser()
         request = parser.parse_stress_prompt(prompt=prompt, base=base_request)
         result = self.run(request)

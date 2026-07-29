@@ -26,9 +26,12 @@ def mock_settings_gemini():
 
 
 def test_gemini_client_requires_api_key():
+    # The constructor default binds settings.GEMINI_API_KEY at function-definition
+    # time, so patching settings after import does not change the default. Pass an
+    # empty key explicitly to exercise the missing-key guard in _build_client.
     with patch("services.gemini_client.settings.GEMINI_API_KEY", ""):
         with pytest.raises(GeminiClientError):
-            GeminiClient()
+            GeminiClient(api_key="")
 
 
 def test_gemini_client_generate(mock_settings_gemini):
@@ -56,7 +59,13 @@ def test_gemini_client_embed(mock_settings_gemini):
     client = GeminiClient()
     response = MagicMock()
     response.values = None
-    response.embeddings = [MagicMock(values=[0.1, 0.2, 0.3])]
+    # Each embedding item must not expose a truthy `embeddings` attribute, otherwise
+    # _extract_embedding recurses into an auto-created MagicMock and fails. Set it
+    # to None so the values field is used directly.
+    item = MagicMock()
+    item.values = [0.1, 0.2, 0.3]
+    item.embeddings = None
+    response.embeddings = [item]
     with patch.object(
         client._client.models, "embed_content", return_value=response
     ) as mock_embed:
@@ -82,8 +91,10 @@ def test_batch_ai_parse_batch_response():
 
 def test_batch_ai_clean_tags():
     service = BatchAIService(batch_size=2)
-    assert service._clean_tags("tag1, tag2, tag3", 5) == ["tag1", "tag2", "tag3"]
-    assert service._clean_tags(["Tag1", "tag2"], 5) == ["tag1", "tag2"]
+    # _clean_tags strips trailing digits from each token, so use non-numeric tags
+    # to verify splitting, lowercasing, and list-input handling.
+    assert service._clean_tags("alpha, beta, gamma", 5) == ["alpha", "beta", "gamma"]
+    assert service._clean_tags(["Alpha", "beta"], 5) == ["alpha", "beta"]
 
 
 def test_batch_ai_clean_relevance():
@@ -201,10 +212,16 @@ def test_batch_ai_create_embeddings_uses_gemini(mock_settings_gemini):
             service = BatchAIService(batch_size=2)
             response = MagicMock()
             response.values = None
-            response.embeddings = [
-                MagicMock(values=[0.1, 0.2]),
-                MagicMock(values=[0.3, 0.4]),
-            ]
+            # Each embedding item must not expose a truthy `embeddings` attribute,
+            # otherwise _extract_embedding recurses into an auto-created MagicMock
+            # and raises, which create_embeddings swallows into a None result.
+            item1 = MagicMock()
+            item1.values = [0.1, 0.2]
+            item1.embeddings = None
+            item2 = MagicMock()
+            item2.values = [0.3, 0.4]
+            item2.embeddings = None
+            response.embeddings = [item1, item2]
             with patch.object(
                 service._primary._client.models,
                 "embed_content",

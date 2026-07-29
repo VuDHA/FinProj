@@ -501,6 +501,7 @@ def test_update_transaction_sell_exceeds_holding(client, session):
 def test_create_transaction_manual_price_for_non_market_asset(client, session):
     asset = Asset(symbol="RE", name="Real Estate", type="REAL_ESTATE", currency="VND", is_active=True)
     session.add(asset)
+    session.flush()
     session.add(PriceSnapshot(asset_id=asset.id, date=datetime.date.today(), price=1500))
     session.commit()
     session.refresh(asset)
@@ -538,6 +539,7 @@ def test_create_transaction_future_date(client, session):
 def test_create_deposit_withdrawal_non_market_asset(client, session):
     asset = Asset(symbol="RE", name="Real Estate", type="REAL_ESTATE", currency="VND", is_active=True)
     session.add(asset)
+    session.flush()
     session.add(PriceSnapshot(asset_id=asset.id, date=datetime.date.today(), price=1000))
     session.commit()
     session.refresh(asset)
@@ -577,6 +579,7 @@ def test_deposit_withdrawal_rejected_for_market_asset(client, session):
 def test_withdrawal_exceeds_holding_non_market_asset(client, session):
     asset = Asset(symbol="RE", name="Real Estate", type="REAL_ESTATE", currency="VND", is_active=True)
     session.add(asset)
+    session.flush()
     session.add(PriceSnapshot(asset_id=asset.id, date=datetime.date.today(), price=1000))
     session.commit()
     session.refresh(asset)

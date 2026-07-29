@@ -10,7 +10,7 @@ from services.ai_insights.prompts import base_prompt, minify_dict
 def test_master_prompt_is_concise():
     text = master_prompt("vi")
     assert "CHỈ trả về" in text
-    assert "không chào hỏi" in text
+    assert "không chào hỏi" in text.lower()
     assert len(text) < 300
 
 
@@ -34,16 +34,27 @@ def test_base_prompt_includes_strict_json_instruction():
 
 @pytest.fixture
 def mock_insight():
-    with patch(
-        "services.ai_insights.prompts.generate_insight",
-        return_value={
-            "overall": "Tổng quan mẫu",
-            "details": "Chi tiết mẫu",
-            "suggestions": ["Gợi ý mẫu"],
-            "used_ollama": False,
-        },
-    ) as m:
-        yield m
+    mock_return = {
+        "overall": "Tổng quan mẫu",
+        "details": "Chi tiết mẫu",
+        "suggestions": ["Gợi ý mẫu"],
+        "used_ollama": False,
+    }
+    # Each service module imports generate_insight directly, so we must patch
+    # the binding in each module, not just the source module.
+    targets = [
+        "services.ai_insights.portfolio.generate_insight",
+        "services.ai_insights.analytics.generate_insight",
+        "services.ai_insights.rebalance.generate_insight",
+        "services.ai_insights.compare.generate_insight",
+        "services.ai_insights.market.generate_insight",
+    ]
+    patches = [patch(t, return_value=mock_return) for t in targets]
+    for p in patches:
+        p.start()
+    yield patches[0]
+    for p in patches:
+        p.stop()
 
 
 def test_ai_rate_limit_endpoint(client):

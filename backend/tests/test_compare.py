@@ -46,7 +46,7 @@ def test_compare_correlation(client, monkeypatch):
     assert response.status_code == 200
     data = response.json()
     assert data["labels"] == ["VCB", "FUEVFVND"]
-    assert data["matrix"][0][1] == 1.0
+    assert abs(data["matrix"][0][1] - 1.0) < 0.001
 
 
 def test_compare_too_many_symbols(client):

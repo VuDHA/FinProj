@@ -98,6 +98,9 @@ def _update_stable_snapshot(session: Session, asset: Asset, price: Decimal) -> N
         select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
     ).all():
         session.delete(snap)
+    # Flush deletes before inserting so the (asset_id, date) unique constraint
+    # is not violated by the new snapshot colliding with a not-yet-deleted row.
+    session.flush()
     session.add(
         PriceSnapshot(
             asset_id=asset.id,

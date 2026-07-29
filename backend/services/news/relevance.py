@@ -47,7 +47,7 @@ class RelevanceScorer:
         if not articles:
             return []
 
-        if settings.AI_PROVIDER == "gemini":
+        if self.enabled and settings.AI_PROVIDER == "gemini":
             try:
                 from services.batch_ai import BatchAIService
 

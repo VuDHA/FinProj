@@ -97,7 +97,7 @@ def test_backtest_prompt_parser_handles_validation_error():
 
     parser = PromptParser()
     with patch(
-        "services.prompt_parser.BatchAIService",
+        "services.batch_ai.BatchAIService",
         return_value=mock_service,
     ):
         with pytest.raises(PromptParserError):

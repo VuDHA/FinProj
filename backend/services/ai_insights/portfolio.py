@@ -41,7 +41,7 @@ class PortfolioInsightService:
                     f" - {item.get('symbol', '')} ({item.get('type', '')}): "
                     f"giá trị={format_currency(item.get('current_value', 0))}, "
                     f"lợi nhuận={format_percent(item.get('pnl_percent', 0))}, "
-                    f"tỷ trọng={format_percent(float(item.get('current_value', 0)) / max(float(portfolio.get('total_value', 1)), 1) * 100)}"
+                    f"tỷ trọng={format_percent((float(item.get('current_value') or 0)) / max(float(portfolio.get('total_value') or 1), 1) * 100)}"
                 )
         else:
             data_lines.append("Chưa có tài sản nào trong danh mục.")

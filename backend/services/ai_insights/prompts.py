@@ -146,12 +146,12 @@ def _is_gemini_used() -> bool:
 
 def format_currency(value) -> str:
     """Format a number as Vietnamese currency."""
-    return f"{float(value):,.0f} VND"
+    return f"{float(value or 0):,.0f} VND"
 
 
 def format_percent(value) -> str:
     """Format a number as a percentage."""
-    return f"{float(value):.2f}%"
+    return f"{float(value or 0):.2f}%"
 
 
 def base_prompt(data: str, role: str, context: str, language: str = DEFAULT_LANGUAGE) -> str:
