@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FileSpreadsheet, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, KeyRound, Plus, Save, Trash2, Upload } from "lucide-react";
 import API, { extractDetailMessage } from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { SmartImportDialog } from "../components/SmartImportDialog";
@@ -91,6 +91,33 @@ export function Settings() {
       showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể lưu nguồn dữ liệu mặc định", "error");
     },
   });
+
+  const envConfig = useQuery({
+    queryKey: ["env-config-settings"],
+    queryFn: async () => (await API.get("/settings/env-config")).data as Array<{ key: string; value: string }>,
+  });
+
+  const saveEnvConfig = useMutation({
+    mutationFn: (payload: Record<string, string>) => API.post("/settings/env-config", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["env-config-settings"] });
+      qc.invalidateQueries({ queryKey: ["ai-status-onboarding"] });
+      qc.invalidateQueries({ queryKey: ["ai-status-modal"] });
+      showToast(labels.settings.geminiApiKeySaved, "success");
+    },
+    onError: (error: any) => {
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể lưu API Key", "error");
+    },
+  });
+
+  const [geminiKey, setGeminiKey] = useState("");
+
+  useEffect(() => {
+    if (envConfig.data) {
+      const item = envConfig.data.find((i) => i.key === "GEMINI_API_KEY");
+      if (item) setGeminiKey(item.value || "");
+    }
+  }, [envConfig.data]);
 
   const importAssets = useMutation({
     mutationFn: async (file: File) => {
@@ -516,6 +543,52 @@ export function Settings() {
             )}
           </div>
         )}
+      </FintechCard>
+
+      <FintechCard delay={0.3}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-accent-blue" />
+            <h3 className="card-title">{labels.settings.geminiApiKey}</h3>
+          </div>
+          {geminiKey ? (
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+              {labels.settings.geminiApiKeyStatusConfigured}
+            </span>
+          ) : (
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">
+              {labels.settings.geminiApiKeyStatusNotConfigured}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-slate-500 mb-3">{labels.settings.geminiApiKeyDescription}</p>
+        <div className="space-y-3">
+          <input
+            type="password"
+            className="input-fintech"
+            value={geminiKey}
+            onChange={(e) => setGeminiKey(e.target.value)}
+            placeholder={labels.settings.geminiApiKeyPlaceholder}
+          />
+          <div className="flex items-center justify-between">
+            <a
+              href={labels.settings.geminiApiKeyHelpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-accent-blue hover:underline"
+            >
+              {labels.settings.geminiApiKeyHelp}
+            </a>
+            <button
+              onClick={() => saveEnvConfig.mutate({ GEMINI_API_KEY: geminiKey })}
+              disabled={saveEnvConfig.isPending || !geminiKey}
+              className="btn-primary"
+            >
+              <Save className="w-4 h-4" />
+              {saveEnvConfig.isPending ? labels.common.saving : labels.common.save}
+            </button>
+          </div>
+        </div>
       </FintechCard>
 
       <FintechCard delay={0.3}>

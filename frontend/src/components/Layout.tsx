@@ -19,8 +19,11 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { labels } from "../i18n/vi";
+import { getAiStatus } from "../api/news";
 import { ApiKeyBanner } from "./ApiKeyBanner";
+import { GeminiApiKeyModal } from "./GeminiApiKeyModal";
 import { HelpModal } from "./HelpModal";
 import { InfoTooltip } from "./InfoTooltip";
 import { OfflineBanner } from "./OfflineBanner";
@@ -28,6 +31,7 @@ import { OnboardingTour, TourStep } from "./OnboardingTour";
 import { PriceAlertsBell } from "./PriceAlertsBell";
 import { PwaInstallPrompt } from "./PwaInstallPrompt";
 import { ThemeSelector } from "./ThemeSelector";
+import { usePersistentState } from "../hooks/usePersistentState";
 
 const nav = [
   { path: "/", label: labels.nav.dashboard, icon: BarChart3, tour: "dashboard", color: "accent-blue" },
@@ -160,6 +164,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [showHelp, setShowHelp] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const [geminiOnboardingDone, setGeminiOnboardingDone] = usePersistentState(
+    "gemini-api-key-onboarding-completed",
+    false
+  );
+
+  const { data: aiStatusData } = useQuery({
+    queryKey: ["ai-status-modal"],
+    queryFn: getAiStatus,
+    refetchInterval: false,
+    staleTime: 60_000,
+  });
+
+  const showGeminiModal =
+    !geminiOnboardingDone &&
+    aiStatusData?.ai_provider === "gemini" &&
+    aiStatusData?.gemini_configured === false;
+
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
@@ -215,6 +236,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
           steps={tourSteps}
           onComplete={finishTour}
           onSkip={finishTour}
+        />
+      )}
+      {showGeminiModal && (
+        <GeminiApiKeyModal
+          onSave={() => setGeminiOnboardingDone(true)}
+          onSkip={() => setGeminiOnboardingDone(true)}
         />
       )}
       <HelpModal open={showHelp} onClose={() => setShowHelp(false)} />
