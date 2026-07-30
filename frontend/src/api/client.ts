@@ -5,6 +5,8 @@ const baseURL = import.meta.env.DEV
   ? "/api/v1"
   : "http://127.0.0.1:8000/api/v1";
 
+export { baseURL as API_BASE_URL };
+
 const API = axios.create({
   baseURL,
   timeout: 30000,

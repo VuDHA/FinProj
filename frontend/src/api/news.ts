@@ -1,4 +1,4 @@
-import API from "./client";
+import API, { API_BASE_URL } from "./client";
 import { labels } from "../i18n/vi";
 
 export interface Article {
@@ -214,7 +214,7 @@ export async function* refreshNewsStream(
   const { data } = await API.post("/news/refresh", undefined, { params: Object.keys(params).length ? params : undefined });
   const jobId = data.job_id as string;
 
-  const res = await fetch(`/api/v1/news/refresh/${jobId}/stream`, { signal });
+  const res = await fetch(`${API_BASE_URL}/news/refresh/${jobId}/stream`, { signal });
   if (!res.ok) {
     throw new Error(`${labels.errors.httpError} ${res.status}`);
   }

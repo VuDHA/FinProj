@@ -80,6 +80,20 @@ def main() -> None:
     if meipass and meipass not in sys.path:
         sys.path.insert(0, meipass)
 
+    # Point SSL-related libraries to the bundled CA certificates so that
+    # HTTPS requests via `requests` / `urllib3` work inside the frozen exe.
+    # `certifi` ships cacert.pem which PyInstaller bundles into _MEIPASS.
+    if meipass:
+        import os as _os
+        for _candidate in (
+            _os.path.join(meipass, "certifi", "cacert.pem"),
+            _os.path.join(meipass, "cacert.pem"),
+        ):
+            if _os.path.isfile(_candidate):
+                _os.environ.setdefault("REQUESTS_CA_BUNDLE", _candidate)
+                _os.environ.setdefault("SSL_CERT_FILE", _candidate)
+                break
+
     # Change the working directory to the data folder so relative paths in
     # logs/backups land in the right place.
     try:

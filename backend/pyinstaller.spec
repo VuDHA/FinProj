@@ -46,6 +46,7 @@ hiddenimports += [
     'pydantic_settings',
     'pydantic',
     'vnstock',
+    'certifi',
 ]
 
 # --- Binary extensions ------------------------------------------------------
@@ -60,6 +61,7 @@ binaries += collect_dynamic_libs('sqlite_vec')
 # them at runtime. On Windows the separator is ';'.
 datas = []
 datas += collect_data_files('sqlite_vec')
+datas += collect_data_files('certifi')
 datas += collect_data_files('api', include_py_files=True)
 datas += collect_data_files('services', include_py_files=True)
 datas += collect_data_files('jobs', include_py_files=True)

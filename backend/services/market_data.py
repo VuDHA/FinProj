@@ -501,6 +501,10 @@ class MarketDataService:
                         self._BENCHMARK_CACHE[cache_key] = result
                         self._BENCHMARK_CACHE_TIME = datetime.datetime.now()
                         return result
+                else:
+                    logger.warning("market_data dchart benchmark %s: unexpected payload format", symbol)
+            else:
+                logger.warning("market_data dchart benchmark %s: HTTP %d", symbol, r.status_code)
         except Exception as e:
             logger.error("market_data dchart benchmark %s error: %s", symbol, e)
 
