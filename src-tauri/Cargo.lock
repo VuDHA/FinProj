@@ -4644,7 +4644,7 @@ dependencies = [
 
 [[package]]
 name = "wealth-vn"
-version = "0.1.9"
+version = "0.2.1"
 dependencies = [
  "env_logger",
  "log",

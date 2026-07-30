@@ -1,4 +1,4 @@
-import API, { API_BASE_URL } from "./client";
+import API from "./client";
 import { labels } from "../i18n/vi";
 
 export interface Article {
@@ -203,59 +203,59 @@ export interface RefreshProgress {
   message: string;
 }
 
-export async function* refreshNewsStream(
+export async function refreshNewsPoll(
   source?: string,
   region?: "vn" | "global",
+  onProgress?: (progress: RefreshProgress) => void,
   signal?: AbortSignal
-): AsyncGenerator<RefreshProgress, RefreshProgress, unknown> {
+): Promise<RefreshProgress> {
   const params: Record<string, string> = {};
   if (source) params.source = source;
   if (region) params.region = region;
   const { data } = await API.post("/news/refresh", undefined, { params: Object.keys(params).length ? params : undefined });
   const jobId = data.job_id as string;
 
-  const res = await fetch(`${API_BASE_URL}/news/refresh/${jobId}/stream`, { signal });
-  if (!res.ok) {
-    throw new Error(`${labels.errors.httpError} ${res.status}`);
-  }
-  if (!res.body) {
-    throw new Error(labels.errors.noResponseBody);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let lastPayload: RefreshProgress | null = null;
+  // Poll the job status endpoint. WebView2 does not support streaming
+  // fetch() response bodies, so we use simple polling instead of SSE.
+  const pollInterval = 1500; // 1.5 seconds
+  const maxDuration = 5 * 60 * 1000; // 5 minutes
+  const deadline = Date.now() + maxDuration;
 
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    let eventType = "";
-    let dataLine = "";
-    for (const line of lines) {
-      if (line.startsWith("event: ")) {
-        eventType = line.slice(7);
-      } else if (line.startsWith("data: ")) {
-        dataLine = line.slice(6);
-      } else if (line === "" && dataLine) {
-        const payload = JSON.parse(dataLine) as RefreshProgress;
-        lastPayload = payload;
-        yield payload;
-        if (eventType === "completed" || eventType === "error" || eventType === "timeout") {
-          return payload;
-        }
-        eventType = "";
-        dataLine = "";
-      }
+    if (signal?.aborted) {
+      throw new DOMException("Aborted", "AbortError");
     }
-  }
+    if (Date.now() > deadline) {
+      throw new Error(labels.errors.streamEnded);
+    }
 
-  if (lastPayload) {
-    return lastPayload;
+    let status: RefreshProgress;
+    try {
+      const { data: statusData } = await API.get(`/news/refresh/${jobId}`);
+      status = statusData as RefreshProgress;
+    } catch (err: any) {
+      if (err?.name === "AbortError" || err?.code === "ERR_CANCELED" || signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+      console.error("[news] poll failed:", err?.message || err, "code:", err?.code);
+      throw err;
+    }
+
+    if (onProgress) {
+      onProgress(status);
+    }
+
+    if (status.status === "completed" || status.status === "error" || status.status === "timeout") {
+      return status;
+    }
+
+    // Wait before next poll, but resolve early if aborted
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, pollInterval);
+      signal?.addEventListener("abort", () => {
+        clearTimeout(timer);
+        resolve();
+      }, { once: true });
+    });
   }
-  throw new Error(labels.errors.streamEnded);
 }

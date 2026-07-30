@@ -39,7 +39,7 @@ import {
   getTrending,
   getWatchlist,
   markAlertRead,
-  refreshNewsStream,
+  refreshNewsPoll,
   type RefreshProgress,
   removeWatchlist,
   summarizeText,
@@ -439,19 +439,24 @@ export function News() {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      for await (const progress of refreshNewsStream(undefined, region, controller.signal)) {
-        setRefreshProgress(progress);
-        if (progress.status === "completed" || progress.status === "error" || progress.status === "timeout") {
-          break;
-        }
+      const result = await refreshNewsPoll(
+        undefined,
+        region,
+        (progress) => setRefreshProgress(progress),
+        controller.signal
+      );
+      if (result.status === "completed") {
+        qc.invalidateQueries({ queryKey: ["news"] });
+        qc.invalidateQueries({ queryKey: ["news-feed"] });
+        qc.invalidateQueries({ queryKey: ["news-trending"] });
+        qc.invalidateQueries({ queryKey: ["news-brief"] });
+        qc.invalidateQueries({ queryKey: ["news-alerts"] });
+        qc.invalidateQueries({ queryKey: ["news-sources"] });
+        showToast(labels.news.refreshSuccess || "Đã làm mới tin tức", "success");
+      } else if (result.status === "error") {
+        setRefreshError(new Error(result.message || "Lỗi làm mới tin"));
+        showToast(result.message || "Không thể làm mới tin", "error");
       }
-      qc.invalidateQueries({ queryKey: ["news"] });
-      qc.invalidateQueries({ queryKey: ["news-feed"] });
-      qc.invalidateQueries({ queryKey: ["news-trending"] });
-      qc.invalidateQueries({ queryKey: ["news-brief"] });
-      qc.invalidateQueries({ queryKey: ["news-alerts"] });
-      qc.invalidateQueries({ queryKey: ["news-sources"] });
-      showToast(labels.news.refreshSuccess || "Đã làm mới tin tức", "success");
     } catch (error: any) {
       if (error.name === "AbortError") {
         showToast(labels.news.refreshTimeout || "Yêu cầu làm mới đã hết thời gian", "error");
