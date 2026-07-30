@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Search, Trash2, ArrowRightLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { FintechCard } from "../components/ui/FintechCard";
@@ -130,7 +130,7 @@ export function Assets() {
       showToast("Đã thêm tài sản thành công", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể thêm tài sản", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể thêm tài sản", "error");
     },
   });
 
@@ -142,7 +142,7 @@ export function Assets() {
       setDeleteTarget(null);
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể xóa tài sản", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể xóa tài sản", "error");
       setDeleteTarget(null);
     },
   });
@@ -157,7 +157,7 @@ export function Assets() {
       showToast("Đã cập nhật tài sản", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể cập nhật tài sản", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể cập nhật tài sản", "error");
     },
   });
 

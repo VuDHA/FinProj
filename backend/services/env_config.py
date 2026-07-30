@@ -1,11 +1,28 @@
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from config import settings
 
 
-_ENV_PATH = Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+def _resolve_env_path() -> Path:
+    """Return the path to the writable .env file.
+
+    Mirrors config._resolve_env_file: when frozen, use the user data directory
+    so the env-config API can read/write settings that persist across runs.
+    """
+    if getattr(sys, "frozen", False):
+        data_dir = os.environ.get("WEALTH_DATA_DIR") or os.path.join(
+            os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+            "wealth-vn",
+            "data",
+        )
+        return Path(data_dir) / ".env"
+    return Path(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
+
+
+_ENV_PATH = _resolve_env_path()
 
 
 # Metadata describing the env variables exposed to the frontend.

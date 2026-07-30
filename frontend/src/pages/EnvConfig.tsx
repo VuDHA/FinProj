@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Check, RefreshCw, Save, Server } from "lucide-react";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { FintechCard } from "../components/ui/FintechCard";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -76,7 +76,7 @@ export function EnvConfig() {
       );
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể lưu cấu hình môi trường", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể lưu cấu hình môi trường", "error");
     },
   });
 

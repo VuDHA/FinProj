@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileSpreadsheet, Plus, Save, Trash2, Upload } from "lucide-react";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { SmartImportDialog } from "../components/SmartImportDialog";
 import { FintechCard } from "../components/ui/FintechCard";
@@ -55,7 +55,7 @@ export function Settings() {
       showToast("Đã lưu loại tài sản", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể lưu loại tài sản", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể lưu loại tài sản", "error");
     },
   });
 
@@ -72,7 +72,7 @@ export function Settings() {
       showToast("Đã lưu mục tiêu phân bổ", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể lưu mục tiêu phân bổ", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể lưu mục tiêu phân bổ", "error");
     },
   });
 
@@ -88,7 +88,7 @@ export function Settings() {
       showToast("Đã lưu nguồn dữ liệu mặc định", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể lưu nguồn dữ liệu mặc định", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể lưu nguồn dữ liệu mặc định", "error");
     },
   });
 
@@ -103,7 +103,7 @@ export function Settings() {
       showToast(`Nhập tài sản: ${data.created} đã tạo, ${data.skipped} bỏ qua${data.errors.length ? `, ${data.errors.length} lỗi` : ""}`, data.errors.length ? "error" : "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể nhập tài sản", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể nhập tài sản", "error");
     },
   });
 
@@ -119,7 +119,7 @@ export function Settings() {
       showToast(`Nhập giao dịch: ${data.created} đã tạo, ${data.skipped} bỏ qua${data.errors.length ? `, ${data.errors.length} lỗi` : ""}`, data.errors.length ? "error" : "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể nhập giao dịch", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể nhập giao dịch", "error");
     },
   });
 

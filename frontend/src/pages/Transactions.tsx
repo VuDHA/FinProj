@@ -14,7 +14,7 @@ import { CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef
 import { createPortal } from "react-dom";
 import { ArrowDownUp, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { EmptyState } from "../components/EmptyState";
 import { FormattedNumberInput } from "../components/FormattedNumberInput";
@@ -336,7 +336,7 @@ export function Transactions() {
       showToast("Đã thêm giao dịch thành công", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể thêm giao dịch", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể thêm giao dịch", "error");
     },
   });
 
@@ -366,7 +366,7 @@ export function Transactions() {
       showToast("Đã thêm thu nhập thành công", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể thêm thu nhập", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể thêm thu nhập", "error");
     },
   });
 
@@ -392,7 +392,7 @@ export function Transactions() {
       showToast("Đã cập nhật giao dịch", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể cập nhật giao dịch", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể cập nhật giao dịch", "error");
     },
   });
 
@@ -408,7 +408,7 @@ export function Transactions() {
       setDeleteTarget(null);
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể xóa giao dịch", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể xóa giao dịch", "error");
       setDeleteTarget(null);
     },
   });
@@ -422,7 +422,7 @@ export function Transactions() {
       setDeleteTarget(null);
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể xóa thu nhập", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể xóa thu nhập", "error");
       setDeleteTarget(null);
     },
   });

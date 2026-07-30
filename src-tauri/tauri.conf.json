@@ -12,12 +12,25 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Wealth VN - Quản lý tài sản",
         "width": 1280,
         "height": 800,
         "resizable": true,
         "fullscreen": false,
         "visible": false
+      },
+      {
+        "label": "splash",
+        "title": "Wealth VN",
+        "url": "splash.html",
+        "width": 420,
+        "height": 320,
+        "decorations": false,
+        "resizable": false,
+        "center": true,
+        "alwaysOnTop": true,
+        "visible": true
       }
     ],
     "security": {

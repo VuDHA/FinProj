@@ -1,10 +1,29 @@
 import os
+import sys
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DB = f"sqlite:///{os.path.join(PROJECT_ROOT, 'data', 'wealth.db')}"
+
+
+def _resolve_env_file() -> str:
+    """Return the path to the .env file used by pydantic_settings.
+
+    When running as a PyInstaller-frozen sidecar, the bundled .env is not
+    writable and lives in a temp extraction dir. We instead use a user-writable
+    .env in the data directory (WEALTH_DATA_DIR) so users can configure API
+    keys and other settings without rebuilding the app.
+    """
+    if getattr(sys, "frozen", False):
+        data_dir = os.environ.get("WEALTH_DATA_DIR") or os.path.join(
+            os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+            "wealth-vn",
+            "data",
+        )
+        return os.path.join(data_dir, ".env")
+    return os.path.join(os.path.dirname(__file__), ".env")
 
 
 class Settings(BaseSettings):
@@ -70,7 +89,9 @@ class Settings(BaseSettings):
     OLLAMA_EMBEDDING_CONCURRENT: int = 1
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(__file__), ".env")
+        env_file=_resolve_env_file(),
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
 

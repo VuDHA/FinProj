@@ -38,7 +38,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { getPortfolioInsight } from "../api/ai";
 import { getSymbols, getHistory } from "../api/compare";
 import { getAlerts, getDailyBrief, type Article } from "../api/news";
@@ -396,7 +396,7 @@ export function Dashboard() {
       showToast("Đã cập nhật giá thành công", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể cập nhật giá", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể cập nhật giá", "error");
     },
   });
 

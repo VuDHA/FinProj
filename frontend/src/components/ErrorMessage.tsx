@@ -1,9 +1,10 @@
 import { AlertCircle } from "lucide-react";
 import { labels } from "../i18n/vi";
+import { extractDetailMessage } from "../api/client";
 
 export function ErrorMessage({ error, retry }: { error: Error | null; retry?: () => void }) {
   if (!error) return null;
-  const message = (error as any)?.response?.data?.detail || error.message || labels.common.error;
+  const message = extractDetailMessage((error as any)?.response?.data?.detail) || error.message || labels.common.error;
   return (
     <div className="rounded-xl border border-accent-rose/30 bg-accent-rose/10 p-4 text-accent-rose backdrop-blur-md">
       <div className="flex items-start gap-3">

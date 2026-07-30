@@ -107,6 +107,8 @@ export interface AiStatus {
   busy: boolean;
   queue_length: number;
   current_task: string | null;
+  gemini_configured?: boolean;
+  ai_provider?: string;
 }
 
 export interface DailyBrief {

@@ -261,7 +261,9 @@ fn main() {
                 .get_webview_window("main")
                 .ok_or_else(|| "Không tìm thấy cửa sổ chính.".to_string())?;
 
-            // Hide until ready; show after health check passes.
+            let splash_window = app.get_webview_window("splash");
+
+            // Hide main until ready; show after health check passes.
             main_window
                 .hide()
                 .map_err(|e| format!("Không ẩn được cửa sổ: {}", e))?;
@@ -271,6 +273,9 @@ fn main() {
             tauri::async_runtime::spawn(async move {
                 match wait_for_backend().await {
                     Ok(()) => {
+                        if let Some(splash) = &splash_window {
+                            let _ = splash.close();
+                        }
                         if let Err(e) = window_for_show.show() {
                             error!("Không hiển thị được cửa sổ: {}", e);
                         }
@@ -280,6 +285,9 @@ fn main() {
                     }
                     Err(msg) => {
                         error!("{}", msg);
+                        if let Some(splash) = &splash_window {
+                            let _ = splash.close();
+                        }
                         // Show the window anyway so the user sees an error screen.
                         let _ = window_for_show.show();
                         let _ = window_for_show.set_focus();

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, Loader2, Plus, Wallet, Zap } from "lucide-react";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { FintechCard } from "./ui/FintechCard";
 import { FormattedNumberInput } from "./FormattedNumberInput";
 import { useToast } from "../contexts/ToastContext";
@@ -128,7 +128,7 @@ export function QuickAddCard() {
       showToast("Đã thêm tài sản thành công", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể thêm tài sản", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể thêm tài sản", "error");
     },
   });
 
@@ -156,7 +156,7 @@ export function QuickAddCard() {
       showToast("Đã thêm giao dịch thành công", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể thêm giao dịch", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể thêm giao dịch", "error");
     },
   });
 

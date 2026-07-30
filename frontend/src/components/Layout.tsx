@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { labels } from "../i18n/vi";
+import { ApiKeyBanner } from "./ApiKeyBanner";
 import { HelpModal } from "./HelpModal";
 import { InfoTooltip } from "./InfoTooltip";
 import { OfflineBanner } from "./OfflineBanner";
@@ -219,6 +220,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <HelpModal open={showHelp} onClose={() => setShowHelp(false)} />
 
       <main className="flex-1 p-4 md:p-8 overflow-auto">
+        <ApiKeyBanner />
         <OfflineBanner />
         <PwaInstallPrompt />
         <div className="flex items-center justify-between mb-4 md:hidden">

@@ -32,6 +32,34 @@ def _resolve_data_dir() -> str:
     return os.path.join(project_root, "data")
 
 
+def _seed_default_env(data_dir: str) -> None:
+    """Create a default .env in the data dir on first run.
+
+    The bundled sidecar has no .env, so without this the app would start with
+    empty GEMINI_API_KEY and the news scheduler enabled but unable to tag
+    articles. We seed a minimal .env that users can later edit via the
+    Settings UI (env-config API).
+    """
+    env_path = os.path.join(data_dir, ".env")
+    if os.path.exists(env_path):
+        return
+    defaults = {
+        "AI_PROVIDER": "gemini",
+        "GEMINI_API_KEY": "",
+        "NEWS_SCHEDULER_ENABLED": "true",
+        "OLLAMA_ENABLED": "false",
+        "DEBUG": "false",
+    }
+    lines = ["# Wealth VN runtime configuration", ""]
+    lines += [f"{k}={v}" for k, v in defaults.items()]
+    lines.append("")
+    try:
+        with open(env_path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(lines))
+    except OSError:
+        pass
+
+
 def main() -> None:
     data_dir = _resolve_data_dir()
     os.makedirs(data_dir, exist_ok=True)
@@ -41,6 +69,10 @@ def main() -> None:
     os.environ.setdefault("DATABASE_URL", f"sqlite:///{db_path}")
     # Also expose the data dir for any module that reads it directly.
     os.environ.setdefault("WEALTH_DATA_DIR", data_dir)
+
+    # Seed a default writable .env so users can configure API keys via the
+    # Settings UI without rebuilding the app.
+    _seed_default_env(data_dir)
 
     # When frozen, sys._MEIPASS is the temp extraction folder. Ensure it is
     # on sys.path so hidden imports / data files resolve correctly.

@@ -20,7 +20,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { getAnalyticsInsight } from "../api/ai";
 import { AiGenerateButton } from "../components/AiGenerateButton";
 import { AiInsightCard } from "../components/AiInsightCard";
@@ -154,7 +154,7 @@ export function Analytics() {
       showToast("Đã cập nhật dữ liệu phân tích", "success");
     },
     onError: (error: any) => {
-      showToast(error?.response?.data?.detail || "Không thể cập nhật dữ liệu", "error");
+      showToast(extractDetailMessage(error?.response?.data?.detail) || "Không thể cập nhật dữ liệu", "error");
     },
   });
 

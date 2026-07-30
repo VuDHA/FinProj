@@ -478,6 +478,10 @@ export const labels = {
     step3Description: "Ghi lại các lệnh mua/bán để tính toán vốn và lãi/lỗ chính xác.",
     step4Title: "Cài đặt",
     step4Description: "Cấu hình nguồn dữ liệu mặc định, mục tiêu phân bổ và xuất/nhập dữ liệu.",
+    apiKeyTitle: "Cấu hình API Key để dùng tính năng AI",
+    apiKeyMessage: "Chưa cấu hình GEMINI_API_KEY. Các tính năng AI (phân tích danh mục, gắn thẻ tin tức) sẽ không hoạt động cho đến khi bạn thêm API key.",
+    apiKeyAction: "Đi đến Cài đặt",
+    dismiss: "Để sau",
   },
   guide: {
     title: "Hướng dẫn nhanh",

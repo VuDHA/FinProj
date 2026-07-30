@@ -9,7 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { RefreshCw, X, Calendar, TrendingUp, TrendingDown, BarChart3, Info, Sparkles } from "lucide-react";
-import API from "../api/client";
+import API, { extractDetailMessage } from "../api/client";
 import { getFundDetail, getStockDetail, getSymbolAIInsight } from "../api/symbol";
 import { chartTooltipStyle, formatCurrency, formatPercent, formatNumber } from "../lib/utils";
 import { labels } from "../i18n/vi";
@@ -243,7 +243,7 @@ export default function SymbolDetailModal({
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err?.response?.data?.detail || err.message || labels.common.error);
+        setError(extractDetailMessage(err?.response?.data?.detail) || err.message || labels.common.error);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -263,7 +263,7 @@ export default function SymbolDetailModal({
       setAiInsight(data);
       setAiGenerated(true);
     } catch (err: any) {
-      setAiError(err?.response?.data?.detail || err.message || labels.common.error);
+      setAiError(extractDetailMessage(err?.response?.data?.detail) || err.message || labels.common.error);
     } finally {
       setAiLoading(false);
     }

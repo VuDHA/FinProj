@@ -10,7 +10,7 @@ const API = axios.create({
   timeout: 30000,
 });
 
-function extractDetailMessage(detail: any): string | null {
+export function extractDetailMessage(detail: any): string | null {
   if (!detail) return null;
   if (typeof detail === "string") return detail;
   if (typeof detail === "object") {
