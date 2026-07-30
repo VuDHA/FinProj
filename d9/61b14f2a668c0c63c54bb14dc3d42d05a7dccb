@@ -1,0 +1,19 @@
+backend/services/gemini_client.py
+  s_063cffb5856cab::t_fde0499ec4dc59 22-24,26-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d961b14f2a668c0c63c54bb14dc3d42d05a7dccb",
+  "prompts": {},
+  "sessions": {
+    "s_063cffb5856cab": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_063cffb5856cab",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
