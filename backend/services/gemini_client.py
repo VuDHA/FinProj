@@ -19,13 +19,13 @@ class GeminiClient:
 
     def __init__(
         self,
-        api_key: str = settings.GEMINI_API_KEY,
-        base_url: str = settings.GEMINI_BASE_URL,
-        timeout: int = settings.AI_TIMEOUT_SECONDS,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        timeout: Optional[int] = None,
     ):
-        self.api_key = api_key
-        self.base_url = base_url.rstrip("/")
-        self.timeout = timeout
+        self.api_key = api_key if api_key is not None else settings.GEMINI_API_KEY
+        self.base_url = (base_url if base_url is not None else settings.GEMINI_BASE_URL).rstrip("/")
+        self.timeout = timeout if timeout is not None else settings.AI_TIMEOUT_SECONDS
         self._client = self._build_client()
 
     def _build_client(self) -> Any:
