@@ -23,9 +23,6 @@ use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_updater::UpdaterExt;
 
-/// Target triple used by Tauri sidecars on Windows x64.
-const SIDECAR_TARGET: &str = "x86_64-pc-windows-msvc";
-
 /// Base URL for the embedded FastAPI backend.
 const BACKEND_URL: &str = "http://127.0.0.1:8000";
 
@@ -88,7 +85,7 @@ fn spawn_sidecar(
     data_dir: &str,
     log_file: std::fs::File,
 ) -> Result<CommandChild, String> {
-    let sidecar_name = format!("wealth-backend-{}", SIDECAR_TARGET);
+    let sidecar_name = "wealth-backend";
     let shell = app.shell();
 
     let mut command = shell

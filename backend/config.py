@@ -10,7 +10,7 @@ DEFAULT_DB = f"sqlite:///{os.path.join(PROJECT_ROOT, 'data', 'wealth.db')}"
 class Settings(BaseSettings):
     DATABASE_URL: str = DEFAULT_DB
     API_PREFIX: str = "/api/v1"
-    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
+    CORS_ORIGINS: list[str] = ["*"]
     SCHEDULER_HOUR: int = 15
     SCHEDULER_MINUTE: int = 35
 

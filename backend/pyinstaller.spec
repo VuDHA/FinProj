@@ -7,7 +7,7 @@
 # by scripts/build_sidecar.ps1 so Tauri can register it as a sidecar.
 
 import os
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_dynamic_libs
 
 # Absolute path to the backend source directory (where this spec lives).
 BACKEND_DIR = os.path.abspath(SPECPATH)
@@ -48,10 +48,18 @@ hiddenimports += [
     'vnstock',
 ]
 
+# --- Binary extensions ------------------------------------------------------
+# sqlite-vec ships a native shared library that must be bundled with the
+# package or sqlite_vec.load() will fail with "The specified module could not
+# be found." in the PyInstaller one-file executable.
+binaries = []
+binaries += collect_dynamic_libs('sqlite_vec')
+
 # --- Data files -------------------------------------------------------------
 # Ship the Python source modules alongside the binary so importlib can load
 # them at runtime. On Windows the separator is ';'.
 datas = []
+datas += collect_data_files('sqlite_vec')
 datas += collect_data_files('api', include_py_files=True)
 datas += collect_data_files('services', include_py_files=True)
 datas += collect_data_files('jobs', include_py_files=True)
@@ -77,7 +85,7 @@ excludes = [
 a = Analysis(
     [os.path.join(BACKEND_DIR, 'main.py')],
     pathex=[BACKEND_DIR],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

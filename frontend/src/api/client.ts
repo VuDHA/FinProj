@@ -1,8 +1,12 @@
 import axios from "axios";
 import { labels } from "../i18n/vi";
 
+const baseURL = import.meta.env.DEV
+  ? "/api/v1"
+  : "http://127.0.0.1:8000/api/v1";
+
 const API = axios.create({
-  baseURL: "/api/v1",
+  baseURL,
   timeout: 30000,
 });
 
