@@ -1,0 +1,27 @@
+frontend/src/api/news.ts
+  s_3999676dd931dc::t_de8d7d1ce4b256 1,217-224,228-242,244-251,254-260
+sc_err.txt
+  s_3999676dd931dc::t_147988e0270229 1-20
+src-tauri/Cargo.lock
+  s_3999676dd931dc::t_f59e664a00b9d4 4647
+src-tauri/Cargo.toml
+  s_3999676dd931dc::t_fb086979e2b3ea 3
+src-tauri/tauri.conf.json
+  s_3999676dd931dc::t_b16a3bdfbfab03 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "987805b9c8072149b547d69ff732bdd5781fcba8",
+  "prompts": {},
+  "sessions": {
+    "s_3999676dd931dc": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_3999676dd931dc",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
