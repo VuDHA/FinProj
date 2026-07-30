@@ -1,0 +1,29 @@
+frontend/src/components/GeminiApiKeyModal.tsx
+  s_a4cac678d8ea49::t_fd2aa4ed5c4387 1-101
+frontend/src/components/Layout.tsx
+  s_a4cac678d8ea49::t_7798c29eaf43dc 22,24,26,34,167-183,241-246
+frontend/src/i18n/vi.ts
+  s_a4cac678d8ea49::t_bd4a59c4003efa 485-493,638-645
+frontend/src/pages/Settings.tsx
+  s_a4cac678d8ea49::t_cbb15a7b58b8d5 3,95-121,548-593
+src-tauri/Cargo.toml
+  s_a4cac678d8ea49::t_de070b18e6ed71 3
+src-tauri/tauri.conf.json
+  s_a4cac678d8ea49::t_31ab6837d4a68e 4,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "608c409e36c318fa89c0925936e7b7d51b623c63",
+  "prompts": {},
+  "sessions": {
+    "s_a4cac678d8ea49": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_a4cac678d8ea49",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
