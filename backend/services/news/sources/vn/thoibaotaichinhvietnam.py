@@ -51,9 +51,10 @@ class ThoiBaoTaiChinhVietNamNewsSource(NewsSourceAdapter):
                     continue
                 seen.add(item["url"])
 
-                # The listing page does not expose publish time, so fetch the
-                # article detail page for an accurate date.
-                published_at_text = self._fetch_detail_date(item["url"])
+                # Use the date from the listing page if available; skip the
+                # per-article detail fetch which makes the crawl extremely slow
+                # (6 categories × dozens of articles × 30s timeout each).
+                published_at_text = item.get("published_at_text")
 
                 raw = {
                     "url": item["url"],
