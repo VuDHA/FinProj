@@ -511,6 +511,7 @@ async def _refresh_stream(job_id: str) -> AsyncGenerator[str, None]:
 
     last_state = None
     deadline = asyncio.get_event_loop().time() + 300  # 5-minute safety net
+    last_heartbeat = asyncio.get_event_loop().time()
     while True:
         current = job.to_dict()
         if current != last_state:
@@ -519,11 +520,17 @@ async def _refresh_stream(job_id: str) -> AsyncGenerator[str, None]:
         if current["status"] in ("completed", "error", "timeout"):
             yield f"event: {current['status']}\ndata: {json.dumps(current)}\n\n"
             break
-        if asyncio.get_event_loop().time() > deadline:
+        now = asyncio.get_event_loop().time()
+        if now > deadline:
             job.update(status="timeout", message="Hết thời gian chờ")
             payload = json.dumps(job.to_dict())
             yield f"event: timeout\ndata: {payload}\n\n"
             break
+        # Send a heartbeat comment every 5 seconds to keep the connection alive.
+        # WebView2/proxies may close idle SSE connections.
+        if now - last_heartbeat > 5:
+            yield ": heartbeat\n\n"
+            last_heartbeat = now
         await asyncio.sleep(0.5)
 
 

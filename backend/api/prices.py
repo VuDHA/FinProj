@@ -333,8 +333,6 @@ def get_benchmark(
     from services.benchmark import BenchmarkService
 
     data = BenchmarkService(session).get_comparison(symbol, start, end)
-    if not data:
-        raise HTTPException(status_code=502, detail="Failed to fetch benchmark data")
     return data
 
 
