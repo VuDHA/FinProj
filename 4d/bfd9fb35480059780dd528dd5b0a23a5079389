@@ -1,0 +1,61 @@
+backend/api/ai.py
+  s_15fd5d210a8c6a::t_ac485e9c9e6fad 3,12-15
+backend/config.py
+  s_15fd5d210a8c6a::t_86740c6ad06656 2,11-28,92-94
+backend/runtime_hook.py
+  s_15fd5d210a8c6a::t_f2dffb484e8aac 35-62,73-76
+backend/services/env_config.py
+  s_15fd5d210a8c6a::t_9bc50d106169bb 2,9-25
+frontend/public/splash.html
+  s_15fd5d210a8c6a::t_28c99a9d735426 1-99
+frontend/src/api/client.ts
+  s_15fd5d210a8c6a::t_c502385a04ec7a 13
+frontend/src/api/news.ts
+  s_15fd5d210a8c6a::t_815637b678da15 110-111
+frontend/src/components/ApiKeyBanner.tsx
+  s_15fd5d210a8c6a::t_56ea49ac6c31cf 1-51
+frontend/src/components/ErrorMessage.tsx
+  s_15fd5d210a8c6a::t_22cca59bfa5cb2 3,7
+frontend/src/components/Layout.tsx
+  s_15fd5d210a8c6a::t_b61d6cc8ed1f8a 23,223
+frontend/src/components/QuickAddCard.tsx
+  s_15fd5d210a8c6a::t_2f1afe258bcd4c 4,131,159
+frontend/src/components/SymbolDetailModal.tsx
+  s_15fd5d210a8c6a::t_bb6b5ffeca4af8 12,246,266
+frontend/src/i18n/vi.ts
+  s_15fd5d210a8c6a::t_cd23a98439c4db 481-484
+frontend/src/pages/Analytics.tsx
+  s_15fd5d210a8c6a::t_9a35a8f9cbd3d7 23,157
+frontend/src/pages/Assets.tsx
+  s_15fd5d210a8c6a::t_61e5b6e23bf5ef 5,133,145,160
+frontend/src/pages/Dashboard.tsx
+  s_15fd5d210a8c6a::t_abde93c9b79e37 41,399
+frontend/src/pages/EnvConfig.tsx
+  s_15fd5d210a8c6a::t_b27a266ab149e6 4,79
+frontend/src/pages/Settings.tsx
+  s_15fd5d210a8c6a::t_38f6414acee94a 4,58,75,91,106,122
+frontend/src/pages/Transactions.tsx
+  s_15fd5d210a8c6a::t_65c62ad6d2d478 17,339,369,395,411,425
+src-tauri/capabilities/default.json
+  s_15fd5d210a8c6a::t_7071e20a34d2fa 5,13
+src-tauri/src/main.rs
+  s_15fd5d210a8c6a::t_9fc92ecf0195d0 264-266,276-278,288-290
+src-tauri/tauri.conf.json
+  s_15fd5d210a8c6a::t_64cde2aa88cd86 15,22-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "4dbfd9fb35480059780dd528dd5b0a23a5079389",
+  "prompts": {},
+  "sessions": {
+    "s_15fd5d210a8c6a": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_15fd5d210a8c6a",
+        "model": "unknown"
+      },
+      "human_author": "Vu Do <vudha.work@gmail.com>"
+    }
+  }
+}
