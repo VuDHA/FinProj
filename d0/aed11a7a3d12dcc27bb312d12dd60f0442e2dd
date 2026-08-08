@@ -1,0 +1,48 @@
+backend/api/transactions.py
+  h_81847490a6d656 13,95-104,113,118-139,176-178,180,251,272
+backend/config.py
+  h_81847490a6d656 14
+backend/main.py
+  h_81847490a6d656 61,88-89
+backend/models.py
+  h_81847490a6d656 5,9-21,36,49,65,74,114,142,162,191,215-216,232
+backend/requirements.txt
+  h_81847490a6d656 12
+backend/schemas.py
+  h_81847490a6d656 24-25
+backend/services/ai_insights/portfolio.py
+  h_81847490a6d656 31-32
+backend/services/analytics.py
+  h_81847490a6d656 17,45,214
+backend/services/asset_type_config.py
+  h_81847490a6d656 1,5,10,17-23,25-31,54-61,77-84,94-99,103-173,194-220
+backend/services/portfolio.py
+  h_81847490a6d656 8,53,59-63,124-125,152-153
+backend/services/sources/tcbs.py
+  h_81847490a6d656 2-3,7-13,21-63,70-77,87-95,126-336,338-340,371-372,377-392,394-395,426,430-432,449-698
+frontend/src/components/QuickAddCard.tsx
+  h_81847490a6d656 15
+frontend/src/i18n/vi.ts
+  h_81847490a6d656 130,612-616
+frontend/src/pages/Analytics.tsx
+  h_81847490a6d656 122,127-131,730,736,738,741
+frontend/src/pages/Assets.tsx
+  h_81847490a6d656 23
+frontend/src/pages/Market.tsx
+  h_81847490a6d656 365-367,380,392,399-402,405,422,438-448,457-493
+frontend/src/pages/Settings.tsx
+  h_81847490a6d656 19-20,30-31,135-140,224,246-247,326-359
+frontend/src/pages/Transactions.tsx
+  h_81847490a6d656 105,119-123,162-167,583-589,612,620,1025-1029,1031-1036,1053-1054,1062,1065,1069-1071
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "d0aed11a7a3d12dcc27bb312d12dd60f0442e2dd",
+  "prompts": {},
+  "humans": {
+    "h_81847490a6d656": {
+      "author": "VuDHA <vudha.work@gmail.com>"
+    }
+  }
+}
