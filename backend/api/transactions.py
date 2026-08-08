@@ -10,7 +10,7 @@ from database import get_session
 from models import Asset, PriceSnapshot, Transaction
 from schemas import TransactionCreate, TransactionRead, TransactionUpdate
 from services.market_data import MarketDataService
-from services.asset_type_config import is_market_price_type
+from services.asset_type_config import is_market_price_type, is_total_value_type
 from services.transaction_types import (
     BUY_TYPES,
     is_buy_type,
@@ -92,8 +92,16 @@ def _resolve_transaction_price(
     return price
 
 
-def _update_stable_snapshot(session: Session, asset: Asset, price: Decimal) -> None:
-    """Replace stale snapshots for a non-market asset with the given transaction price."""
+def _update_stable_snapshot(session: Session, asset: Asset, price: Decimal, quantity: Decimal | None = None) -> None:
+    """Replace stale snapshots for a non-market asset with the given transaction price.
+
+    For total_value mode, the transaction price is the total capital, so the
+    snapshot stores the per-unit price (price / quantity) to keep current_value
+    = quantity × snapshot_price correct.
+    """
+    snapshot_price = price
+    if quantity is not None and quantity > 0 and is_total_value_type(session, asset.type):
+        snapshot_price = price / quantity
     for snap in session.exec(
         select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
     ).all():
@@ -102,9 +110,31 @@ def _update_stable_snapshot(session: Session, asset: Asset, price: Decimal) -> N
         PriceSnapshot(
             asset_id=asset.id,
             date=datetime.date.today(),
-            price=price,
+            price=snapshot_price,
         )
     )
+
+
+def _sync_stable_snapshot_from_latest(session: Session, asset: Asset) -> None:
+    """Rebuild the stable snapshot from the latest transaction for a non-market asset.
+
+    After any create/update/delete, the snapshot must reflect the most recent
+    transaction (by date, then id) — not necessarily the one just modified.
+    This ensures editing an older transaction does not overwrite the latest
+    valuation.
+    """
+    latest_tx = session.exec(
+        select(Transaction)
+        .where(Transaction.asset_id == asset.id)
+        .order_by(Transaction.date.desc(), Transaction.id.desc())
+    ).first()
+    if latest_tx:
+        _update_stable_snapshot(session, asset, latest_tx.price, latest_tx.quantity)
+    else:
+        for snap in session.exec(
+            select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
+        ).all():
+            session.delete(snap)
 
 
 @router.post("/", response_model=TransactionRead)
@@ -143,11 +173,11 @@ def create_transaction(
     db_tx = Transaction(**transaction.model_dump())
     session.add(db_tx)
 
-    # For non-market assets, the transaction price is the latest valuation.
-    # Update the snapshot so the dashboard reflects the manual price instead of
-    # any stale market price from when the asset was created.
+    # For non-market assets, the snapshot must reflect the latest transaction
+    # (by date), not necessarily this one — editing an older transaction should
+    # not overwrite the most recent valuation.
     if not is_market_price_type(session, asset.type):
-        _update_stable_snapshot(session, asset, transaction.price)
+        _sync_stable_snapshot_from_latest(session, asset)
 
     try:
         session.commit()
@@ -218,7 +248,7 @@ def update_transaction(
 
     # Keep the stable asset snapshot in sync with the latest transaction price.
     if not is_market_price_type(session, asset.type):
-        _update_stable_snapshot(session, asset, tx.price)
+        _sync_stable_snapshot_from_latest(session, asset)
 
     try:
         session.commit()
@@ -239,18 +269,7 @@ def delete_transaction(transaction_id: int, session: Session = Depends(get_sessi
     session.flush()
 
     if asset and asset.is_active and not is_market_price_type(session, asset.type):
-        latest_tx = session.exec(
-            select(Transaction)
-            .where(Transaction.asset_id == asset.id)
-            .order_by(Transaction.date.desc(), Transaction.id.desc())
-        ).first()
-        if latest_tx:
-            _update_stable_snapshot(session, asset, latest_tx.price)
-        else:
-            for snap in session.exec(
-                select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
-            ).all():
-                session.delete(snap)
+        _sync_stable_snapshot_from_latest(session, asset)
 
     try:
         session.commit()

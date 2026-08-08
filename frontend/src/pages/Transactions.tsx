@@ -102,7 +102,7 @@ export function Transactions() {
     queryFn: async () => (await API.get("/assets/")).data,
   });
 
-  const assetTypes = useQuery<{ [key: string]: { marketPrice: boolean } }>({
+  const assetTypes = useQuery<{ [key: string]: { marketPrice: boolean; capitalMode?: string } }>({
     queryKey: ["asset-types"],
     queryFn: async () => (await API.get("/settings/asset-types")).data.types,
   });
@@ -113,6 +113,11 @@ export function Transactions() {
 
   const isNonMarketAsset = useCallback(
     (type: string) => type && assetTypes.data?.[type]?.marketPrice === false,
+    [assetTypes.data]
+  );
+
+  const isTotalValueAsset = useCallback(
+    (type: string) => type && assetTypes.data?.[type]?.capitalMode === "total_value",
     [assetTypes.data]
   );
 
@@ -153,6 +158,12 @@ export function Transactions() {
       setForm((prev) => ({ ...prev, type: "BUY" }));
     }
   }, [selectedAsset, form.type, isNonMarketAsset]);
+
+  useEffect(() => {
+    if (selectedAsset && isTotalValueAsset(selectedAsset.type) && form.price_mode === "market") {
+      setForm((prev) => ({ ...prev, price_mode: "manual" }));
+    }
+  }, [selectedAsset, form.price_mode, isTotalValueAsset]);
 
   useEffect(() => {
     const state = location.state as { asset_id?: number } | null;
@@ -569,6 +580,13 @@ export function Transactions() {
                 {errors.quantity && <p className="text-xs text-rose-500 mt-1">{errors.quantity}</p>}
               </div>
               <div className="relative md:col-span-2">
+                {selectedAsset && isTotalValueAsset(selectedAsset.type) ? (
+                  <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1 gap-1">
+                    <div className="flex-1 px-2 py-1.5 text-xs font-medium rounded-md bg-white text-accent-blue shadow-sm text-center">
+                      {labels.transactions.totalValue}
+                    </div>
+                  </div>
+                ) : (
                 <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1 gap-1">
                   <button
                     type="button"
@@ -591,6 +609,7 @@ export function Transactions() {
                     {labels.transactions.manualPrice}
                   </button>
                 </div>
+                )}
                 <div className="relative mt-1">
                   <FormattedNumberInput
                     mode="currency"
@@ -598,7 +617,7 @@ export function Transactions() {
                     placeholder={labels.transactions.price}
                     className={`input-fintech pr-10 ${errors.price ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                     value={form.price}
-                    disabled={form.price_mode === "market"}
+                    disabled={form.price_mode === "market" && !(selectedAsset && isTotalValueAsset(selectedAsset.type))}
                     onChange={(value) => handleChange("price", value)}
                     aria-invalid={!!errors.price}
                   />
@@ -1003,7 +1022,18 @@ export function Transactions() {
                 {editErrors.quantity && <p className="text-xs text-rose-500 mt-1">{editErrors.quantity}</p>}
               </div>
               <div className="relative md:col-span-2">
+                {(() => {
+                  const editAsset = (assets.data || []).find((a: any) => a.id === editTarget.asset_id);
+                  const editIsTotalValue = editAsset && isTotalValueAsset(editAsset.type);
+                  return (
+                <>
                 <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1 gap-1 mb-1">
+                  {editIsTotalValue ? (
+                    <div className="flex-1 px-2 py-1.5 text-xs font-medium rounded-md bg-white text-accent-blue shadow-sm text-center">
+                      {labels.transactions.totalValue}
+                    </div>
+                  ) : (
+                  <>
                   <button
                     type="button"
                     onClick={() => handleEditChange("price_mode", "market")}
@@ -1020,6 +1050,8 @@ export function Transactions() {
                   >
                     {labels.transactions.manualPrice}
                   </button>
+                  </>
+                  )}
                 </div>
                 <FormattedNumberInput
                   mode="currency"
@@ -1027,13 +1059,16 @@ export function Transactions() {
                   placeholder={labels.transactions.price}
                   className={`input-fintech pr-10 ${editErrors.price ? "border-rose-400 focus:border-rose-400 focus:ring-rose-200" : ""}`}
                   value={editForm.price}
-                  disabled={editForm.price_mode === "market"}
+                  disabled={editForm.price_mode === "market" && !editIsTotalValue}
                   onChange={(value) => handleEditChange("price", value)}
                 />
-                {editForm.price_mode === "market" && editMarketPricePreview.isLoading && (
+                {editForm.price_mode === "market" && !editIsTotalValue && editMarketPricePreview.isLoading && (
                   <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs text-slate-400">{labels.common.loading}</span>
                 )}
                 {editErrors.price && <p className="text-xs text-rose-500 mt-1">{editErrors.price}</p>}
+                </>
+                  );
+                })()}
               </div>
               <div className="relative">
                 <FormattedNumberInput

@@ -28,9 +28,8 @@ class PortfolioInsightService:
         stable_value = portfolio.get('stable_value', 0)
         if stable_value:
             data_lines.append(
-                f"Tài sản ổn định (không định giá thị trường hàng ngày): "
-                f"giá trị={format_currency(stable_value)}. "
-                f"Loại tài sản này được hiển thị riêng và không tính vào lợi nhuận/lỗ."
+                f"Tài sản cố định (không tính PnL): "
+                f"giá trị={format_currency(stable_value)}."
             )
 
         items = portfolio.get("items", [])

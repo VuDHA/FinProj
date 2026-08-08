@@ -21,6 +21,8 @@ class AssetTypeConfig(BaseModel):
     label: str
     fields: List[str]
     marketPrice: bool = True
+    capitalMode: str = "unit_price"  # unit_price | total_value
+    showPnl: bool = True
 
 
 class AssetTypeConfigMap(BaseModel):

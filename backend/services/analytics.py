@@ -14,7 +14,7 @@ from schemas import (
     TypeReturn,
     MonthlyPnL,
 )
-from services.asset_type_config import is_market_price_type
+from services.asset_type_config import shows_pnl_type
 from services.market_data import MarketDataService
 from services.transaction_types import is_buy_type, is_sell_type
 from services.portfolio import PortfolioService
@@ -42,7 +42,7 @@ class AnalyticsService:
         portfolio = PortfolioService(self.session).get_portfolio()
 
         market_items = [
-            item for item in portfolio.items if is_market_price_type(self.session, item.type)
+            item for item in portfolio.items if shows_pnl_type(self.session, item.type)
         ]
         items = sorted(market_items, key=lambda x: x.pnl_percent, reverse=True)
         top = items[:5]
@@ -211,7 +211,7 @@ class AnalyticsService:
         self, start_date: datetime.date, end_date: datetime.date
     ) -> List[MonthlyPnL]:
         assets = self.session.exec(select(Asset).where(Asset.is_active == True)).all()
-        assets = [a for a in assets if is_market_price_type(self.session, a.type)]
+        assets = [a for a in assets if shows_pnl_type(self.session, a.type)]
         if not assets:
             return []
 

@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 from models import Asset, PriceSnapshot, Transaction
 from schemas import PortfolioItem, PortfolioSummary
-from services.asset_type_config import is_market_price_type
+from services.asset_type_config import is_market_price_type, is_total_value_type, shows_pnl_type
 from services.market_data import MarketDataService
 from services.transaction_types import is_buy_type, is_sell_type
 
@@ -50,12 +50,17 @@ class PortfolioService:
             ).all()
             quantity = Decimal("0")
             cost = Decimal("0")
+            total_value_mode = is_total_value_type(self.session, asset.type)
             for t in transactions:
                 effective_price = self.market.resolve_effective_price(asset, t.date, t.price)
                 price = effective_price if effective_price and effective_price > 0 else t.price
                 if is_buy_type(t.type):
                     quantity += t.quantity
-                    cost += t.quantity * price + t.fee
+                    if total_value_mode:
+                        # capital = entered value, not quantity × price
+                        cost += price + t.fee
+                    else:
+                        cost += t.quantity * price + t.fee
                 elif is_sell_type(t.type):
                     if quantity > 0:
                         avg_cost = cost / quantity
@@ -116,7 +121,8 @@ class PortfolioService:
             total_value += current_value
 
             is_market = is_market_price_type(self.session, asset.type)
-            if is_market:
+            shows_pnl = shows_pnl_type(self.session, asset.type)
+            if shows_pnl:
                 market_value += current_value
                 market_cost += cost
             else:
@@ -143,7 +149,8 @@ class PortfolioService:
         except Exception:
             self.session.rollback()
 
-        # PnL is calculated only on market-priced assets; stable assets are excluded.
+        # PnL is calculated on market-priced assets and non-market assets with
+        # showPnl enabled; fixed-capital stable assets are excluded.
         total_pnl = market_value - market_cost
         total_pnl_percent = (total_pnl / market_cost * 100) if market_cost else 0.0
 

@@ -12,6 +12,7 @@ type AssetTypeConfig = {
   label: string;
   fields: string[];
   marketPrice: boolean;
+  capitalMode?: string;
 };
 
 type AssetTypeMap = Record<string, AssetTypeConfig>;

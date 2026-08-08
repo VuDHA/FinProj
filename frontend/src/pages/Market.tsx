@@ -362,8 +362,9 @@ export function Market() {
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-3 mb-4">
-            <div className="flex bg-slate-100 rounded-lg p-1 w-full md:w-auto">
+          {/* Row 1: Tab switcher + Search */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="flex bg-slate-100 rounded-lg p-1 w-full sm:w-auto flex-shrink-0">
               {(["STOCK", "FUND"] as const).map((tab) => (
                 <button
                   key={tab}
@@ -376,7 +377,7 @@ export function Market() {
                     setMaxPrice("");
                     setPage(1);
                   }}
-                  className={`flex-1 md:flex-none px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === tab
+                  className={`flex-1 sm:flex-none px-5 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === tab
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-900"
                     }`}
@@ -388,16 +389,20 @@ export function Market() {
             <input
               type="text"
               placeholder={labels.market.searchPlaceholder}
-              className="input-fintech flex-1"
+              className="input-fintech w-full sm:flex-1 sm:min-w-[200px]"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
             />
+          </div>
+
+          {/* Row 2: Filters */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
             {exchanges.length > 0 && (
               <select
-                className="input-fintech md:w-44"
+                className="input-fintech w-full sm:w-auto sm:min-w-[140px] flex-shrink-0"
                 value={exchangeFilter}
                 onChange={(e) => {
                   setExchangeFilter(e.target.value);
@@ -414,7 +419,7 @@ export function Market() {
             )}
             {activeTab === "FUND" && fundTypes.length > 0 && (
               <select
-                className="input-fintech md:w-56"
+                className="input-fintech w-full sm:w-auto sm:min-w-[160px] flex-shrink-0"
                 value={fundType}
                 onChange={(e) => {
                   setFundType(e.target.value);
@@ -430,7 +435,17 @@ export function Market() {
               </select>
             )}
             <select
-              className="input-fintech md:w-48"
+              className="input-fintech w-full sm:w-auto sm:min-w-[140px] flex-shrink-0"
+              value={changeFilter}
+              onChange={(e) => setChangeFilter(e.target.value)}
+              disabled={!quotesReady}
+            >
+              <option value="all">{labels.market.allChanges}</option>
+              <option value="up">{labels.market.gainers}</option>
+              <option value="down">{labels.market.losers}</option>
+            </select>
+            <select
+              className="input-fintech w-full sm:w-auto sm:min-w-[140px] flex-shrink-0"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -439,7 +454,43 @@ export function Market() {
               <option value="exchange">{labels.market.sortByExchange}</option>
               <option value="changePercent">{labels.market.sortByChangePercent}</option>
             </select>
-            <div className="flex items-center gap-2">
+          </div>
+
+          {/* Row 3: Price range + Actions */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <FormattedNumberInput
+                mode="currency"
+                decimals={0}
+                min={0}
+                className="input-fintech w-28 sm:w-36"
+                placeholder={labels.market.minPrice}
+                value={minPrice}
+                onChange={(value) => {
+                  setMinPrice(value);
+                  setPage(1);
+                }}
+                disabled={!quotesReady}
+              />
+              <span className="text-slate-400 text-sm">—</span>
+              <FormattedNumberInput
+                mode="currency"
+                decimals={0}
+                min={0}
+                className="input-fintech w-28 sm:w-36"
+                placeholder={labels.market.maxPrice}
+                value={maxPrice}
+                onChange={(value) => {
+                  setMaxPrice(value);
+                  setPage(1);
+                }}
+                disabled={!quotesReady}
+              />
+            </div>
+            <span className="text-xs text-slate-500 hidden sm:inline">
+              {labels.market.priceRangeHint}
+            </span>
+            <div className="flex items-center gap-2 ml-auto">
               <InfoTooltip content={labels.tooltips.refreshPrices} />
               <button
                 onClick={() => pageQuotes.refetch()}
@@ -458,48 +509,6 @@ export function Market() {
                 </button>
               )}
             </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-3 mb-4">
-            <select
-              className="input-fintech md:w-48"
-              value={changeFilter}
-              onChange={(e) => setChangeFilter(e.target.value)}
-              disabled={!quotesReady}
-            >
-              <option value="all">{labels.market.allChanges}</option>
-              <option value="up">{labels.market.gainers}</option>
-              <option value="down">{labels.market.losers}</option>
-            </select>
-            <FormattedNumberInput
-              mode="currency"
-              decimals={0}
-              min={0}
-              className="input-fintech md:w-48"
-              placeholder={labels.market.minPrice}
-              value={minPrice}
-              onChange={(value) => {
-                setMinPrice(value);
-                setPage(1);
-              }}
-              disabled={!quotesReady}
-            />
-            <FormattedNumberInput
-              mode="currency"
-              decimals={0}
-              min={0}
-              className="input-fintech md:w-48"
-              placeholder={labels.market.maxPrice}
-              value={maxPrice}
-              onChange={(value) => {
-                setMaxPrice(value);
-                setPage(1);
-              }}
-              disabled={!quotesReady}
-            />
-            <span className="text-xs text-slate-500 self-center">
-              {labels.market.priceRangeHint}
-            </span>
           </div>
 
           {allSymbols.isLoading ? (

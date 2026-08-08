@@ -2,8 +2,21 @@ import datetime
 from decimal import Decimal
 from typing import Optional, List
 
-from sqlalchemy import Index
+from sqlalchemy import Column, ForeignKey, Index, Integer
 from sqlmodel import SQLModel, Field, Relationship
+
+
+def _fk_column(fk_target: str, *, index: bool = False, nullable: bool = False) -> Column:
+    """Create a ForeignKey column with ON DELETE CASCADE.
+
+    Works across SQLModel versions (0.0.19 lacks the ondelete= kwarg).
+    """
+    return Column(
+        Integer,
+        ForeignKey(fk_target, ondelete="CASCADE"),
+        index=index,
+        nullable=nullable,
+    )
 
 
 class Asset(SQLModel, table=True):
@@ -20,7 +33,7 @@ class Asset(SQLModel, table=True):
 
 class PriceSnapshot(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    asset_id: int = Field(foreign_key="asset.id", ondelete="CASCADE")
+    asset_id: int = Field(sa_column=_fk_column("asset.id"))
     date: datetime.date = Field(index=True)
     price: Decimal
     change: Optional[Decimal] = None
@@ -33,7 +46,7 @@ class PriceSnapshot(SQLModel, table=True):
 
 class Transaction(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    asset_id: int = Field(foreign_key="asset.id", ondelete="CASCADE")
+    asset_id: int = Field(sa_column=_fk_column("asset.id"))
     type: str  # BUY, SELL, DEPOSIT, WITHDRAWAL
     quantity: Decimal
     price: Decimal
@@ -49,7 +62,7 @@ class Transaction(SQLModel, table=True):
 
 class Income(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    asset_id: int = Field(foreign_key="asset.id", ondelete="CASCADE", index=True)
+    asset_id: int = Field(sa_column=_fk_column("asset.id", index=True))
     type: str  # DIVIDEND, INTEREST
     amount: Decimal
     date: datetime.date
@@ -58,7 +71,7 @@ class Income(SQLModel, table=True):
 
 class Alert(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    asset_id: int = Field(foreign_key="asset.id", ondelete="CASCADE")
+    asset_id: int = Field(sa_column=_fk_column("asset.id"))
     type: str  # STOP_LOSS, TAKE_PROFIT
     value_type: str  # VALUE, PERCENT
     value: Decimal
@@ -98,7 +111,7 @@ class NewsSource(SQLModel, table=True):
 
 class NewsArticle(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    source_id: int = Field(foreign_key="newssource.id", ondelete="CASCADE", index=True)
+    source_id: int = Field(sa_column=_fk_column("newssource.id", index=True))
     url: str = Field(index=True)
     title: str
     summary: Optional[str] = None
@@ -126,7 +139,7 @@ class NewsArticle(SQLModel, table=True):
 
 class NewsSymbol(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    article_id: int = Field(foreign_key="newsarticle.id", ondelete="CASCADE", index=True)
+    article_id: int = Field(sa_column=_fk_column("newsarticle.id", index=True))
     symbol: str = Field(index=True)
 
     __table_args__ = (
@@ -146,7 +159,7 @@ class NewsAlert(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     alert_type: str = Field(index=True)  # symbol, sentiment, volume, breaking
     symbol: Optional[str] = Field(index=True)
-    article_id: int = Field(foreign_key="newsarticle.id", ondelete="CASCADE", index=True)
+    article_id: int = Field(sa_column=_fk_column("newsarticle.id", index=True))
     title: str
     message: str
     is_read: bool = Field(default=False)
@@ -175,7 +188,7 @@ class Goal(SQLModel, table=True):
 
 class Dividend(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    asset_id: int = Field(foreign_key="asset.id", ondelete="CASCADE", index=True)
+    asset_id: int = Field(sa_column=_fk_column("asset.id", index=True))
     ex_date: str  # ISO date
     pay_date: Optional[str] = None
     amount_per_share: Decimal
@@ -199,8 +212,8 @@ class Dividend(SQLModel, table=True):
 class TaxRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     tax_year: int = Field(index=True)
-    transaction_id: Optional[int] = Field(default=None, foreign_key="transaction.id", ondelete="CASCADE")
-    asset_id: Optional[int] = Field(default=None, foreign_key="asset.id", ondelete="CASCADE", index=True)
+    transaction_id: Optional[int] = Field(default=None, sa_column=_fk_column("transaction.id", nullable=True))
+    asset_id: Optional[int] = Field(default=None, sa_column=_fk_column("asset.id", index=True, nullable=True))
     tax_type: str  # "capital_gains", "dividend", "transfer_fee"
     taxable_amount: Decimal  # the amount subject to tax
     tax_rate: Decimal  # e.g., 0.1% for transfer, 5% for dividend
@@ -216,7 +229,7 @@ class TaxRecord(SQLModel, table=True):
 
 class CorporateAction(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    asset_id: int = Field(foreign_key="asset.id", ondelete="CASCADE", index=True)
+    asset_id: int = Field(sa_column=_fk_column("asset.id", index=True))
     action_type: str  # "split", "stock_dividend", "bonus", "rights", "cash_dividend", "par_change"
     ex_date: str  # ISO date
     ratio: Optional[str] = None  # e.g., "2:1" for split, "10:1" for stock dividend

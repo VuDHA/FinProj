@@ -119,13 +119,16 @@ export function Analytics() {
       },
   });
 
-  const assetTypes = useQuery<{ [key: string]: { marketPrice: boolean } }>({
+  const assetTypes = useQuery<{ [key: string]: { marketPrice: boolean; showPnl?: boolean } }>({
     queryKey: ["asset-types"],
     queryFn: async () => (await API.get("/settings/asset-types")).data.types,
   });
 
-  const isMarketType = (type: string) =>
-    assetTypes.data?.[type]?.marketPrice !== false;
+  const showsPnl = (type: string) => {
+    const info = assetTypes.data?.[type];
+    if (!info) return true;
+    return info.marketPrice !== false ? true : !!info.showPnl;
+  };
 
   const data = analytics.data;
 
@@ -724,18 +727,18 @@ export function Analytics() {
                           <td className="value-cell" title={formatCurrency(item.current_value)}>{formatCurrency(item.current_value)}</td>
                           <td className="value-cell" title={formatCurrency(item.cost)}>{formatCurrency(item.cost)}</td>
                           <td
-                            className={`value-cell ${!isMarketType(item.type)
+                            className={`value-cell ${!showsPnl(item.type)
                               ? "text-slate-400"
                               : item.pnl >= 0
                                 ? "text-accent-emerald"
                                 : "text-accent-rose"
                               }`}
-                            title={isMarketType(item.type) ? formatCurrency(item.pnl) : ""}
+                            title={showsPnl(item.type) ? formatCurrency(item.pnl) : ""}
                           >
-                            {isMarketType(item.type) ? formatCurrency(item.pnl) : "-"}
+                            {showsPnl(item.type) ? formatCurrency(item.pnl) : "-"}
                           </td>
                           <td className="text-right">
-                            {isMarketType(item.type) ? <TrendBadge value={item.pnl_percent} /> : <span className="text-slate-400">-</span>}
+                            {showsPnl(item.type) ? <TrendBadge value={item.pnl_percent} /> : <span className="text-slate-400">-</span>}
                           </td>
                         </tr>
                       ))}

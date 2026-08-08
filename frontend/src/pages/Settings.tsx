@@ -16,6 +16,8 @@ type AssetTypeConfig = {
   label: string;
   fields: string[];
   marketPrice: boolean;
+  capitalMode?: string;
+  showPnl?: boolean;
 };
 
 type AssetTypeMap = Record<string, AssetTypeConfig>;
@@ -25,6 +27,8 @@ type AssetTypeItem = {
   label: string;
   fields: string[];
   marketPrice: boolean;
+  capitalMode: string;
+  showPnl: boolean;
 };
 
 const FIELD_OPTIONS = [
@@ -128,7 +132,12 @@ export function Settings() {
   useEffect(() => {
     if (assetTypes.data && typeList.length === 0) {
       setTypeList(
-        Object.entries(assetTypes.data).map(([code, info]) => ({ code, ...info }))
+        Object.entries(assetTypes.data).map(([code, info]) => ({
+          code,
+          ...info,
+          capitalMode: info.capitalMode || "unit_price",
+          showPnl: info.showPnl ?? info.marketPrice,
+        }))
       );
     }
   }, [assetTypes.data, typeList.length]);
@@ -212,7 +221,7 @@ export function Settings() {
     }
     setTypeList([
       ...typeList,
-      { code, label: "", fields: ["name", "value"], marketPrice: false },
+      { code, label: "", fields: ["name", "value"], marketPrice: false, capitalMode: "unit_price", showPnl: false },
     ]);
   };
 
@@ -234,6 +243,8 @@ export function Settings() {
         label: item.label.trim() || code,
         fields,
         marketPrice: item.marketPrice,
+        capitalMode: item.marketPrice ? "unit_price" : item.capitalMode,
+        showPnl: item.marketPrice ? true : item.showPnl,
       };
     }
     saveAssetTypes.mutate(payload);
@@ -312,6 +323,40 @@ export function Settings() {
                 />
                 {labels.settings.assetTypeMarketPrice}
               </label>
+              {!item.marketPrice && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="text-slate-500">{labels.settings.assetTypeCapitalMode}:</span>
+                  <label className="inline-flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-200 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`capital-mode-${idx}`}
+                      checked={item.capitalMode !== "total_value"}
+                      onChange={() => updateTypeItem(idx, { capitalMode: "unit_price" })}
+                    />
+                    {labels.settings.assetTypeCapitalModeUnitPrice}
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 bg-white px-2 py-1 rounded border border-slate-200 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`capital-mode-${idx}`}
+                      checked={item.capitalMode === "total_value"}
+                      onChange={() => updateTypeItem(idx, { capitalMode: "total_value" })}
+                    />
+                    {labels.settings.assetTypeCapitalModeTotalValue}
+                  </label>
+                </div>
+              )}
+              {!item.marketPrice && (
+                <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={item.showPnl}
+                    onChange={(e) => updateTypeItem(idx, { showPnl: e.target.checked })}
+                  />
+                  {labels.settings.assetTypeShowPnl}
+                  <span className="text-xs text-slate-400">({labels.settings.assetTypeShowPnlHint})</span>
+                </label>
+              )}
             </div>
           ))}
           <button onClick={handleAddType} className="btn-secondary">
