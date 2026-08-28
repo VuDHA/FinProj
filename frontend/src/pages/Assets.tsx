@@ -144,7 +144,6 @@ export function Assets() {
     },
     onError: (error: any) => {
       showToast(error?.response?.data?.detail || "Không thể xóa tài sản", "error");
-      setDeleteTarget(null);
     },
   });
 
@@ -345,8 +344,8 @@ export function Assets() {
       {assetTypes.isError && <ErrorMessage error={assetTypes.error} retry={() => assetTypes.refetch()} />}
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
       {create.isError && <ErrorMessage error={create.error} retry={() => create.mutate()} />}
-      {update.isError && <ErrorMessage error={update.error} retry={() => update.reset()} />}
-      {remove.isError && <ErrorMessage error={remove.error} retry={() => remove.reset()} />}
+      {update.isError && <ErrorMessage error={update.error} retry={() => { if (editTarget) handleEditSubmit(); else update.reset(); }} />}
+      {remove.isError && <ErrorMessage error={remove.error} retry={() => { if (deleteTarget) remove.mutate(deleteTarget.id); else remove.reset(); }} />}
       <SectionHeader title={labels.assets.title} />
 
       <FintechCard delay={0.1}>

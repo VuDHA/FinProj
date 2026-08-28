@@ -21,10 +21,39 @@ from services.sources import registry
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
+DATE_FORMAT_KEY = "date_format"
+DEFAULT_DATE_FORMAT = "dd/mm/yyyy"
+ALLOWED_DATE_FORMATS = ["dd/mm/yyyy", "mm/dd/yyyy", "yyyy-mm-dd", "dd-mm-yyyy"]
+
 
 @router.get("/", response_model=List[SettingRead])
 def list_settings(session: Session = Depends(get_session)):
     return session.exec(select(Setting)).all()
+
+
+@router.get("/date-format")
+def get_date_format(session: Session = Depends(get_session)):
+    setting = session.exec(select(Setting).where(Setting.key == DATE_FORMAT_KEY)).first()
+    fmt = setting.value if setting else DEFAULT_DATE_FORMAT
+    return {"format": fmt, "options": ALLOWED_DATE_FORMATS}
+
+
+@router.post("/date-format")
+def save_date_format(payload: Dict[str, str], session: Session = Depends(get_session)):
+    fmt = (payload.get("format") or "").strip().lower()
+    if fmt not in ALLOWED_DATE_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid date format. Allowed: {', '.join(ALLOWED_DATE_FORMATS)}",
+        )
+    existing = session.exec(select(Setting).where(Setting.key == DATE_FORMAT_KEY)).first()
+    if existing:
+        existing.value = fmt
+        session.add(existing)
+    else:
+        session.add(Setting(key=DATE_FORMAT_KEY, value=fmt))
+    session.commit()
+    return {"format": fmt, "options": ALLOWED_DATE_FORMATS}
 
 
 @router.get("/sources/{asset_type}", response_model=List[AssetSourceInfo])

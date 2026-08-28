@@ -11,6 +11,8 @@ import { InfoTooltip } from "../components/InfoTooltip";
 import { useToast } from "../contexts/ToastContext";
 import { labels } from "../i18n/vi";
 import { clearAppStorage } from "../lib/storage";
+import { useDateFormat } from "../hooks/useDateFormat";
+import { formatDate } from "../lib/utils";
 
 type AssetTypeConfig = {
   label: string;
@@ -44,6 +46,27 @@ export function Settings() {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const [smartImportType, setSmartImportType] = useState<"assets" | "transactions" | null>(null);
+
+  const dateFormat = useDateFormat();
+  const [dateFormatValue, setDateFormatValue] = useState<string>("");
+  const [dateFormatDirty, setDateFormatDirty] = useState(false);
+
+  useEffect(() => {
+    if (!dateFormatDirty && dateFormat.format) setDateFormatValue(dateFormat.format);
+  }, [dateFormat.format, dateFormatDirty]);
+
+  const saveDateFormat = useMutation({
+    mutationFn: (fmt: string) => API.post("/settings/date-format", { format: fmt }),
+    onSuccess: () => {
+      dateFormat.persist(dateFormatValue);
+      qc.invalidateQueries({ queryKey: ["date-format"] });
+      setDateFormatDirty(false);
+      showToast("Đã lưu định dạng ngày", "success");
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.detail || "Không thể lưu định dạng ngày", "error");
+    },
+  });
 
   const assetTypes = useQuery<AssetTypeMap>({
     queryKey: ["asset-types"],
@@ -260,7 +283,45 @@ export function Settings() {
       {saveDefaultSources.isError && <ErrorMessage error={saveDefaultSources.error} retry={() => saveDefaultSources.reset()} />}
       {importAssets.isError && <ErrorMessage error={importAssets.error} retry={() => importAssets.reset()} />}
       {importTransactions.isError && <ErrorMessage error={importTransactions.error} retry={() => importTransactions.reset()} />}
+      {saveDateFormat.isError && <ErrorMessage error={saveDateFormat.error} retry={() => saveDateFormat.reset()} />}
       <SectionHeader title={labels.settings.title} />
+
+      <FintechCard delay={0.05}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="card-title">{labels.settings.dateFormat}</h3>
+            <InfoTooltip content={labels.settings.dateFormatDescription} />
+          </div>
+          <button
+            onClick={() => saveDateFormat.mutate(dateFormatValue)}
+            disabled={saveDateFormat.isPending || !dateFormatDirty || !dateFormatValue}
+            className="btn-primary"
+          >
+            <Save className="w-4 h-4" />
+            {saveDateFormat.isPending ? labels.settings.saving : labels.settings.save}
+          </button>
+        </div>
+        <p className="text-sm text-slate-500 mb-3">{labels.settings.dateFormatDescription}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            className="input-fintech max-w-xs"
+            value={dateFormatValue}
+            onChange={(e) => {
+              setDateFormatValue(e.target.value);
+              setDateFormatDirty(true);
+            }}
+          >
+            {(dateFormat.options.length ? dateFormat.options : ["dd/mm/yyyy", "mm/dd/yyyy", "yyyy-mm-dd", "dd-mm-yyyy"]).map((opt) => (
+              <option key={opt} value={opt}>{opt.toUpperCase()}</option>
+            ))}
+          </select>
+          {dateFormatValue && (
+            <span className="text-sm text-slate-500">
+              {labels.settings.dateFormatExample}: <span className="font-mono text-slate-700">{formatDate("2026-08-28", dateFormatValue)}</span>
+            </span>
+          )}
+        </div>
+      </FintechCard>
 
       <FintechCard delay={0.05}>
         <div className="flex items-center justify-between mb-4">

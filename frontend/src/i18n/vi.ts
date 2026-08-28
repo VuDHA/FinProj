@@ -628,6 +628,9 @@ export const labels = {
     clearCache: "Xóa cache local",
     clearCacheDescription: "Xóa toàn bộ dữ liệu cache và bộ lọc đã lưu trong trình duyệt. Trang sẽ tải lại.",
     clearCacheConfirm: "Bạn có chắc muốn xóa toàn bộ cache local? Thao tác này không thể hoàn tác.",
+    dateFormat: "Định dạng ngày",
+    dateFormatDescription: "Chọn cách hiển thị ngày trên toàn hệ thống.",
+    dateFormatExample: "Ví dụ",
   },
   importExport: {
     smartImportAssets: "Nhập tài sản thông minh",

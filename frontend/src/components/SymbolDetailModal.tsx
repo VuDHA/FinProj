@@ -11,8 +11,9 @@ import {
 import { RefreshCw, X, Calendar, TrendingUp, TrendingDown, BarChart3, Info, Sparkles } from "lucide-react";
 import API from "../api/client";
 import { getFundDetail, getStockDetail, getSymbolAIInsight } from "../api/symbol";
-import { chartTooltipStyle, formatCurrency, formatPercent, formatNumber } from "../lib/utils";
+import { chartTooltipStyle, formatCurrency, formatPercent, formatNumber, formatDate, formatDateShort } from "../lib/utils";
 import { labels } from "../i18n/vi";
+import { useDateFormat } from "../hooks/useDateFormat";
 import { AiInsightCard } from "./AiInsightCard";
 
 interface SymbolDetailModalProps {
@@ -182,6 +183,7 @@ export default function SymbolDetailModal({
   exchange,
   onClose,
 }: SymbolDetailModalProps) {
+  const { format: dateFormat } = useDateFormat();
   const [fundDetail, setFundDetail] = useState<FundDetail | null>(null);
   const [stockDetail, setStockDetail] = useState<StockDetail | null>(null);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
@@ -293,7 +295,7 @@ export default function SymbolDetailModal({
     if (["1Y", "3Y", "5Y", "ALL", "YTD"].includes(range)) {
       return d.toLocaleDateString("vi-VN", { month: "2-digit", year: "2-digit" });
     }
-    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+    return formatDateShort(date, dateFormat);
   };
 
   return (
@@ -501,7 +503,7 @@ export default function SymbolDetailModal({
                             contentStyle={chartTooltipStyle}
                             formatter={(value: number) => [formatCurrency(value), labels.symbolDetail.price]}
                             labelFormatter={(date: string) =>
-                              `Ngày ${new Date(date).toLocaleDateString("vi-VN")}`
+                              `Ngày ${formatDate(date, dateFormat)}`
                             }
                           />
                           <Area
@@ -554,7 +556,7 @@ export default function SymbolDetailModal({
                           <div className="flex justify-between md:justify-start md:gap-2">
                             <span className="text-slate-500">{labels.symbolDetail.inceptionDate}:</span>
                             <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">
-                              {new Date(fundDetail.inception_date).toLocaleDateString("vi-VN")}
+                              {formatDate(fundDetail.inception_date, dateFormat)}
                             </span>
                           </div>
                         )}
@@ -568,7 +570,7 @@ export default function SymbolDetailModal({
                           <div className="flex justify-between md:justify-start md:gap-2">
                             <span className="text-slate-500">{labels.symbolDetail.navUpdateAt}:</span>
                             <span className="font-medium text-slate-900 flex-1 min-w-0 overflow-hidden truncate text-right md:text-left">
-                              {new Date(fundDetail.nav_update_at).toLocaleDateString("vi-VN")}
+                              {formatDate(fundDetail.nav_update_at, dateFormat)}
                             </span>
                           </div>
                         )}

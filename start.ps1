@@ -162,6 +162,57 @@ Write-Host ""
 
 if (-not (Test-Path $TempDir)) { New-Item -ItemType Directory -Path $TempDir -Force | Out-Null }
 
+# --- Đồng bộ mã nguồn web-base ---
+if (-not (Test-Command git)) {
+    Write-Warn "Git chưa được cài đặt. Bỏ qua bước đồng bộ mã nguồn."
+} else {
+    Write-Info "Đồng bộ mã nguồn mới nhất từ nhánh web-base..."
+
+    # --- Backup user data before sync (git reset --hard would wipe tracked files) ---
+    $dbPath = Join-Path $BackendDir "data\wealth.db"
+    $dbBackup = Join-Path $TempDir "wealth.db.bak"
+    $dbWalPath = Join-Path $BackendDir "data\wealth.db-wal"
+    $dbShmPath = Join-Path $BackendDir "data\wealth.db-shm"
+    $dbWalBackup = Join-Path $TempDir "wealth.db-wal.bak"
+    $dbShmBackup = Join-Path $TempDir "wealth.db-shm.bak"
+    $hasBackup = $false
+    if (Test-Path $dbPath) {
+        Copy-Item $dbPath $dbBackup -Force
+        if (Test-Path $dbWalPath) { Copy-Item $dbWalPath $dbWalBackup -Force }
+        if (Test-Path $dbShmPath) { Copy-Item $dbShmPath $dbShmBackup -Force }
+        $hasBackup = $true
+        Write-Info "Đã sao lưu cơ sở dữ liệu người dùng trước khi đồng bộ."
+    }
+
+    $currentBranch = $(git rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    if ($currentBranch -ne "web-base") {
+        Write-Info "Đang chuyển sang nhánh web-base..."
+        git checkout web-base 2>&1 | ForEach-Object { Write-Host $_ }
+    }
+
+    Show-Spinner "Đang kéo mã nguồn mới nhất" 3
+    git fetch origin web-base 2>&1 | ForEach-Object { Write-Host $_ }
+
+    # Use reset --hard for reliable auto-update (end users don't edit source code).
+    # Local code changes are discarded; user data is restored from backup below.
+    git reset --hard origin/web-base 2>&1 | ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -eq 0) {
+        Write-Ok "Mã nguồn đã cập nhật theo web-base"
+    } else {
+        Write-Warn "Không thể đồng bộ mã nguồn mới nhất. Bỏ qua."
+    }
+
+    # --- Restore user data after sync ---
+    if ($hasBackup -and (Test-Path $dbBackup)) {
+        $dataDirRestore = Join-Path $BackendDir "data"
+        if (-not (Test-Path $dataDirRestore)) { New-Item -ItemType Directory -Path $dataDirRestore -Force | Out-Null }
+        Copy-Item $dbBackup $dbPath -Force
+        if (Test-Path $dbWalBackup) { Copy-Item $dbWalBackup $dbWalPath -Force }
+        if (Test-Path $dbShmBackup) { Copy-Item $dbShmBackup $dbShmPath -Force }
+        Write-Ok "Đã khôi phục cơ sở dữ liệu người dùng."
+    }
+}
+
 # --- Python ---
 $PythonCmd = $null
 if (Test-Command python) { $PythonCmd = "python" }

@@ -55,7 +55,9 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useToast } from "../contexts/ToastContext";
 import { useAiInsight } from "../hooks/useAiInsight";
 import { labels } from "../i18n/vi";
-import { chartTooltipStyle, formatCurrency, formatPercent } from "../lib/utils";
+import { chartTooltipStyle, formatCurrency, formatPercent, formatDateShort, DEFAULT_DATE_FORMAT } from "../lib/utils";
+import { getItem } from "../lib/storage";
+import { useDateFormat } from "../hooks/useDateFormat";
 
 const TYPE_COLORS: Record<string, string> = {
   STOCK: "var(--accent-blue)",
@@ -98,7 +100,8 @@ function formatRelativeTime(date: string | null): string {
   if (diffMin < 60) return `${diffMin} phút`;
   if (diffHour < 24) return `${diffHour} giờ`;
   if (diffDay < 7) return `${diffDay} ngày`;
-  return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  const fmt = getItem<string>("date_format", DEFAULT_DATE_FORMAT);
+  return formatDateShort(date, fmt);
 }
 
 function SectionLink({ to, children }: { to: string; children: React.ReactNode }) {
@@ -187,6 +190,7 @@ function MobileQrCard() {
 export function Dashboard() {
   const qc = useQueryClient();
   const { showToast } = useToast();
+  const { format: dateFormat } = useDateFormat();
   const { theme } = useTheme();
 
   const portfolio = useQuery({
@@ -387,14 +391,12 @@ export function Dashboard() {
   const trendPercentData = useMemo(() => {
     const trendMap = new Map<string, { label: string; portfolio?: number; benchmark?: number }>();
     for (const point of trendHistory.data || []) {
-      const date = new Date(point.date);
-      const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+      const label = formatDateShort(point.date, dateFormat);
       const iso = point.date;
       trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, portfolio: point.value });
     }
     for (const point of trendBenchmark.data || []) {
-      const date = new Date(point.date);
-      const label = date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+      const label = formatDateShort(point.date, dateFormat);
       const iso = point.date;
       trendMap.set(iso, { ...(trendMap.get(iso) || { label }), label, benchmark: point.benchmark_value });
     }
@@ -416,7 +418,7 @@ export function Dashboard() {
       portfolio: basePortfolio ? ((d.portfolio ?? basePortfolio) / basePortfolio - 1) * 100 : null,
       benchmark: baseBenchmark ? ((d.benchmark ?? baseBenchmark) / baseBenchmark - 1) * 100 : null,
     }));
-  }, [trendHistory.data, trendBenchmark.data]);
+  }, [trendHistory.data, trendBenchmark.data, dateFormat]);
 
   const [displayTrendData, setDisplayTrendData] = useState<typeof trendPercentData>([]);
   const [hasTrendData, setHasTrendData] = useState(false);
@@ -499,12 +501,12 @@ export function Dashboard() {
     });
     return sortedDates
       .map((date) => ({
-        date: new Date(date).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }),
+        date: formatDateShort(date, dateFormat),
         a: filledSeries[compareA]?.[date] ?? null,
         b: filledSeries[compareB]?.[date] ?? null,
       }))
       .filter((d) => d.a != null || d.b != null);
-  }, [compareHistoryA.data, compareHistoryB.data, compareA, compareB]);
+  }, [compareHistoryA.data, compareHistoryB.data, compareA, compareB, dateFormat]);
 
   const topGainer = analytics.data?.top_performers?.[0];
   const topLoser = analytics.data?.bottom_performers?.[0];

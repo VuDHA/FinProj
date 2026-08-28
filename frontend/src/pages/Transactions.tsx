@@ -15,13 +15,15 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { useToast } from "../contexts/ToastContext";
 import { usePersistentState } from "../hooks/usePersistentState";
 import { labels } from "../i18n/vi";
-import { formatCurrency } from "../lib/utils";
+import { formatCurrency, formatDate } from "../lib/utils";
+import { useDateFormat } from "../hooks/useDateFormat";
 import { hasErrors, nonNegativeNumber, notFutureDate, positiveNumber, required, validateForm } from "../lib/validation";
 
 export function Transactions() {
   const qc = useQueryClient();
   const { showToast } = useToast();
   const location = useLocation();
+  const { format: dateFormat } = useDateFormat();
   const [tab, setTab] = usePersistentState<"transactions" | "income">("transactions.tab", "transactions");
   const [form, setForm] = usePersistentState("transactions.form", {
     asset_id: "",
@@ -110,6 +112,14 @@ export function Transactions() {
   const selectedAsset = useMemo(() => {
     return (assets.data || []).find((a: any) => String(a.id) === form.asset_id);
   }, [assets.data, form.asset_id]);
+
+  // Clear stale asset_id from persisted form state if the asset no longer
+  // exists (e.g. it was deleted in another session/tab).
+  useEffect(() => {
+    if (form.asset_id && assets.data && !selectedAsset) {
+      setForm((prev) => ({ ...prev, asset_id: "" }));
+    }
+  }, [form.asset_id, assets.data, selectedAsset, setForm]);
 
   const isNonMarketAsset = useCallback(
     (type: string) => type && assetTypes.data?.[type]?.marketPrice === false,
@@ -311,7 +321,6 @@ export function Transactions() {
     },
     onError: (error: any) => {
       showToast(error?.response?.data?.detail || "Không thể xóa giao dịch", "error");
-      setDeleteTarget(null);
     },
   });
 
@@ -325,7 +334,6 @@ export function Transactions() {
     },
     onError: (error: any) => {
       showToast(error?.response?.data?.detail || "Không thể xóa thu nhập", "error");
-      setDeleteTarget(null);
     },
   });
 
@@ -464,9 +472,9 @@ export function Transactions() {
       {assets.isError && <ErrorMessage error={assets.error} retry={() => assets.refetch()} />}
       {create.isError && <ErrorMessage error={create.error} retry={() => create.mutate()} />}
       {createIncome.isError && <ErrorMessage error={createIncome.error} retry={() => createIncome.mutate()} />}
-      {update.isError && <ErrorMessage error={update.error} retry={() => update.reset()} />}
-      {remove.isError && <ErrorMessage error={remove.error} retry={() => remove.reset()} />}
-      {removeIncome.isError && <ErrorMessage error={removeIncome.error} retry={() => removeIncome.reset()} />}
+      {update.isError && <ErrorMessage error={update.error} retry={() => { if (editTarget) handleSubmitEdit(); else update.reset(); }} />}
+      {remove.isError && <ErrorMessage error={remove.error} retry={() => { if (deleteTarget && deleteTarget.type === "transaction") remove.mutate(deleteTarget.id); else remove.reset(); }} />}
+      {removeIncome.isError && <ErrorMessage error={removeIncome.error} retry={() => { if (deleteTarget && deleteTarget.type === "income") removeIncome.mutate(deleteTarget.id); else removeIncome.reset(); }} />}
       <SectionHeader title={labels.transactions.title} />
 
       <div className="flex gap-2">
@@ -741,12 +749,12 @@ export function Transactions() {
                       const asset = assets.data?.find((a: any) => a.id === tx.asset_id);
                       return (
                         <tr key={tx.id}>
-                          <td className="font-mono text-slate-500">{tx.date}</td>
+                          <td className="font-mono text-slate-500">{formatDate(tx.date, dateFormat)}</td>
                           <td>
                             <div className="font-display font-semibold text-slate-900 whitespace-nowrap">
-                              {asset ? asset.symbol : tx.asset_id}
+                              {asset ? asset.symbol : `#${tx.asset_id}`}
                             </div>
-                            <span className="text-xs text-slate-500 max-w-[120px] truncate block">{asset ? asset.name : "-"}</span>
+                            <span className="text-xs text-slate-500 max-w-[120px] truncate block">{asset ? asset.name : "(đã xóa)"}</span>
                           </td>
                           <td>
                             <span className={transactionTypeBadgeClass(tx.type)}>
@@ -767,7 +775,7 @@ export function Transactions() {
                                 <Pencil className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => setDeleteTarget({ id: tx.id, label: asset ? `${asset.symbol} — ${tx.date}` : String(tx.id), type: "transaction" })}
+                                onClick={() => setDeleteTarget({ id: tx.id, label: asset ? `${asset.symbol} — ${formatDate(tx.date, dateFormat)}` : `#${tx.asset_id} (đã xóa)`, type: "transaction" })}
                                 disabled={remove.isPending}
                                 className="inline-flex items-center justify-center p-2 rounded-lg text-accent-rose hover:bg-accent-rose/10 transition-colors disabled:opacity-50"
                                 aria-label="Xóa giao dịch"
@@ -945,12 +953,12 @@ export function Transactions() {
                         const asset = assets.data?.find((a: any) => a.id === inc.asset_id);
                         return (
                           <tr key={inc.id}>
-                            <td className="font-mono text-slate-500">{inc.date}</td>
+                            <td className="font-mono text-slate-500">{formatDate(inc.date, dateFormat)}</td>
                             <td>
                               <div className="font-display font-semibold text-slate-900 whitespace-nowrap">
-                                {asset ? asset.symbol : inc.asset_id}
+                                {asset ? asset.symbol : `#${inc.asset_id}`}
                               </div>
-                              <span className="text-xs text-slate-500 max-w-[120px] truncate block">{asset ? asset.name : "-"}</span>
+                              <span className="text-xs text-slate-500 max-w-[120px] truncate block">{asset ? asset.name : "(đã xóa)"}</span>
                             </td>
                             <td>
                               <span className="badge-gain">
@@ -960,7 +968,7 @@ export function Transactions() {
                             <td className="value-cell" title={formatCurrency(inc.amount)}>{formatCurrency(inc.amount)}</td>
                             <td className="text-right">
                               <button
-                                onClick={() => setDeleteTarget({ id: inc.id, label: asset ? `${asset.symbol} — ${inc.date}` : String(inc.id), type: "income" })}
+                                onClick={() => setDeleteTarget({ id: inc.id, label: asset ? `${asset.symbol} — ${formatDate(inc.date, dateFormat)}` : `#${inc.asset_id} (đã xóa)`, type: "income" })}
                                 disabled={removeIncome.isPending}
                                 className="inline-flex items-center justify-center p-2 rounded-lg text-accent-rose hover:bg-accent-rose/10 transition-colors disabled:opacity-50"
                                 aria-label="Xóa thu nhập"
@@ -1004,7 +1012,7 @@ export function Transactions() {
                 <label className="block text-xs font-medium text-slate-600 mb-1">{labels.transactions.assetCol}</label>
                 <input type="text" disabled value={(() => {
                   const asset = (assets.data || []).find((a: any) => a.id === editTarget.asset_id);
-                  return asset ? `${asset.symbol} — ${asset.name}` : editTarget.asset_id;
+                  return asset ? `${asset.symbol} — ${asset.name}` : `#${editTarget.asset_id} (đã xóa)`;
                 })()} className="input-fintech bg-slate-50" />
               </div>
               <div>

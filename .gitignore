@@ -160,3 +160,7 @@ build/
 *.manifest
 *.spec
 .tmp
+
+# Playwright temp file
+.playwright-temp-*
+.playwright-*

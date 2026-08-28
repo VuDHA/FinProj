@@ -199,8 +199,10 @@ def update_transaction(
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     asset = session.get(Asset, tx.asset_id)
-    if not asset or not asset.is_active:
+    if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
+    # Allow editing transactions even if the asset was soft-deleted — the
+    # transaction still exists and the user should be able to correct it.
 
     if update.quantity is not None and update.quantity <= 0:
         raise HTTPException(status_code=400, detail="Quantity must be positive")
@@ -247,7 +249,8 @@ def update_transaction(
     session.add(tx)
 
     # Keep the stable asset snapshot in sync with the latest transaction price.
-    if not is_market_price_type(session, asset.type):
+    # Skip for inactive assets — their snapshots are no longer relevant.
+    if asset.is_active and not is_market_price_type(session, asset.type):
         _sync_stable_snapshot_from_latest(session, asset)
 
     try:
