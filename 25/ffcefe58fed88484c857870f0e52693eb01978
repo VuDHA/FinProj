@@ -1,0 +1,36 @@
+.gitignore
+  h_81847490a6d656 162-166
+backend/api/settings.py
+  h_81847490a6d656 24-27,34-58
+backend/api/transactions.py
+  h_81847490a6d656 202,204-205,252-253
+frontend/src/components/SymbolDetailModal.tsx
+  h_81847490a6d656 14,16,186,298,506,559,573
+frontend/src/hooks/useDateFormat.ts
+  h_81847490a6d656 1-33
+frontend/src/i18n/vi.ts
+  h_81847490a6d656 631-633
+frontend/src/lib/utils.ts
+  h_81847490a6d656 11-49
+frontend/src/pages/Assets.tsx
+  h_81847490a6d656 347-348
+frontend/src/pages/Dashboard.tsx
+  h_81847490a6d656 58-60,103-104,193,394,399,421,504,509
+frontend/src/pages/Settings.tsx
+  h_81847490a6d656 14-15,50-70,286,289-325
+frontend/src/pages/Transactions.tsx
+  h_81847490a6d656 18-19,26,116-123,475-477,752,755,757,778,956,959,961,971,1015
+start.ps1
+  h_81847490a6d656 165-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "25ffcefe58fed88484c857870f0e52693eb01978",
+  "prompts": {},
+  "humans": {
+    "h_81847490a6d656": {
+      "author": "VuDHA <vudha.work@gmail.com>"
+    }
+  }
+}
