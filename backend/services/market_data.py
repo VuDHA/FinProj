@@ -183,12 +183,22 @@ class MarketDataService:
             "error": warnings[-1] if warnings else "Failed to fetch market data",
         }
 
+    def _fetch_quote_threaded(self, symbol: str, asset_type: str) -> dict:
+        """Run fetch_quote on a dedicated Session so worker threads never share
+        self.session (SQLite sessions are not thread-safe and concurrent use
+        raises sqlite3.InterfaceError: bad parameter or other API misuse)."""
+        from database import engine
+
+        with Session(engine) as session:
+            return MarketDataService(session).fetch_quote(symbol, asset_type)
+
     def fetch_quotes(self, symbols: List[str], asset_type: str = "STOCK") -> List[dict]:
         """Fetch giá nhiều mã cùng lúc bằng đa luồng."""
         results = []
         with ThreadPoolExecutor(max_workers=8) as executor:
             future_to_symbol = {
-                executor.submit(self.fetch_quote, s, asset_type): s for s in symbols
+                executor.submit(self._fetch_quote_threaded, s, asset_type): s
+                for s in symbols
             }
             for future in as_completed(future_to_symbol):
                 symbol = future_to_symbol[future]
@@ -223,15 +233,23 @@ class MarketDataService:
             for s in symbols
         ]
 
+    def _fetch_price_with_warnings_threaded(
+        self, asset: Asset
+    ) -> Tuple[Optional[dict], List[str]]:
+        """Run fetch_price_with_warnings on a dedicated Session so worker
+        threads never share self.session (SQLite sessions are not thread-safe
+        and concurrent use raises sqlite3.InterfaceError)."""
+        from database import engine
+
+        with Session(engine) as session:
+            return MarketDataService(session).fetch_price_with_warnings(asset)
+
     def fetch_quotes_for_assets(self, assets: List[Asset]) -> List[dict]:
         """Fetch prices for concrete Asset objects, respecting asset.source."""
-        # Pre-fetch defaults so worker threads do not race on the shared session.
-        self.selector._get_defaults()
-
         results = []
         with ThreadPoolExecutor(max_workers=8) as executor:
             future_to_asset = {
-                executor.submit(self.fetch_price_with_warnings, asset): asset
+                executor.submit(self._fetch_price_with_warnings_threaded, asset): asset
                 for asset in assets
             }
             for future in as_completed(future_to_asset):
