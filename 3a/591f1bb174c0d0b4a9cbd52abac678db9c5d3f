@@ -1,0 +1,14 @@
+backend/services/market_data.py
+  h_81847490a6d656 186-194,200-201,236-246,252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "3a591f1bb174c0d0b4a9cbd52abac678db9c5d3f",
+  "prompts": {},
+  "humans": {
+    "h_81847490a6d656": {
+      "author": "VuDHA <vudha.work@gmail.com>"
+    }
+  }
+}
