@@ -1,0 +1,24 @@
+backend/api/assets.py
+  h_81847490a6d656 22-37,40-41,103,111,152-154,171
+backend/api/prices.py
+  h_81847490a6d656 27-31,46-49
+backend/database.py
+  h_81847490a6d656 80-123,171
+backend/services/analytics.py
+  h_81847490a6d656 17,236-238,242-244
+backend/services/asset_type_config.py
+  h_81847490a6d656 152-153
+backend/services/market_data.py
+  h_81847490a6d656 72-80,100-104,354-359,369-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "7f057d06a1d15016d22b5c4fe6330aa9bdb9ad5c",
+  "prompts": {},
+  "humans": {
+    "h_81847490a6d656": {
+      "author": "VuDHA <vudha.work@gmail.com>"
+    }
+  }
+}
