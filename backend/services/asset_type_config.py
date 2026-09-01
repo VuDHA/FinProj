@@ -149,6 +149,8 @@ def _rebuild_snapshots_for_type(session: Session, asset_type: str, config: dict)
                     select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
                 ).all():
                     session.delete(snap)
+                # Flush deletes before inserting to avoid UNIQUE constraint conflicts.
+                session.flush()
                 session.add(
                     PriceSnapshot(
                         asset_id=asset.id,

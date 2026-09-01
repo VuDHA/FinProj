@@ -19,9 +19,26 @@ from services.source_config import is_valid_source_for_type
 router = APIRouter(prefix="/assets", tags=["assets"])
 
 
+def _attach_manual_value(session: Session, asset: Asset) -> AssetRead:
+    """Return an AssetRead with manual_value populated from the latest snapshot
+    for non-market assets. Market-priced assets always have manual_value=None.
+    """
+    data = asset.model_dump()
+    if not is_market_price_type(session, asset.type):
+        latest = session.exec(
+            select(PriceSnapshot)
+            .where(PriceSnapshot.asset_id == asset.id)
+            .order_by(PriceSnapshot.date.desc(), PriceSnapshot.id.desc())
+        ).first()
+        if latest and latest.price > 0:
+            data["manual_value"] = float(latest.price)
+    return AssetRead(**data)
+
+
 @router.get("/", response_model=List[AssetRead])
 def list_assets(session: Session = Depends(get_session)):
-    return session.exec(select(Asset).where(Asset.is_active == True)).all()
+    assets = session.exec(select(Asset).where(Asset.is_active == True)).all()
+    return [_attach_manual_value(session, a) for a in assets]
 
 
 @router.post("/", response_model=AssetRead)
@@ -83,7 +100,7 @@ def create_asset(asset: AssetCreate, session: Session = Depends(get_session)):
             session.rollback()
             raise
 
-    return db_asset
+    return _attach_manual_value(session, db_asset)
 
 
 @router.get("/{asset_id}", response_model=AssetRead)
@@ -91,7 +108,7 @@ def get_asset(asset_id: int, session: Session = Depends(get_session)):
     asset = session.get(Asset, asset_id)
     if not asset or not asset.is_active:
         raise HTTPException(status_code=404, detail="Asset not found")
-    return asset
+    return _attach_manual_value(session, asset)
 
 
 @router.put("/{asset_id}", response_model=AssetRead)
@@ -132,6 +149,9 @@ def update_asset(asset_id: int, update: AssetUpdate, session: Session = Depends(
                 select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
             ).all():
                 session.delete(snap)
+            # Flush deletes before inserting to avoid UNIQUE constraint conflicts
+            # when a snapshot for today's date already exists.
+            session.flush()
             session.add(
                 PriceSnapshot(
                     asset_id=asset.id,
@@ -148,7 +168,7 @@ def update_asset(asset_id: int, update: AssetUpdate, session: Session = Depends(
         session.rollback()
         raise
     session.refresh(asset)
-    return asset
+    return _attach_manual_value(session, asset)
 
 
 @router.delete("/{asset_id}")

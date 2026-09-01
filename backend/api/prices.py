@@ -24,7 +24,11 @@ DEFAULT_WATCHLIST = [
 
 
 def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> PriceSnapshot | None:
-    """Persist a price snapshot if it is valid and not already stored for this date."""
+    """Persist or update a price snapshot for the given date.
+
+    If a snapshot already exists for (asset_id, date), its price/change fields
+    are updated with the freshly fetched data so stale prices don't persist.
+    """
     if not data or not data.get("price"):
         return None
 
@@ -39,6 +43,10 @@ def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> Price
         )
     ).first()
     if existing:
+        existing.price = data["price"]
+        existing.change = data.get("change")
+        existing.change_percent = data.get("change_percent")
+        session.add(existing)
         return existing
 
     snapshot = PriceSnapshot(

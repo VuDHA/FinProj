@@ -69,6 +69,15 @@ class MarketDataService:
         self.session.refresh(asset)
         return asset
 
+    @staticmethod
+    def _date_range(start: datetime.date, end: datetime.date) -> List[datetime.date]:
+        dates = []
+        current = start
+        while current <= end:
+            dates.append(current)
+            current += datetime.timedelta(days=1)
+        return dates
+
     def _save_history(
         self,
         asset_id: int,
@@ -88,7 +97,11 @@ class MarketDataService:
                 self.session.add(
                     PriceSnapshot(asset_id=asset_id, date=d, price=price)
                 )
-        self.session.commit()
+        try:
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
 
     # ------------------------------------------------------------------
     # Price API
@@ -338,7 +351,12 @@ class MarketDataService:
         start: datetime.date,
         end: datetime.date,
     ) -> Dict[datetime.date, float]:
-        """Fetch market history, backfilling into PriceSnapshot when local data is missing."""
+        """Fetch market history, backfilling any missing dates into PriceSnapshot.
+
+        Returns a merged dict of cached + freshly fetched prices. Only dates
+        that are missing locally are fetched from the market source, so a
+        request with a few gaps only scrapes the gaps — not the whole range.
+        """
         asset = self._ensure_asset(symbol, asset_type)
         snapshots = self.session.exec(
             select(PriceSnapshot).where(
@@ -348,18 +366,30 @@ class MarketDataService:
             ).order_by(PriceSnapshot.date.asc(), PriceSnapshot.id.asc())
         ).all()
         existing_map = {s.date: s for s in snapshots}
+        cached = {s.date: float(s.price) for s in snapshots}
 
-        # If we already have enough data for the requested range, return it.
-        if snapshots:
-            span = (end - start).days + 1
-            if len(snapshots) >= span * 0.5:
-                return {s.date: float(s.price) for s in snapshots}
+        # Determine which dates in the range are missing locally.
+        all_dates = set(self._date_range(start, end))
+        missing_dates = sorted(all_dates - set(existing_map.keys()))
+        if not missing_dates:
+            return cached
 
-        # Otherwise fetch live data and backfill into the database.
-        live = self.fetch_market_history(symbol, asset_type, start, end)
-        if live:
-            self._save_history(asset.id, live, existing_map)
-        return live
+        # Fetch live data only for the missing span (source APIs return the
+        # full range they cover, so we request the min..max of the gaps).
+        fetch_start = missing_dates[0]
+        fetch_end = missing_dates[-1]
+        live = self.fetch_market_history(symbol, asset_type, fetch_start, fetch_end)
+        if not live:
+            return cached
+
+        # Only save dates that are actually missing — the source may return
+        # dates outside the requested range that already exist in the DB.
+        missing_set = set(missing_dates)
+        to_save = {d: p for d, p in live.items() if d in missing_set}
+        if to_save:
+            self._save_history(asset.id, to_save, existing_map)
+        cached.update(live)
+        return cached
 
     def force_backfill_history(
         self,

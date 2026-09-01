@@ -14,7 +14,7 @@ from schemas import (
     TypeReturn,
     MonthlyPnL,
 )
-from services.asset_type_config import shows_pnl_type
+from services.asset_type_config import is_market_price_type, shows_pnl_type
 from services.market_data import MarketDataService
 from services.transaction_types import is_buy_type, is_sell_type
 from services.portfolio import PortfolioService
@@ -233,10 +233,15 @@ class AnalyticsService:
             else:
                 current = current.replace(month=current.month + 1)
 
-        # Fetch historical market prices for each asset over the period
+        # Fetch historical market prices for each asset over the period.
+        # Non-market assets (e.g. GOLD with manual pricing, BANK, REAL_ESTATE)
+        # have no market history — their prices come from stored snapshots only.
         market_data = MarketDataService(self.session)
         asset_prices: Dict[int, Dict[datetime.date, float]] = {}
         for asset in assets:
+            if not is_market_price_type(self.session, asset.type):
+                asset_prices[asset.id] = {}
+                continue
             try:
                 asset_prices[asset.id] = market_data.fetch_history(
                     asset.symbol, asset.type, start_date, end_date

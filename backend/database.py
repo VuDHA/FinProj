@@ -77,6 +77,50 @@ def _seed_asset_type_settings(session):
     seed_asset_types(session)
 
 
+def _ensure_price_snapshot_unique_index():
+    """Create the unique index on (asset_id, date) and clean up duplicates.
+
+    The index was added to the PriceSnapshot model after the table was already
+    created in some databases, so create_all() did not add it. Without it,
+    concurrent or repeated price refreshes can insert duplicate snapshots for
+    the same (asset_id, date) pair, which causes fund/stock price charts to
+    show the same price on different trading days.
+    """
+    if not settings.DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.connect() as conn:
+        # Check if the unique index already exists.
+        existing = conn.execute(
+            text(
+                "SELECT name FROM sqlite_master WHERE type='index' "
+                "AND tbl_name='pricesnapshot' AND name='idx_prices_asset_date'"
+            )
+        ).fetchone()
+        if existing:
+            return
+
+        # Clean up duplicate snapshots before creating the unique index.
+        # Keep the row with the highest id (most recently inserted) per (asset_id, date).
+        conn.execute(
+            text(
+                "DELETE FROM pricesnapshot WHERE id NOT IN ("
+                "  SELECT MAX(id) FROM pricesnapshot GROUP BY asset_id, date"
+                ")"
+            )
+        )
+        conn.commit()
+
+        # Create the unique index.
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_asset_date "
+                "ON pricesnapshot (asset_id, date)"
+            )
+        )
+        conn.commit()
+        logger.info("Created unique index idx_prices_asset_date on pricesnapshot")
+
+
 def _create_embedding_table():
     """Create the regular table for article embeddings.
 
@@ -124,6 +168,7 @@ def init_db():
     SQLModel.metadata.create_all(engine)
     _ensure_columns()
     _ensure_news_columns()
+    _ensure_price_snapshot_unique_index()
     _create_embedding_table()
     with Session(engine) as session:
         _seed_default_source_settings(session)
