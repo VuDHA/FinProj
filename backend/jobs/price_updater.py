@@ -21,6 +21,10 @@ def _get_or_create_snapshot(session: Session, asset: Asset, data: dict) -> Price
         )
     ).first()
     if existing:
+        existing.price = data["price"]
+        existing.change = data.get("change")
+        existing.change_percent = data.get("change_percent")
+        session.add(existing)
         return existing
 
     snapshot = PriceSnapshot(

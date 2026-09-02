@@ -106,6 +106,7 @@ def _update_stable_snapshot(session: Session, asset: Asset, price: Decimal, quan
         select(PriceSnapshot).where(PriceSnapshot.asset_id == asset.id)
     ).all():
         session.delete(snap)
+    session.flush()
     session.add(
         PriceSnapshot(
             asset_id=asset.id,

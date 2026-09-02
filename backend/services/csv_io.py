@@ -184,13 +184,23 @@ def import_assets_from_rows(session: Session, rows: List[Dict[str, Any]]) -> Csv
             created += 1
 
             if value:
-                session.add(
-                    PriceSnapshot(
-                        asset_id=asset.id,
-                        date=datetime.date.today(),
-                        price=value,
+                today = datetime.date.today()
+                existing = session.exec(
+                    select(PriceSnapshot).where(
+                        PriceSnapshot.asset_id == asset.id,
+                        PriceSnapshot.date == today,
                     )
-                )
+                ).first()
+                if existing:
+                    existing.price = value
+                else:
+                    session.add(
+                        PriceSnapshot(
+                            asset_id=asset.id,
+                            date=today,
+                            price=value,
+                        )
+                    )
         session.commit()
     except Exception:
         session.rollback()

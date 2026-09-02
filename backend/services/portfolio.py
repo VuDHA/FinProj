@@ -16,7 +16,7 @@ class PortfolioService:
         self.market = MarketDataService(session)
 
     def _save_snapshot(self, asset: Asset, data: dict):
-        """Persist a market price snapshot if it is valid and not already stored."""
+        """Persist or update a market price snapshot for the given date."""
         if not data or not data.get("price"):
             return
         existing = self.session.exec(
@@ -26,6 +26,10 @@ class PortfolioService:
             )
         ).first()
         if existing:
+            existing.price = data["price"]
+            existing.change = data.get("change")
+            existing.change_percent = data.get("change_percent")
+            self.session.add(existing)
             return
         snapshot = PriceSnapshot(
             asset_id=asset.id,

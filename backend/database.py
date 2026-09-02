@@ -88,37 +88,57 @@ def _ensure_price_snapshot_unique_index():
     """
     if not settings.DATABASE_URL.startswith("sqlite"):
         return
-    with engine.connect() as conn:
-        # Check if the unique index already exists.
-        existing = conn.execute(
-            text(
-                "SELECT name FROM sqlite_master WHERE type='index' "
-                "AND tbl_name='pricesnapshot' AND name='idx_prices_asset_date'"
-            )
-        ).fetchone()
-        if existing:
-            return
+    try:
+        with engine.connect() as conn:
+            # Check if the unique index already exists.
+            existing = conn.execute(
+                text(
+                    "SELECT name FROM sqlite_master WHERE type='index' "
+                    "AND tbl_name='pricesnapshot' AND name='idx_prices_asset_date'"
+                )
+            ).fetchone()
+            if existing:
+                return
 
-        # Clean up duplicate snapshots before creating the unique index.
-        # Keep the row with the highest id (most recently inserted) per (asset_id, date).
-        conn.execute(
-            text(
-                "DELETE FROM pricesnapshot WHERE id NOT IN ("
-                "  SELECT MAX(id) FROM pricesnapshot GROUP BY asset_id, date"
-                ")"
-            )
-        )
-        conn.commit()
+            # Check if the pricesnapshot table exists (it should after
+            # create_all, but guard against partially-initialized DBs).
+            table_exists = conn.execute(
+                text(
+                    "SELECT name FROM sqlite_master WHERE type='table' "
+                    "AND name='pricesnapshot'"
+                )
+            ).fetchone()
+            if not table_exists:
+                return
 
-        # Create the unique index.
-        conn.execute(
-            text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_asset_date "
-                "ON pricesnapshot (asset_id, date)"
+            # Clean up duplicate snapshots before creating the unique index.
+            # Keep the row with the highest id (most recently inserted) per
+            # (asset_id, date). Also handle rows with NULL asset_id or date
+            # (which would violate the NOT NULL constraint on the index).
+            conn.execute(
+                text(
+                    "DELETE FROM pricesnapshot WHERE id NOT IN ("
+                    "  SELECT MAX(id) FROM pricesnapshot "
+                    "  WHERE asset_id IS NOT NULL AND date IS NOT NULL "
+                    "  GROUP BY asset_id, date"
+                    ")"
+                )
             )
-        )
-        conn.commit()
-        logger.info("Created unique index idx_prices_asset_date on pricesnapshot")
+            conn.commit()
+
+            # Create the unique index.
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_asset_date "
+                    "ON pricesnapshot (asset_id, date)"
+                )
+            )
+            conn.commit()
+            logger.info("Created unique index idx_prices_asset_date on pricesnapshot")
+    except Exception as e:
+        logger.error("Failed to create unique index on pricesnapshot: %s", e)
+        # Don't re-raise — the app can still run without the index, it just
+        # may produce duplicate snapshots. The user can manually fix the DB.
 
 
 def _create_embedding_table():
