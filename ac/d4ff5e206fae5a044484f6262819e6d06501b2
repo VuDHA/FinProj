@@ -1,0 +1,24 @@
+backend/api/transactions.py
+  h_81847490a6d656 109
+backend/database.py
+  h_81847490a6d656 91-125,127-134,136-141
+backend/jobs/price_updater.py
+  h_81847490a6d656 24-27
+backend/services/csv_io.py
+  h_81847490a6d656 187-202
+backend/services/portfolio.py
+  h_81847490a6d656 19,29-32
+backend/services/smart_import.py
+  h_81847490a6d656 252-267
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "acd4ff5e206fae5a044484f6262819e6d06501b2",
+  "prompts": {},
+  "humans": {
+    "h_81847490a6d656": {
+      "author": "VuDHA <vudha.work@gmail.com>"
+    }
+  }
+}
